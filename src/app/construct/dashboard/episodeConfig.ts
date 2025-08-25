@@ -50,7 +50,7 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
         description: "Pax's strange visions of frogs won't go away. As he goes about his normal day, a series of bizarre coincidences and amphibious events leave him questioning what's real. When a familiar face and a mysterious note from Lily force a choice, Pax must decide: embrace his human reality, or leap into the unknown. The time has come to choose... red or green?",
         redPathDescription: "The Red Path: Who is this? Don't answer and lets ask Lily about these cryptic notes.",
         greenPathDescription: "The Green Path: Answer the call? maybe you can get some answers to these visions.",
-        videoUrl: "https://youtu.be/Zmvv1Jr5Zmc"
+        videoUrl: "https://www.youtube.com/embed/Zmvv1Jr5Zmc"
     },
     // {
     //     id: "episode-3",
