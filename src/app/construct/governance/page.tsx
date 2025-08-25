@@ -397,7 +397,7 @@ export default function MatrixConstruct() {
                                         color: "#4ade80",
                                     }}
                                 >
-                                    You take the red pill, you stay in Wonderland, and I show you
+                                    You take the green pill, you stay in Wonderland, and I show you
                                     how deep the frog-hole goes. Embrace the croak, and let your
                                     true amphibious self leap into the unknown.
                                 </p>
@@ -410,7 +410,7 @@ export default function MatrixConstruct() {
                                             fontFamily: "monospace",
                                         }}
                                     >
-                                        50 MatrixFrog required to vote
+                                        1000 MatrixFrog required to vote
                                     </p>
                                 )}
                             </div>
@@ -448,7 +448,7 @@ export default function MatrixConstruct() {
                                         color: "#4ade80",
                                     }}
                                 >
-                                    You take the blue pill, the story ends, you wake up in your
+                                    You take the red pill, the story ends, you wake up in your
                                     bed and believe whatever you want to believe. Perhaps these
                                     are just delusions, but if this isn&apos;t real, then what
                                     truly is, and how long can you deny the frog within?
@@ -464,7 +464,7 @@ export default function MatrixConstruct() {
                                             fontFamily: "monospace",
                                         }}
                                     >
-                                        50 MatrixFrog required to vote
+                                        1000 MatrixFrog required to vote
                                     </p>
                                 )}
                             </div>
