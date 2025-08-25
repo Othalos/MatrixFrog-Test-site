@@ -461,12 +461,12 @@ export default function MatrixConstruct() {
   const blooperVideos = [
     {
       value: "blooper-1",
-      title: "Blooper 1: Behind the Scenes",
+      title: "Blooper 1: First Episode Bloopers",
       src: "https://www.youtube.com/embed/54CTSANSdUU?enablejsapi=1",
     },
     {
       value: "blooper-2",
-      title: "Blooper 2: Blooper scenes",
+      title: "Blooper 2: Second Episode Bloopers - Coming Soon",
     },
   ];
 
@@ -630,7 +630,7 @@ export default function MatrixConstruct() {
                         width="100%"
                         height="315"
                         // src="https://www.youtube.com/embed/u4uWWpSvZp8?enablejsapi=1"
-                        src="https://www.youtube.com/embed/0roDfig5Ycs"
+                        src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
                         title="YouTube video player"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -712,10 +712,10 @@ export default function MatrixConstruct() {
                     }}
                   >
                     <CardTitle style={{ color: "#4ade80" }}>
-                      The Peptrix Saga - Episode 1 - Flying Dreams
+                      The Peptrix Saga - Episode 2 - Calling Card
                     </CardTitle>
                     <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>
-                      60%
+                      20%
                     </span>
                   </div>
                   <div
@@ -730,7 +730,7 @@ export default function MatrixConstruct() {
                     Story Progress
                   </div>
                   <Progress
-                    value={60}
+                    value={20}
                     style={{
                       height: "4px",
                       backgroundColor: "#065f46",
@@ -750,7 +750,7 @@ export default function MatrixConstruct() {
                     }}
                   >
                     {(() => {
-                      const episode = getEpisodeStatus(selectedEpisode || "episode-1");
+                      const episode = getEpisodeStatus(selectedEpisode || "episode-2");
                       return episode?.description || "Episode description not available.";
                     })()}
                   </p>
@@ -759,7 +759,7 @@ export default function MatrixConstruct() {
 
               {/* Voting Section */}
               {(() => {
-                const episode = getEpisodeStatus(selectedEpisode || "episode-1");
+                const episode = getEpisodeStatus(selectedEpisode || "episode-2");
                 if (!episode) {
                   return (
                     <Card
