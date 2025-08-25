@@ -42,7 +42,7 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
     {
         id: "episode-2",
         title: "Episode 2: Calling Card",
-        status: "current",
+        status: "active",
         votingStartDate: new Date("2025-09-01"),
         votingEndDate: new Date("2025-09-08"),
         redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
