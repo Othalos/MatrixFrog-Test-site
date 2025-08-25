@@ -41,16 +41,16 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
     },
     {
         id: "episode-2",
-        title: "Episode 2: The Awakening",
-        status: "upcoming",
-        votingStartDate: new Date("2025-07-23"),
-        votingEndDate: new Date("2025-07-30"),
+        title: "Episode 2: Calling Card",
+        status: "current",
+        votingStartDate: new Date("2025-09-01"),
+        votingEndDate: new Date("2025-09-08"),
         redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
         greenWalletAddress: "0x81D1851281d12733DCF175A3476FD1f1B245aE53",
-        description: "The choice has been made. Now the consequences unfold as our protagonist faces the reality of their decision. The world around them begins to shift and change, revealing the true nature of their existence. Every step forward brings new revelations, new challenges, and new questions about what it means to be human, or something more.",
-        redPathDescription: "The Red Path: Embrace the chaos and dive deeper into the rabbit hole of consciousness.",
-        greenPathDescription: "The Green Path: Transcend the limitations of human perception and embrace the amphibian within.",
-        videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs"
+        description: "Pax's strange visions of frogs won't go away. As he goes about his normal day, a series of bizarre coincidences and amphibious events leave him questioning what's real. When a familiar face and a mysterious note from Lily force a choice, Pax must decide: embrace his human reality, or leap into the unknown. The time has come to choose... red or green?",
+        redPathDescription: "The Red Path: Who is this? Don't answer and lets ask Lily about these cryptic notes.",
+        greenPathDescription: "The Green Path: Answer the call? maybe you can get some answers to these visions.",
+        videoUrl: "https://youtu.be/Zmvv1Jr5Zmc"
     },
     // {
     //     id: "episode-3",
