@@ -44,7 +44,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
-//  const [tokenError, setTokenError] = useState(false);
+  const [tokenError, setTokenError] = useState(false);
   const [networkError, setNetworkError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
