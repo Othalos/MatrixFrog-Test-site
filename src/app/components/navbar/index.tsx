@@ -301,11 +301,11 @@ export default function Navbar() {
       setTimeout(() => setNetworkError(false), 3000);
       return;
     }
-    //if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
-    //  setTokenError(true);
-    //  setTimeout(() => setTokenError(false), 2000);
-    // return;
-    //}
+    if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
+      setTokenError(true);
+      setTimeout(() => setTokenError(false), 2000);
+     return;
+    }
     window.location.href = "/construct";
   };
 
