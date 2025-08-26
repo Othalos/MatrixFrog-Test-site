@@ -44,7 +44,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
-  const [tokenError, setTokenError] = useState(false);
+//  const [tokenError, setTokenError] = useState(false);
   const [networkError, setNetworkError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -301,11 +301,11 @@ export default function Navbar() {
       setTimeout(() => setNetworkError(false), 3000);
       return;
     }
-    if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
-      setTokenError(true);
-      setTimeout(() => setTokenError(false), 2000);
-     return;
-    }
+   // if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
+   //   setTokenError(true);
+   //   setTimeout(() => setTokenError(false), 2000);
+   //  return;
+   // }
     window.location.href = "/construct";
   };
 
