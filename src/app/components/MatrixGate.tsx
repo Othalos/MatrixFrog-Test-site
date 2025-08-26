@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { useAccount, useReadContract } from "wagmi";
 
-const MATRIX_TOKEN_CA = "0x2044682dad187456af1eee1b4e02bbf0a9abc919";
+const MATRIX_TOKEN_CA = "0x434dd2afe3baf277ffcfe9bef9787eda6b4c38d5";
 const ABI = [
   // Minimal ERC-20 ABI
   {
@@ -94,7 +94,7 @@ export default function MatrixGate() {
             </div>
           ) : (
             <p className="mt-4 text-red-600 font-semibold">
-              ❌ You need at least 50,000 MatrixFrog tokens to access The
+              ❌ You need at least 100,000 MatrixFrog tokens to access The
               Construct.
             </p>
           )}
