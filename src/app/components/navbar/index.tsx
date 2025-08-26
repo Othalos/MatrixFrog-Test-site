@@ -289,7 +289,7 @@ export default function Navbar() {
   }, [balanceData, decimalsData, isCorrectNetwork]);
 
   // Handle Construct link click
- // const handleConstructClick = (e: React.MouseEvent) => {
+  const handleConstructClick = (e: React.MouseEvent) => {
  //   e.preventDefault();
  //   if (!isConnected) {
  //     setShowWarning(true);
@@ -306,8 +306,8 @@ export default function Navbar() {
  //     setTimeout(() => setTokenError(false), 2000);
  //    return;
  //   }
- //   window.location.href = "/construct";
- // };
+    window.location.href = "/construct";
+  };
 
   return (
     <>
