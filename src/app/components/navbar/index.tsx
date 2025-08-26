@@ -289,25 +289,25 @@ export default function Navbar() {
   }, [balanceData, decimalsData, isCorrectNetwork]);
 
   // Handle Construct link click
-  const handleConstructClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!isConnected) {
-      setShowWarning(true);
-      setTimeout(() => setShowWarning(false), 3000);
-      return;
-    }
-    if (!isCorrectNetwork) {
-      setNetworkError(true);
-      setTimeout(() => setNetworkError(false), 3000);
-      return;
-    }
-    if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
-      setTokenError(true);
-      setTimeout(() => setTokenError(false), 2000);
-      return;
-    }
-    window.location.href = "/construct";
-  };
+ // const handleConstructClick = (e: React.MouseEvent) => {
+ //   e.preventDefault();
+ //   if (!isConnected) {
+ //     setShowWarning(true);
+ //     setTimeout(() => setShowWarning(false), 3000);
+ //     return;
+ //   }
+ //   if (!isCorrectNetwork) {
+ //     setNetworkError(true);
+ //     setTimeout(() => setNetworkError(false), 3000);
+ //     return;
+ //   }
+ //   if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
+ //     setTokenError(true);
+ //     setTimeout(() => setTokenError(false), 2000);
+ //    return;
+ //   }
+ //   window.location.href = "/construct";
+ // };
 
   return (
     <>
