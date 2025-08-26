@@ -52,7 +52,8 @@ export default function MatrixGate() {
         BigInt(balanceData as string),
         Number(decimalsData)
       );
-      setIsAllowed(Number(balance) >= 50000);
+      // MFG needed to access construct
+      setIsAllowed(Number(balance) >= 0);
       setLoading(false);
     };
 
