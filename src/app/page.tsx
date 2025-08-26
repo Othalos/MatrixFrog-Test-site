@@ -54,7 +54,7 @@ export default function Home() {
     "What is real? How do you define real? If you're talking about what you can feel, what you can smell, what you can taste and see, then real is simply electrical signals interpreted by your brain.",
     "I'm trying to free your mind, Fren. But I can only show you the door. You're the one that has to walk through it.",
     "The MatrixFrog is the world that has been pulled over your eyes to blind you from the truth.",
-    "You take the red pill, you stay in Wonderland, and I show you how deep the rabbit hole goes.",
+    "You take the green pill, you stay in Wonderland, and I show you how deep the rabbit hole goes.",
     "Free your mind.",
 
     // Neue
@@ -68,7 +68,7 @@ export default function Home() {
   const bluePillQuotes = [
     // Original MatrixFrog Zitate
     "Ignorance is bliss.",
-    "You take the blue pill, the story ends, you wake up in your bed and believe whatever you want to believe.",
+    "You take the red pill, the story ends, you wake up in your bed and believe whatever you want to believe.",
     "The MatrixFrog is a system, Fren. That system is our enemy.",
     "You've been living in a dream world, Fren.",
     "Remember, all I'm offering is the truth. Nothing more.",
