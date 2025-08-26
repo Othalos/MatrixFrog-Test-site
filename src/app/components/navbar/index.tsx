@@ -44,7 +44,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
-  const [tokenError, setTokenError] = useState(false);
+ // const [tokenError, setTokenError] = useState(false);
   const [networkError, setNetworkError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -389,7 +389,8 @@ export default function Navbar() {
                         Switch to Pepe Unchained
                       </span>
                     )}
-                    {tokenError && isConnected && isCorrectNetwork && (
+                    {/* add tokenError && in front of isConnected */}
+                    {isConnected && isCorrectNetwork && (
                       <span className="absolute text-[var(--matrix-red)] text-xs mt-1 left-0 right-0 text-center warning-animation">
                         MFG Token is less then 100000
                       </span>
