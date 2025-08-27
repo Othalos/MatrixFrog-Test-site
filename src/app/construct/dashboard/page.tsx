@@ -712,7 +712,7 @@ export default function MatrixConstruct() {
                     }}
                   >
                     <CardTitle style={{ color: "#4ade80" }}>
-                      The Peptrix Saga - Episode 2 - Calling Card
+                      The Peptrix Saga (Active) - Episode 2 - Calling Card
                     </CardTitle>
                     <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>
                       20%
