@@ -212,7 +212,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 fontFamily: "monospace",
                             }}
                         >
-                            Can't see your MFG tokens? Add them manually to your wallet.
+                            Can&apos;t see your MFG tokens? Add them manually to your wallet.
                         </p>
                     </div>
                 )}
