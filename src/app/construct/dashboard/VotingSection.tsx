@@ -66,6 +66,8 @@ interface VotingSectionProps {
     connectCoinbase?: () => void;
     handleDisconnect?: () => void;
     switchToPepeUnchained?: () => void;
+    // MFG Token Balance für Add Token Logic
+    mfgBalance?: string;
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
@@ -92,6 +94,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     connectCoinbase,
     handleDisconnect,
     switchToPepeUnchained,
+    mfgBalance = "0",
 }) => {
     const [showWalletOptions, setShowWalletOptions] = useState(false);
     
@@ -100,6 +103,28 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     const isUpcoming = episode.status === 'upcoming';
 
     const countdown = getVotingCountdown(episode);
+
+    // Add MFG Token to Wallet
+    const addTokenToWallet = async () => {
+        try {
+            if (typeof window !== "undefined" && window.ethereum) {
+                await window.ethereum.request({
+                    method: 'wallet_watchAsset',
+                    params: {
+                        type: 'ERC20',
+                        options: {
+                            address: '0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5',
+                            symbol: 'MFG',
+                            decimals: 18,
+                            image: 'https://matrixfrog.com/emerald.png', // Optional: Token-Icon
+                        },
+                    },
+                });
+            }
+        } catch (error) {
+            console.log('Token not added to wallet:', error);
+        }
+    };
 
     // Wallet Connect Handler
     const handleWalletConnect = () => {
@@ -148,6 +173,49 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         NEXT CHAPTER DECISION
                     </CardTitle>
                 </CardHeader>
+
+                {/* Add MFG Token Button - Zeige nur wenn Wallet verbunden aber Balance 0 oder sehr niedrig */}
+                {isConnected && isCorrectNetwork && (parseInt(mfgBalance.replace(/,/g, "")) <= 100) && (
+                    <div
+                        style={{
+                            textAlign: "center",
+                            margin: "16px",
+                        }}
+                    >
+                        <button
+                            onClick={addTokenToWallet}
+                            style={{
+                                backgroundColor: "#1f2937",
+                                border: "1px solid #4ade80",
+                                color: "#4ade80",
+                                padding: "8px 16px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontFamily: "monospace",
+                                fontSize: "0.8rem",
+                                transition: "all 0.3s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "rgba(74, 222, 128, 0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#1f2937";
+                            }}
+                        >
+                            Add MFG Token to Wallet
+                        </button>
+                        <p
+                            style={{
+                                fontSize: "0.65rem",
+                                color: "#9ca3af",
+                                marginTop: "8px",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            Can't see your MFG tokens? Add them manually to your wallet.
+                        </p>
+                    </div>
+                )}
 
                 <div
                     style={{
