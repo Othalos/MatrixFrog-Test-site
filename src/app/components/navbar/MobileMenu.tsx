@@ -32,6 +32,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   handleNetworkSwitch
 }) => {
   const [showWalletOptions, setShowWalletOptions] = useState(false);
+  
   return (
     <div className="mobile-menu">
       <div className="mobile-menu-container">
@@ -47,21 +48,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
           <span className="mobile-menu-link hover-white">Treasury</span>
         </Link>
 
-        {/* Construct */}
+        {/* Construct - WALLET WALL ENTFERNT */}
         <div
           onClick={() => {
-            if (!isConnected) {
-              alert("Please connect your wallet first to access the Construct");
-              return;
-            }
-
-            // Check if user has enough tokens (100,000 MatrixFrog)
-            // const balanceNumber = parseFloat(tokenBalance.replace(/,/g, ""));
-            if (Number(tokenBalance.replace(/,/g, "")) < 100000) {
-              alert("You need at least 100,000 MatrixFrog tokens to access the Construct. Current balance: " + tokenBalance);
-              return;
-            }
-
             setMenuOpen(false);
             window.location.href = "/construct";
           }}

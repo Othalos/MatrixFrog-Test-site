@@ -3,46 +3,25 @@
 import { useRouter } from "next/navigation";
 import { CSSProperties, useEffect, useState } from "react";
 import { IoMdCheckmark } from "react-icons/io";
-import { useAccount } from "wagmi";
 import styles from "./construct.module.css";
 
 export default function ConstructPage() {
   const router = useRouter();
-  const { isConnected } = useAccount();
   const [isHovered, setIsHovered] = useState(false);
-  const [firstText, setFirstText] = useState(true);
-  const [secondText, setSecondText] = useState(false);
-  const [matrixBalance, setMatrixBalance] = useState<string | null>(null);
+  const [showEnteringText, setShowEnteringText] = useState(false);
 
+  // WALLET WALL ENTFERNT - Direkter Zugang zum Construct
   useEffect(() => {
-    const bal = window.localStorage.getItem("Mat_bal");
-    setMatrixBalance(bal || null);
-  }, []);
-
-  // Check wallet connection
-  useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-      return;
-    }
-  }, [isConnected, router]);
-
-  useEffect(() => {
-    if (!isConnected) return; // Don't proceed if not connected
-
     const timers: NodeJS.Timeout[] = [];
 
-    // Step 1: Show "Standard Access..." message for 2 seconds
-    setFirstText(true);
+    // Step 1: Show loading message for 2 seconds
     timers.push(
       setTimeout(() => {
-        setFirstText(false);
-        setSecondText(true);
+        setShowEnteringText(true);
 
-        // Step 2: Show "VIP confirmed..." message for 2 seconds
+        // Step 2: Show "Entering the Construct" message for 1 second
         timers.push(
           setTimeout(() => {
-            setSecondText(false);
             router.push("/construct/dashboard");
           }, 1000)
         );
@@ -53,7 +32,7 @@ export default function ConstructPage() {
     return () => {
       timers.forEach(clearTimeout);
     };
-  }, [router, isConnected]); // Include isConnected in dependencies
+  }, [router]);
 
   // Handle skip button click
   const handleSkip = () => {
@@ -101,17 +80,14 @@ export default function ConstructPage() {
         <div style={{ fontSize: "2rem" }} className={styles.progressMessage}>
           LOADING THE CONSTRUCT...
         </div>
-        <div className={styles.tokenBalance}>
-          MatrixFrog Token Balance: {matrixBalance ?? "0"}
-        </div>
-        {firstText && (
+        {!showEnteringText && (
           <div className={styles.tokenMessage}>
-            Standard-Access 1000000.00 additional tokens required for VIP status
+            Access Granted - Welcome to the Matrix
           </div>
         )}
-        {secondText && (
+        {showEnteringText && (
           <div className={styles.tokenMessage}>
-            VIP-Status confirmed <IoMdCheckmark />
+            Entering the Construct <IoMdCheckmark />
           </div>
         )}
 

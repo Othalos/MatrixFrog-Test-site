@@ -1,7 +1,6 @@
 "use client";
 import { Progress } from "@/app/components/ui/progress";
 import { BarChart3, FileVideo, User } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -28,8 +27,6 @@ import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
-
-
 
 const ERC20_ABI = [
   {
@@ -214,9 +211,6 @@ const getVotingBalances = async (episodeId: string) => {
   const episode = getEpisodeStatus(episodeId);
   if (!episode) return { redVotes: 0, greenVotes: 0 };
 
-  // const redWalletAddress = episode.redWalletAddress;
-  // const greenWalletAddress = episode.greenWalletAddress;
-
   try {
     const cachedResults = typeof window !== 'undefined' ? getCachedVotingResults(episodeId) : null;
 
@@ -246,10 +240,8 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-1");
   const [selectedBlooper, setSelectedBlooper] = useState("blooper-1");
-  // const [selected, setSelected] = useState(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("saga");
-  // const [videoError, setVideoError] = useState(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
@@ -267,7 +259,6 @@ export default function MatrixConstruct() {
   const {
     balance: mfgBalance,
     rawBalance: rawMfgBalance,
-    isLoading: balanceLoading,
     refetch: refetchBalance,
   } = useMFGBalance();
 
@@ -289,8 +280,6 @@ export default function MatrixConstruct() {
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
 
-
-
   // Update localStorage when MFG balance changes
   useEffect(() => {
     if (mfgBalance && isConnected) {
@@ -298,17 +287,17 @@ export default function MatrixConstruct() {
     }
   }, [mfgBalance, isConnected]);
 
-  // Redirect if not connected or insufficient balance
-  useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-      return;
-    }
-
-    if (typeof rawMfgBalance === "bigint" && rawMfgBalance < parseEther("50")) {
-      router.push("/");
-    }
-  }, [isConnected, rawMfgBalance, router]);
+  // WALLET WALL KOMPLETT ENTFERNT
+  // useEffect(() => {
+  //   if (!isConnected) {
+  //     router.push("/");
+  //     return;
+  //   }
+  //   
+  //   if (typeof rawMfgBalance === "bigint" && rawMfgBalance < parseEther("50")) {
+  //     router.push("/");
+  //   }
+  // }, [isConnected, rawMfgBalance, router]);
 
   // Handle successful transaction
   useEffect(() => {
@@ -389,7 +378,7 @@ export default function MatrixConstruct() {
 
   const handleVote = async () => {
     if (!isConnected || !address) {
-      setVoteError("Please connect your wallet first");
+      setVoteError("Please connect your wallet first to vote");
       return;
     }
 
@@ -524,13 +513,13 @@ export default function MatrixConstruct() {
                 color: "var(--matrix-text-light)",
               }}
             >
-              v2.0 access level: architect
+              v2.0 access level: open access
             </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "0.75rem", color: "#16a34a" }}>
-            MatrixFrog HOLDINGS
+            System Status
           </div>
           <div
             style={{
@@ -539,11 +528,11 @@ export default function MatrixConstruct() {
               display: "flex",
               alignItems: "center",
               gap: "5px",
+              color: "#4ade80",
             }}
-            className="construct-balance"
+            className="construct-status"
           >
-            $MATRIXFROG: {balanceLoading ? "Loading..." : mfgBalance}{" "}
-            <Image src="/emerald.png" alt="MATRIX" width={15} height={15} />
+            ONLINE
           </div>
         </div>
       </header>
@@ -629,7 +618,6 @@ export default function MatrixConstruct() {
                       <iframe
                         width="100%"
                         height="315"
-                        // src="https://www.youtube.com/embed/u4uWWpSvZp8?enablejsapi=1"
                         src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
                         title="YouTube video player"
                         frameBorder="0"
