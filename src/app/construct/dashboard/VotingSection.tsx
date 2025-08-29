@@ -66,6 +66,8 @@ interface VotingSectionProps {
     connectCoinbase?: () => void;
     handleDisconnect?: () => void;
     switchToPepeUnchained?: () => void;
+    // MFG Token Balance für Token-Balance-Anzeige
+    mfgBalance?: string;
     // MFG Token Balance für Add Token Logic
     mfgBalance?: string;
 }
@@ -103,28 +105,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     const isUpcoming = episode.status === 'upcoming';
 
     const countdown = getVotingCountdown(episode);
-
-    // Add MFG Token to Wallet
-    const addTokenToWallet = async () => {
-        try {
-            if (typeof window !== "undefined" && window.ethereum) {
-                await window.ethereum.request({
-                    method: 'wallet_watchAsset',
-                    params: {
-                        type: 'ERC20',
-                        options: {
-                            address: '0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5',
-                            symbol: 'MFG',
-                            decimals: 18,
-                            image: 'https://matrixfrog.com/emerald.png', // Optional: Token-Icon
-                        },
-                    },
-                });
-            }
-        } catch (error) {
-            console.log('Token not added to wallet:', error);
-        }
-    };
 
     // Wallet Connect Handler
     const handleWalletConnect = () => {
@@ -173,6 +153,52 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         NEXT CHAPTER DECISION
                     </CardTitle>
                 </CardHeader>
+
+                {/* MFG Token Balance Display */}
+                {isConnected && isCorrectNetwork && (
+                    <div
+                        style={{
+                            textAlign: "center",
+                            margin: "16px",
+                            padding: "12px",
+                            backgroundColor: "rgba(74, 222, 128, 0.05)",
+                            border: "1px solid rgba(74, 222, 128, 0.3)",
+                            borderRadius: "6px",
+                        }}
+                    >
+                        <div
+                            style={{
+                                color: "#4ade80",
+                                fontFamily: "monospace",
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                marginBottom: "4px",
+                            }}
+                        >
+                            MFG Token Balance
+                        </div>
+                        <div
+                            style={{
+                                color: "#22c55e",
+                                fontFamily: "monospace",
+                                fontSize: "1.1rem",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            {mfgBalance} MFG
+                        </div>
+                        <div
+                            style={{
+                                fontSize: "0.65rem",
+                                color: "#9ca3af",
+                                marginTop: "4px",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            1000 MFG required per vote
+                        </div>
+                    </div>
+                )}
 
                 {/* MFG Token Balance Display */}
                 {isConnected && isCorrectNetwork && (
