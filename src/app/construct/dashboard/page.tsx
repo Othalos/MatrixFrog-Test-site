@@ -931,6 +931,7 @@ export default function MatrixConstruct() {
                     connectCoinbase={connectCoinbase}
                     handleDisconnect={handleDisconnect}
                     switchToPepeUnchained={switchToPepeUnchained}
+                    mfgBalance={mfgBalance}
                   />
                 );
               })()}

@@ -174,46 +174,49 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     </CardTitle>
                 </CardHeader>
 
-                {/* Add MFG Token Button - Zeige nur wenn Wallet verbunden aber Balance 0 oder sehr niedrig */}
-                {isConnected && isCorrectNetwork && (parseInt(mfgBalance.replace(/,/g, "")) <= 100) && (
+                {/* MFG Token Balance Display */}
+                {isConnected && isCorrectNetwork && (
                     <div
                         style={{
                             textAlign: "center",
                             margin: "16px",
+                            padding: "12px",
+                            backgroundColor: "rgba(74, 222, 128, 0.05)",
+                            border: "1px solid rgba(74, 222, 128, 0.3)",
+                            borderRadius: "6px",
                         }}
                     >
-                        <button
-                            onClick={addTokenToWallet}
+                        <div
                             style={{
-                                backgroundColor: "#1f2937",
-                                border: "1px solid #4ade80",
                                 color: "#4ade80",
-                                padding: "8px 16px",
-                                borderRadius: "6px",
-                                cursor: "pointer",
                                 fontFamily: "monospace",
-                                fontSize: "0.8rem",
-                                transition: "all 0.3s ease",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = "rgba(74, 222, 128, 0.1)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = "#1f2937";
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                marginBottom: "4px",
                             }}
                         >
-                            Add MFG Token to Wallet
-                        </button>
-                        <p
+                            MFG Token Balance
+                        </div>
+                        <div
+                            style={{
+                                color: "#22c55e",
+                                fontFamily: "monospace",
+                                fontSize: "1.1rem",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            {mfgBalance} MFG
+                        </div>
+                        <div
                             style={{
                                 fontSize: "0.65rem",
                                 color: "#9ca3af",
-                                marginTop: "8px",
+                                marginTop: "4px",
                                 fontFamily: "monospace",
                             }}
                         >
-                            Can&apos;t see your MFG tokens? Add them manually to your wallet.
-                        </p>
+                            1000 MFG required per vote
+                        </div>
                     </div>
                 )}
 
