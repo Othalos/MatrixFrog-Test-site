@@ -198,52 +198,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     </div>
                 )}
 
-                {/* MFG Token Balance Display */}
-                {isConnected && isCorrectNetwork && (
-                    <div
-                        style={{
-                            textAlign: "center",
-                            margin: "16px",
-                            padding: "12px",
-                            backgroundColor: "rgba(74, 222, 128, 0.05)",
-                            border: "1px solid rgba(74, 222, 128, 0.3)",
-                            borderRadius: "6px",
-                        }}
-                    >
-                        <div
-                            style={{
-                                color: "#4ade80",
-                                fontFamily: "monospace",
-                                fontSize: "0.9rem",
-                                fontWeight: "bold",
-                                marginBottom: "4px",
-                            }}
-                        >
-                            MFG Token Balance
-                        </div>
-                        <div
-                            style={{
-                                color: "#22c55e",
-                                fontFamily: "monospace",
-                                fontSize: "1.1rem",
-                                fontWeight: "bold",
-                            }}
-                        >
-                            {mfgBalance} MFG
-                        </div>
-                        <div
-                            style={{
-                                fontSize: "0.65rem",
-                                color: "#9ca3af",
-                                marginTop: "4px",
-                                fontFamily: "monospace",
-                            }}
-                        >
-                            1000 MFG required per vote
-                        </div>
-                    </div>
-                )}
-
                 <div
                     style={{
                         display: "flex",
