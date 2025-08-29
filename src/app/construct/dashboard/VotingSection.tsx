@@ -68,8 +68,6 @@ interface VotingSectionProps {
     switchToPepeUnchained?: () => void;
     // MFG Token Balance für Token-Balance-Anzeige
     mfgBalance?: string;
-    // MFG Token Balance für Add Token Logic
-    mfgBalance?: string;
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
