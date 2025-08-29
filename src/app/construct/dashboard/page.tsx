@@ -1,7 +1,6 @@
 "use client";
 import { Progress } from "@/app/components/ui/progress";
 import { BarChart3, FileVideo, User } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -23,13 +22,18 @@ import {
   useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
+  useConnect,
+  useDisconnect,
+  useSwitchChain,
 } from "wagmi";
+import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
 
+// Pepe Unchained Chain ID
+const PEPE_UNCHAINED_CHAIN_ID = 97741;
+
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
-
-
 
 const ERC20_ABI = [
   {
@@ -214,9 +218,6 @@ const getVotingBalances = async (episodeId: string) => {
   const episode = getEpisodeStatus(episodeId);
   if (!episode) return { redVotes: 0, greenVotes: 0 };
 
-  // const redWalletAddress = episode.redWalletAddress;
-  // const greenWalletAddress = episode.greenWalletAddress;
-
   try {
     const cachedResults = typeof window !== 'undefined' ? getCachedVotingResults(episodeId) : null;
 
@@ -246,18 +247,25 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-1");
   const [selectedBlooper, setSelectedBlooper] = useState("blooper-1");
-  // const [selected, setSelected] = useState(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("saga");
-  // const [videoError, setVideoError] = useState(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isVoting, setIsVoting] = useState(false);
   const [voteSuccess, setVoteSuccess] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
-  const { isConnected, address } = useAccount();
+  const { isConnected, address, chain } = useAccount();
   const router = useRouter();
+  
+  // Wallet Connect functionality
+  const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
+  
+  // Check if we're on the correct network
+  const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -267,7 +275,6 @@ export default function MatrixConstruct() {
   const {
     balance: mfgBalance,
     rawBalance: rawMfgBalance,
-    isLoading: balanceLoading,
     refetch: refetchBalance,
   } = useMFGBalance();
 
@@ -289,7 +296,132 @@ export default function MatrixConstruct() {
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
 
+  // Function to add Pepe Unchained network to wallet
+  const addPepeUnchainedNetwork = async () => {
+    try {
+      if (typeof window !== "undefined" && window.ethereum) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
+              chainName: "Pepe Unchained Mainnet",
+              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
+              nativeCurrency: {
+                name: "PEPE",
+                symbol: "PEPU",
+                decimals: 18,
+              },
+              blockExplorerUrls: [
+                "https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz",
+              ],
+            },
+          ],
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to add network:", error);
+      return false;
+    }
+  };
 
+  // Function to switch to Pepe Unchained network
+  const switchToPepeUnchained = async () => {
+    try {
+      if (switchChain) {
+        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
+      } else {
+        await addPepeUnchainedNetwork();
+      }
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+      await addPepeUnchainedNetwork();
+    }
+  };
+
+  // Wallet connection handlers für VotingSection
+  const connectMetaMask = async () => {
+    setIsConnecting(true);
+    try {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (isMobileDevice && typeof window !== 'undefined' && window.ethereum) {
+        await connect({ connector: injected() });
+      } else {
+        await connect({ connector: injected() });
+      }
+
+      setTimeout(async () => {
+        await switchToPepeUnchained();
+        setIsConnecting(false);
+      }, 1000);
+    } catch (error) {
+      console.error("MetaMask connection failed:", error);
+      setIsConnecting(false);
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        alert("Please install MetaMask");
+      }
+    }
+  };
+
+  const connectWalletConnect = async () => {
+    setIsConnecting(true);
+    try {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      await connect({
+        connector: walletConnect({
+          qrModalOptions: {
+            themeMode: 'dark',
+            themeVariables: {
+              '--wcm-z-index': '9999',
+            }
+          },
+          projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
+          metadata: {
+            name: 'MatrixFrog',
+            description: 'MatrixFrog Voting Platform',
+            url: 'https://matrixfrog.com',
+            icons: ['https://matrixfrog.com/favicon.ico']
+          }
+        }),
+      });
+
+      const networkSwitchDelay = isMobileDevice ? 2000 : 1000;
+      setTimeout(async () => {
+        await switchToPepeUnchained();
+        setIsConnecting(false);
+      }, networkSwitchDelay);
+    } catch (error) {
+      console.error("WalletConnect connection failed:", error);
+      setIsConnecting(false);
+      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        alert("WalletConnect connection failed. Please try again.");
+      }
+    }
+  };
+
+  const connectCoinbase = async () => {
+    setIsConnecting(true);
+    try {
+      await connect({ connector: coinbaseWallet() });
+
+      setTimeout(async () => {
+        await switchToPepeUnchained();
+        setIsConnecting(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Coinbase connection failed:", error);
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    setVoteError(null);
+  };
 
   // Update localStorage when MFG balance changes
   useEffect(() => {
@@ -298,17 +430,17 @@ export default function MatrixConstruct() {
     }
   }, [mfgBalance, isConnected]);
 
-  // Redirect if not connected or insufficient balance
-  useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-      return;
-    }
-
-    if (typeof rawMfgBalance === "bigint" && rawMfgBalance < parseEther("50")) {
-      router.push("/");
-    }
-  }, [isConnected, rawMfgBalance, router]);
+  // WALLET WALL KOMPLETT ENTFERNT
+  // useEffect(() => {
+  //   if (!isConnected) {
+  //     router.push("/");
+  //     return;
+  //   }
+  //   
+  //   if (typeof rawMfgBalance === "bigint" && rawMfgBalance < parseEther("50")) {
+  //     router.push("/");
+  //   }
+  // }, [isConnected, rawMfgBalance, router]);
 
   // Handle successful transaction
   useEffect(() => {
@@ -389,7 +521,7 @@ export default function MatrixConstruct() {
 
   const handleVote = async () => {
     if (!isConnected || !address) {
-      setVoteError("Please connect your wallet first");
+      setVoteError("Please connect your wallet first to vote");
       return;
     }
 
@@ -524,13 +656,13 @@ export default function MatrixConstruct() {
                 color: "var(--matrix-text-light)",
               }}
             >
-              v2.0 access level: architect
+              v2.0 access level: open access
             </div>
           </div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: "0.75rem", color: "#16a34a" }}>
-            MatrixFrog HOLDINGS
+            System Status
           </div>
           <div
             style={{
@@ -539,11 +671,11 @@ export default function MatrixConstruct() {
               display: "flex",
               alignItems: "center",
               gap: "5px",
+              color: "#4ade80",
             }}
-            className="construct-balance"
+            className="construct-status"
           >
-            $MATRIXFROG: {balanceLoading ? "Loading..." : mfgBalance}{" "}
-            <Image src="/emerald.png" alt="MATRIX" width={15} height={15} />
+            ONLINE
           </div>
         </div>
       </header>
@@ -629,7 +761,6 @@ export default function MatrixConstruct() {
                       <iframe
                         width="100%"
                         height="315"
-                        // src="https://www.youtube.com/embed/u4uWWpSvZp8?enablejsapi=1"
                         src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
                         title="YouTube video player"
                         frameBorder="0"
@@ -792,6 +923,15 @@ export default function MatrixConstruct() {
                     greenPillVotes={greenPillVotes}
                     totalVotes={totalVotes}
                     votingStatsLoading={votingStatsLoading}
+                    // Wallet Connect Props
+                    isConnecting={isConnecting}
+                    isCorrectNetwork={isCorrectNetwork}
+                    connectMetaMask={connectMetaMask}
+                    connectWalletConnect={connectWalletConnect}
+                    connectCoinbase={connectCoinbase}
+                    handleDisconnect={handleDisconnect}
+                    switchToPepeUnchained={switchToPepeUnchained}
+                    mfgBalance={mfgBalance}
                   />
                 );
               })()}

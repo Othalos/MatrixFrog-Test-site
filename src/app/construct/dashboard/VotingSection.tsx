@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { type EpisodeConfig, getVotingCountdown } from "./episodeConfig";
 
@@ -58,6 +58,16 @@ interface VotingSectionProps {
     greenPillVotes: number;
     totalVotes: number;
     votingStatsLoading: boolean;
+    // Neue Wallet Connect Props
+    isConnecting?: boolean;
+    isCorrectNetwork?: boolean;
+    connectMetaMask?: () => void;
+    connectWalletConnect?: () => void;
+    connectCoinbase?: () => void;
+    handleDisconnect?: () => void;
+    switchToPepeUnchained?: () => void;
+    // MFG Token Balance für Token-Balance-Anzeige
+    mfgBalance?: string;
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
@@ -76,16 +86,50 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     greenPillVotes,
     totalVotes,
     votingStatsLoading,
+    // Wallet Connect Props
+    isConnecting = false,
+    isCorrectNetwork = true,
+    connectMetaMask,
+    connectWalletConnect,
+    connectCoinbase,
+    handleDisconnect,
+    switchToPepeUnchained,
+    mfgBalance = "0",
 }) => {
+    const [showWalletOptions, setShowWalletOptions] = useState(false);
+    
     const isVotingEnabled = episode.status === 'active' && isHydrated && isConnected;
     const isCompleted = episode.status === 'completed';
     const isUpcoming = episode.status === 'upcoming';
 
     const countdown = getVotingCountdown(episode);
 
+    // Wallet Connect Handler
+    const handleWalletConnect = () => {
+        if (!isConnected) {
+            setShowWalletOptions(true);
+        }
+    };
+
+    const handleWalletSelection = async (walletType: 'metamask' | 'walletconnect' | 'coinbase') => {
+        setShowWalletOptions(false);
+        
+        switch (walletType) {
+            case 'metamask':
+                connectMetaMask?.();
+                break;
+            case 'walletconnect':
+                connectWalletConnect?.();
+                break;
+            case 'coinbase':
+                connectCoinbase?.();
+                break;
+        }
+    };
+
     return (
         <>
-            {/* CSS 애니메이션 스타일 주입 */}
+            {/* CSS Animationen */}
             <style dangerouslySetInnerHTML={{ __html: winnerAnimationStyles }} />
 
             {/* Decision Section */}
@@ -107,6 +151,52 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         NEXT CHAPTER DECISION
                     </CardTitle>
                 </CardHeader>
+
+                {/* MFG Token Balance Display */}
+                {isConnected && isCorrectNetwork && (
+                    <div
+                        style={{
+                            textAlign: "center",
+                            margin: "16px",
+                            padding: "12px",
+                            backgroundColor: "rgba(74, 222, 128, 0.05)",
+                            border: "1px solid rgba(74, 222, 128, 0.3)",
+                            borderRadius: "6px",
+                        }}
+                    >
+                        <div
+                            style={{
+                                color: "#4ade80",
+                                fontFamily: "monospace",
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                marginBottom: "4px",
+                            }}
+                        >
+                            MFG Token Balance
+                        </div>
+                        <div
+                            style={{
+                                color: "#22c55e",
+                                fontFamily: "monospace",
+                                fontSize: "1.1rem",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            {mfgBalance} MFG
+                        </div>
+                        <div
+                            style={{
+                                fontSize: "0.65rem",
+                                color: "#9ca3af",
+                                marginTop: "4px",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            1000 MFG required per vote
+                        </div>
+                    </div>
+                )}
 
                 <div
                     style={{
@@ -170,7 +260,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             {episode.redPathDescription}
                         </p>
 
-                        {/* Red Path Vote Count - Only show for completed episodes */}
                         {isCompleted && (
                             <div
                                 style={{
@@ -256,7 +345,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             {episode.greenPathDescription}
                         </p>
 
-                        {/* Green Path Vote Count - Only show for completed episodes */}
                         {isCompleted && (
                             <div
                                 style={{
@@ -323,6 +411,142 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     </div>
                 )}
 
+                {/* Network Warning */}
+                {isConnected && !isCorrectNetwork && (
+                    <div
+                        style={{
+                            backgroundColor: "#7f1d1d",
+                            color: "#fecaca",
+                            padding: "12px",
+                            margin: "16px",
+                            borderRadius: "8px",
+                            textAlign: "center",
+                            fontFamily: "monospace",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "10px",
+                        }}
+                    >
+                        ⚠️ Wrong Network. Please switch to Pepe Unchained
+                        <button
+                            onClick={switchToPepeUnchained}
+                            style={{
+                                backgroundColor: "#dc2626",
+                                color: "white",
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: "0.7rem",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            Switch Network
+                        </button>
+                    </div>
+                )}
+
+                {/* Wallet Options Modal */}
+                {showWalletOptions && (
+                    <div
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: "rgba(0, 0, 0, 0.8)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            zIndex: 9999,
+                        }}
+                        onClick={() => setShowWalletOptions(false)}
+                    >
+                        <div
+                            style={{
+                                backgroundColor: "black",
+                                border: "1px solid #4ade80",
+                                borderRadius: "8px",
+                                padding: "24px",
+                                minWidth: "300px",
+                                fontFamily: "monospace",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 style={{ color: "#4ade80", marginBottom: "16px", textAlign: "center" }}>
+                                SELECT WALLET
+                            </h3>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                <button
+                                    onClick={() => handleWalletSelection('metamask')}
+                                    disabled={isConnecting}
+                                    style={{
+                                        backgroundColor: "transparent",
+                                        border: "1px solid #4ade80",
+                                        color: "#4ade80",
+                                        padding: "12px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontFamily: "monospace",
+                                        opacity: isConnecting ? 0.5 : 1,
+                                    }}
+                                >
+                                    {isConnecting ? "Connecting..." : "MetaMask"}
+                                </button>
+                                <button
+                                    onClick={() => handleWalletSelection('walletconnect')}
+                                    disabled={isConnecting}
+                                    style={{
+                                        backgroundColor: "transparent",
+                                        border: "1px solid #4ade80",
+                                        color: "#4ade80",
+                                        padding: "12px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontFamily: "monospace",
+                                        opacity: isConnecting ? 0.5 : 1,
+                                    }}
+                                >
+                                    {isConnecting ? "Connecting..." : "WalletConnect"}
+                                </button>
+                                <button
+                                    onClick={() => handleWalletSelection('coinbase')}
+                                    disabled={isConnecting}
+                                    style={{
+                                        backgroundColor: "transparent",
+                                        border: "1px solid #4ade80",
+                                        color: "#4ade80",
+                                        padding: "12px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontFamily: "monospace",
+                                        opacity: isConnecting ? 0.5 : 1,
+                                    }}
+                                >
+                                    {isConnecting ? "Connecting..." : "Coinbase Wallet"}
+                                </button>
+                                <button
+                                    onClick={() => setShowWalletOptions(false)}
+                                    style={{
+                                        backgroundColor: "#dc2626",
+                                        border: "1px solid #dc2626",
+                                        color: "white",
+                                        padding: "8px",
+                                        borderRadius: "4px",
+                                        cursor: "pointer",
+                                        fontFamily: "monospace",
+                                        marginTop: "8px",
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div
                     style={{
                         textAlign: "center",
@@ -333,52 +557,90 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     }}
                 >
                     <button
-                        onClick={onVote}
-                        disabled={!isVotingEnabled || !selected || isVoting || isPending || isConfirming}
+                        onClick={!isConnected ? handleWalletConnect : onVote}
+                        disabled={(isConnected && (!selected || isVoting || isPending || isConfirming)) || isConnecting}
                         style={{
                             backgroundColor:
-                                !isVotingEnabled || !selected || isVoting || isPending || isConfirming
-                                    ? "#374151"
-                                    : "#16a34a",
+                                !isConnected 
+                                    ? "#16a34a"  // Wallet Connect Button - grün
+                                    : (!selected || isVoting || isPending || isConfirming)
+                                        ? "#374151"  // Disabled
+                                        : "#16a34a", // Vote Button - grün
                             color:
-                                !isVotingEnabled || !selected || isVoting || isPending || isConfirming
-                                    ? "#9ca3af"
-                                    : "black",
+                                !isConnected
+                                    ? "black"
+                                    : (!selected || isVoting || isPending || isConfirming)
+                                        ? "#9ca3af"
+                                        : "black",
                             borderRadius: "8px",
                             width: "100%",
                             padding: "12px 24px",
                             fontFamily: "monospace",
                             border: "none",
                             outline: "none",
-                            cursor:
-                                !isVotingEnabled || !selected || isVoting || isPending || isConfirming
-                                    ? "not-allowed"
-                                    : "pointer",
+                            cursor: isConnecting || (isConnected && (!selected || isVoting || isPending || isConfirming)) ? "not-allowed" : "pointer",
                             transition: "background-color 0.3s ease",
                         }}
                     >
                         {!isHydrated
                             ? "Loading..."
-                            : isCompleted
-                                ? "Voting Completed"
-                                : isUpcoming
-                                    ? countdown
-                                        ? `Voting Starts in ${countdown}`
-                                        : "Voting Coming Soon"
-                                    : !isConnected
-                                        ? "Connect Wallet to Vote"
-                                        : !selected
-                                            ? "Select a Choice to Vote"
-                                            : isVoting || isPending
-                                                ? "Confirming Transaction..."
-                                                : isConfirming
-                                                    ? "Processing Vote..."
-                                                    : "Cast Vote (1000 MATRIX)"}
+                            : isConnecting
+                                ? "Connecting Wallet..."
+                                : isCompleted
+                                    ? "Voting Completed"
+                                    : isUpcoming
+                                        ? countdown
+                                            ? `Voting Starts in ${countdown}`
+                                            : "Voting Coming Soon"
+                                        : !isConnected
+                                            ? "Connect Wallet"
+                                            : !isCorrectNetwork
+                                                ? "Switch Network"
+                                                : !selected
+                                                    ? "Select a Choice to Vote"
+                                                    : isVoting || isPending
+                                                        ? "Confirming Transaction..."
+                                                        : isConfirming
+                                                            ? "Processing Vote..."
+                                                            : "Cast Vote (1000 MATRIX)"}
                     </button>
                 </div>
+
+                {/* Wallet Info für verbundene Wallets */}
+                {isConnected && (
+                    <div
+                        style={{
+                            textAlign: "center",
+                            marginBottom: "16px",
+                            fontSize: "0.7rem",
+                            color: "#4ade80",
+                            fontFamily: "monospace",
+                        }}
+                    >
+                        Wallet Connected
+                        {handleDisconnect && (
+                            <button
+                                onClick={handleDisconnect}
+                                style={{
+                                    marginLeft: "10px",
+                                    backgroundColor: "transparent",
+                                    border: "1px solid #dc2626",
+                                    color: "#dc2626",
+                                    padding: "2px 8px",
+                                    borderRadius: "4px",
+                                    cursor: "pointer",
+                                    fontSize: "0.6rem",
+                                    fontFamily: "monospace",
+                                }}
+                            >
+                                Disconnect
+                            </button>
+                        )}
+                    </div>
+                )}
             </Card>
 
-            {/* Voting Stats - Show for active and completed episodes */}
+            {/* Voting Stats */}
             {(episode.status === 'active' || isCompleted) && (
                 <Card
                     style={{
@@ -439,4 +701,4 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     );
 };
 
-export default VotingSection; 
+export default VotingSection;

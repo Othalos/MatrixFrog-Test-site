@@ -44,8 +44,6 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
   const [tokenBalance, setTokenBalance] = useState<string>("0");
- // const [tokenError, setTokenError] = useState(false);
-  const [networkError, setNetworkError] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
   const { connect } = useConnect();
@@ -54,7 +52,6 @@ export default function Navbar() {
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   const [isHoveringAddress, setIsHoveringAddress] = useState(false);
-  const [showWarning, setShowWarning] = useState(false);
 
   // Check if we're on the correct network
   const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
@@ -149,16 +146,6 @@ export default function Navbar() {
     window.addEventListener("resize", checkIfMobile);
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
-
-  // Handle network changes
-  useEffect(() => {
-    if (isConnected && !isCorrectNetwork) {
-      setNetworkError(true);
-      setTokenBalance("0");
-    } else {
-      setNetworkError(false);
-    }
-  }, [isConnected, isCorrectNetwork]);
 
   // Toggle mobile menu
   const toggleMenu = () => {
@@ -256,7 +243,6 @@ export default function Navbar() {
     disconnect();
     setWalletConnected(false);
     setTokenBalance("0");
-    setNetworkError(false);
   };
 
   // Handle network switch button click
@@ -288,51 +274,16 @@ export default function Navbar() {
     updateBalance();
   }, [balanceData, decimalsData, isCorrectNetwork]);
 
-  // Handle Construct link click
+  // Handle Construct link click - WALLET WALL ENTFERNT
   const handleConstructClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isConnected) {
-      setShowWarning(true);
-      setTimeout(() => setShowWarning(false), 3000);
-      return;
-    }
-    if (!isCorrectNetwork) {
-      setNetworkError(true);
-      setTimeout(() => setNetworkError(false), 3000);
-      return;
-    }
-   // if (Number(tokenBalance.replace(/,/g, "")) < 0.001) {
-   //   setTokenError(true);
-   //   setTimeout(() => setTokenError(false), 2000);
-   //  return;
-   // }
+    // Alle Wallet- und Token-Checks entfernt - direkter Zugang
     window.location.href = "/construct";
   };
 
   return (
     <>
       <style jsx>{`
-        .warning-animation {
-          animation: fadeInOut 3s ease-in-out;
-        }
-        @keyframes fadeInOut {
-          0% {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          10% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          90% {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-        }
         .network-indicator {
           padding: 4px 8px;
           border-radius: 4px;
@@ -368,34 +319,16 @@ export default function Navbar() {
                 <div className="nav-items">
                   <NavLink href={getNavLink("about")} label="About" />
                   <div className="divider">|</div>
-                  {/* <NavLink href={getNavLink("buybot")} label="BuyBot" /> */}
                   <NavLink href={getNavLink("buybot")} label="PepTrix" />
                   <div className="divider">|</div>
                   <NavLink href="/migration-protocol" label="Treasury" />
                   <div className="divider">|</div>
-                  <div className="relative">
-                    <NavLink
-                      href=""
-                      label="Construct"
-                      onClick={handleConstructClick}
-                    />
-                    {showWarning && !isConnected && (
-                      <span className="absolute text-[var(--matrix-red)] text-xs mt-1 left-0 right-0 text-center warning-animation">
-                        Please connect wallet
-                      </span>
-                    )}
-                    {networkError && isConnected && !isCorrectNetwork && (
-                      <span className="absolute text-[var(--matrix-red)] text-xs mt-1 left-0 right-0 text-center warning-animation">
-                        Switch to Pepe Unchained
-                      </span>
-                    )}
-                    {/* add tokenError && in front of isConnected */}
-                    {isConnected && isCorrectNetwork && (
-                      <span className="absolute text-[var(--matrix-red)] text-xs mt-1 left-0 right-0 text-center warning-animation">
-                        MFG Token is less then 100000
-                      </span>
-                    )}
-                  </div>
+                  {/* Construct Link - OHNE WALLET WALL */}
+                  <NavLink
+                    href=""
+                    label="Construct"
+                    onClick={handleConstructClick}
+                  />
                   <div className="divider">|</div>
                   <NavLink href={getNavLink("roadmap")} label="Roadmap" />
                 </div>
