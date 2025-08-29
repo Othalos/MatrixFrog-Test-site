@@ -52,8 +52,21 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
         greenPathDescription: "The Green Path: Answer the call? maybe you can get some answers to these visions.",
         videoUrl: "https://www.youtube.com/embed/Zmvv1Jr5Zmc"
     },
+     {
+         id: "episode-3",
+         title: "Episode 3: Life's Lessons",
+         status: "upcoming",
+         votingStartDate: new Date("2024-02-01"),
+         votingEndDate: new Date("2024-02-08"),
+         redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
+         greenWalletAddress: "0x81D1851281d12733DCF175A3476FD1f1B245aE53",
+         description: "The battle for reality reaches its climax as forces beyond comprehension clash in the ultimate showdown. The fate of consciousness itself hangs in the balance as our protagonist must make the final choice that will determine not just their own destiny, but the destiny of all who have been touched by this extraordinary journey.",
+         redPathDescription: "The Red Path: Stand against the system and fight for human consciousness.",
+         greenPathDescription: "The Green Path: Evolve beyond the conflict and find harmony in the new reality.",
+         videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs"
+     } 
     // {
-    //     id: "episode-3",
+    //     id: "episode-4",
     //     title: "Episode 3: The Resistance",
     //     status: "upcoming",
     //     votingStartDate: new Date("2024-02-01"),
