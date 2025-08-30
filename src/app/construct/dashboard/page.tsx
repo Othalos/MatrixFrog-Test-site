@@ -244,8 +244,9 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
   });
 };
 
+//Manually update episode on line 249 and 288
 export default function MatrixConstruct() {
-  const [selectedEpisode, setSelectedEpisode] = useState("episode-1");
+  const [selectedEpisode, setSelectedEpisode] = useState("episode-2");
   const [selectedBlooper, setSelectedBlooper] = useState("blooper-1");
   const [selected, setSelected] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("saga");
@@ -284,7 +285,7 @@ export default function MatrixConstruct() {
     totalVotes,
     isLoading: votingStatsLoading,
     refetch: refetchVotingStats,
-  } = useVotingWalletBalances(selectedEpisode || "episode-1");
+  } = useVotingWalletBalances(selectedEpisode || "episode-2");
 
   const {
     writeContract,
@@ -536,6 +537,7 @@ export default function MatrixConstruct() {
       return;
     }
 
+    //Adjust MFG amount to be used here
     const requiredAmount = parseEther("1000");
     if (!rawMfgBalance && (rawMfgBalance as bigint) < requiredAmount) {
       setVoteError(
