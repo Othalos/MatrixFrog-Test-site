@@ -30,7 +30,7 @@ export default function BuyBotSection() {
           Dive into the first episode of the Peptrix series, <b>Flying Dreams</b>, and begin shaping your reality!
         </p>
         <p className="text-white leading-relaxed mb-4">
-          If you want to view past episodes and bloopers then head over to your YouTube channel:
+          If you want to view past episodes and bloopers then head over to our YouTube channel:
           <a href="https://www.youtube.com/@MatrixFrog" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">@MatrixFrog</a>.
         </p>
       </div>
