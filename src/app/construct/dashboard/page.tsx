@@ -594,14 +594,14 @@ export default function MatrixConstruct() {
 
   const blooperVideos = [
     {
-      value: "blooper-1",
-      title: "Blooper 1: First Episode Bloopers",
+      value: "blooper-2",
+      title: "Blooper 2: Second Episode Bloopers",
       src: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1",
     },
     {
-      value: "blooper-2",
-      title: "Blooper 2: Second Episode Bloopers",
-      scr: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1",
+      value: "blooper-1",
+      title: "Blooper 1: First Episode Bloopers",
+      scr: "https://www.youtube.com/embed/54CTSANSdUU?enablejsapi=1",
     },
   ];
 
