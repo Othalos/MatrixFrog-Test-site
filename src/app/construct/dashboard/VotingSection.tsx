@@ -193,7 +193,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 fontFamily: "monospace",
                             }}
                         >
-                            1000 MFG required per vote
+                            25000 MFG required per vote
                         </div>
                     </div>
                 )}
@@ -287,7 +287,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                1000 MatrixFrog required to vote
+                                25000 MatrixFrog required to vote
                             </p>
                         )}
                     </div>
@@ -372,7 +372,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                1000 MatrixFrog required to vote
+                                25000 MatrixFrog required to vote
                             </p>
                         )}
                     </div>
@@ -391,7 +391,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             fontFamily: "monospace",
                         }}
                     >
-                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! 1000 MATRIX transferred.
+                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! 25000 MATRIX transferred.
                     </div>
                 )}
 
@@ -602,7 +602,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                                         ? "Confirming Transaction..."
                                                         : isConfirming
                                                             ? "Processing Vote..."
-                                                            : "Cast Vote (1000 MATRIX)"}
+                                                            : "Cast Vote (25000 MATRIX)"}
                     </button>
                 </div>
 
