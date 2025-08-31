@@ -137,8 +137,8 @@ const useVotingWalletBalances = (episodeId: string) => {
   }
 
   // Calculate current vote counts from wallet balances
-  const currentRedVotes = redPillBalance ? Number(formatUnits(redPillBalance as bigint, 18)) / 1000 : 0;
-  const currentGreenVotes = greenPillBalance ? Number(formatUnits(greenPillBalance as bigint, 18)) / 1000 : 0;
+  const currentRedVotes = redPillBalance ? Number(formatUnits(redPillBalance as bigint, 18)) / 25000 : 0;
+  const currentGreenVotes = greenPillBalance ? Number(formatUnits(greenPillBalance as bigint, 18)) / 25000 : 0;
   const currentTotalVotes = currentRedVotes + currentGreenVotes;
 
   // For completed episodes, use static results from episode config
@@ -384,8 +384,8 @@ export default function MatrixConstruct() {
           metadata: {
             name: 'MatrixFrog',
             description: 'MatrixFrog Voting Platform',
-            url: 'https://matrixfrog.com',
-            icons: ['https://matrixfrog.com/favicon.ico']
+            url: 'https://matrixfrog.one',
+            icons: ['https://matrixfrog.one/favicon.ico']
           }
         }),
       });
@@ -538,10 +538,10 @@ export default function MatrixConstruct() {
     }
 
     //Adjust MFG amount to be used here
-    const requiredAmount = parseEther("1000");
+    const requiredAmount = parseEther("25000");
     if (!rawMfgBalance && (rawMfgBalance as bigint) < requiredAmount) {
       setVoteError(
-        "Insufficient MFG balance. You need at least 1000 MFG to vote."
+        "Insufficient MFG balance. You need at least 25000 MFG to vote."
       );
       return;
     }
@@ -601,7 +601,7 @@ export default function MatrixConstruct() {
     {
       value: "blooper-2",
       title: "Blooper 2: Second Episode Bloopers",
-      scr: "https://www.youtube.com/embed/si7PIkactfk",
+      scr: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1",
     },
   ];
 
