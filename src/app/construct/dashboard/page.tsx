@@ -247,7 +247,7 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
 //Manually update episode on line 249 and 288
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-2");
-  const [selectedBlooper, setSelectedBlooper] = useState("blooper-1");
+  const [selectedBlooper, setSelectedBlooper] = useState("blooper-2");
   const [selected, setSelected] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState("saga");
   const [videoError, setVideoError] = useState<string | null>(null);
