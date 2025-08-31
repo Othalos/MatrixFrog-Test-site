@@ -596,7 +596,7 @@ export default function MatrixConstruct() {
     {
       value: "blooper-1",
       title: "Blooper 1: First Episode Bloopers",
-      src: "https://www.youtube.com/embed/54CTSANSdUU?enablejsapi=1",
+      src: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1",
     },
     {
       value: "blooper-2",
