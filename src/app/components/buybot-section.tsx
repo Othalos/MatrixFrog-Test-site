@@ -29,13 +29,17 @@ export default function BuyBotSection() {
         <p className="text-white leading-relaxed mb-4">
           Dive into the first episode of the Peptrix series, <b>Flying Dreams</b>, and begin shaping your reality!
         </p>
+        <p className="text-white leading-relaxed mb-4">
+          If you want to view past episodes and bloopers then head over to your YouTube channel:
+          <a href="https://www.youtube.com/@MatrixFrog" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">@MatrixFrog</a>.
+        </p>
       </div>
     ),
     how: (
       <div className="terminal-text-container">
         <h3 className="text-matrix-green font-bold text-xl mb-4">How to Participate</h3>
         <p className="text-white leading-relaxed mb-4">
-          To unlock the Construct and participate, you&apos;ll need to hold at least <b>100,000 MatrixFrog</b>.
+          To participate in choosing the path of the next episode, you&apos;ll need to hold at least <b>25,000 MatrixFrog</b>.
         </p>
         <p className="text-white leading-relaxed mb-4">
           You can acquire MatrixFrog by swapping Pepe Unchained on their website. Just copy the MatrixFrog Contract Address below and paste it into the swap function at:
