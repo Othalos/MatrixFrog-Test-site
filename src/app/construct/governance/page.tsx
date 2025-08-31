@@ -410,7 +410,7 @@ export default function MatrixConstruct() {
                                             fontFamily: "monospace",
                                         }}
                                     >
-                                        1000 MatrixFrog required to vote
+                                        25000 MatrixFrog required to vote
                                     </p>
                                 )}
                             </div>
@@ -464,7 +464,7 @@ export default function MatrixConstruct() {
                                             fontFamily: "monospace",
                                         }}
                                     >
-                                        1000 MatrixFrog required to vote
+                                        25000 MatrixFrog required to vote
                                     </p>
                                 )}
                             </div>
