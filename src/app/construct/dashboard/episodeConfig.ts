@@ -44,7 +44,7 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
         title: "Episode 2: Calling Card",
         status: "active",
         votingStartDate: new Date("2025-09-01"),
-        votingEndDate: new Date("2025-09-08"),
+        votingEndDate: new Date("2025-09-12"),
         redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
         greenWalletAddress: "0x81D1851281d12733DCF175A3476FD1f1B245aE53",
         description: "Pax's strange visions of frogs won't go away. As he goes about his normal day, a series of bizarre coincidences and amphibious events leave him questioning what's real. When a familiar face and a mysterious note from Lily force a choice, Pax must decide: embrace his human reality, or leap into the unknown. The time has come to choose... red or green?",
