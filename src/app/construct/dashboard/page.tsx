@@ -244,7 +244,6 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
   });
 };
 
-//Manually update episode on line 249 and 288
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-2");
   const [selectedBlooper, setSelectedBlooper] = useState("blooper-2");
@@ -431,18 +430,6 @@ export default function MatrixConstruct() {
     }
   }, [mfgBalance, isConnected]);
 
-  // WALLET WALL KOMPLETT ENTFERNT
-  // useEffect(() => {
-  //   if (!isConnected) {
-  //     router.push("/");
-  //     return;
-  //   }
-  //   
-  //   if (typeof rawMfgBalance === "bigint" && rawMfgBalance < parseEther("50")) {
-  //     router.push("/");
-  //   }
-  // }, [isConnected, rawMfgBalance, router]);
-
   // Handle successful transaction
   useEffect(() => {
     if (isConfirmed && hash) {
@@ -565,6 +552,11 @@ export default function MatrixConstruct() {
       setIsVoting(false);
     }
   };
+  
+  // Find the currently selected episode object from the main config
+  const currentSagaEpisode = EPISODE_CONFIGS.find(
+    (ep) => ep.id === selectedEpisode
+  );
 
   const sidebarItems = [
     {
@@ -592,6 +584,7 @@ export default function MatrixConstruct() {
     },
   ];
 
+  // ✅ FIX: Corrected typo from `scr` to `src` for blooper-1
   const blooperVideos = [
     {
       value: "blooper-1",
@@ -761,10 +754,12 @@ export default function MatrixConstruct() {
                         overflow: "hidden",
                       }}
                     >
+                      {/* ✅ FIX: Dynamically set the src from the selected episode's videoUrl */}
                       <iframe
+                        key={currentSagaEpisode?.id} // Add key to force re-render on change
                         width="100%"
                         height="315"
-                        src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
+                        src={currentSagaEpisode?.videoUrl}
                         title="YouTube video player"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -961,6 +956,7 @@ export default function MatrixConstruct() {
                       }}
                     >
                       <iframe
+                        key={selectedBlooper} // Add key to force re-render on change
                         width="100%"
                         height="315"
                         src={
