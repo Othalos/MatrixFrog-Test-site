@@ -2,6 +2,7 @@
 import { Progress } from "@/app/components/ui/progress";
 import { BarChart3, FileVideo, User } from "lucide-react";
 import { useEffect, useState } from "react";
+import { DatabaseZap } from "lucide-react"; // Import a new icon
 import {
   Card,
   CardContent,
@@ -581,6 +582,15 @@ export default function MatrixConstruct() {
       href: "#",
       active: activeSection === "bloopers",
       onClick: () => setActiveSection("bloopers"),
+    },
+    // New Staking Tab
+    {
+      icon: DatabaseZap, // Or any other icon you prefer
+      label: "Staking",
+      subtitle: "Earn PTX rewards",
+      href: "#",
+      active: activeSection === "staking",
+      onClick: () => setActiveSection("staking"),
     },
   ];
 
