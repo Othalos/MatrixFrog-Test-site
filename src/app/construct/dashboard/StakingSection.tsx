@@ -36,7 +36,7 @@ const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const PTX_TOKEN_ADDRESS = "0x30aa9CB881E3cBf90184445995C605A668d2Cd569";
 
-const POOL_ID = 0; // The first pool you created is ID 0
+const POOL_ID = 0;
 
 // Helper to format numbers with commas and decimals
 const formatNumber = (value: string | number, decimals: number = 2) => {
@@ -109,7 +109,6 @@ export default function StakingSection() {
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-  // Refetch data after a successful transaction
   useEffect(() => {
     if (isConfirmed) {
       setNotification({ message: 'Transaction confirmed!', type: 'success' });
@@ -119,7 +118,7 @@ export default function StakingSection() {
       refetchAllowance();
       setTimeout(() => setNotification(null), 5000);
     }
-  }, [isConfirmed]);
+  }, [isConfirmed, refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance]);
 
   // --- FORMATTED VALUES ---
   const mfgBalance = mfgBalanceData ? formatUnits(mfgBalanceData as bigint, 18) : "0";
@@ -137,7 +136,7 @@ export default function StakingSection() {
       address: MFG_TOKEN_ADDRESS,
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [STAKING_CONTRACT_ADDRESS, maxUint256] // Approve a large amount for convenience
+      args: [STAKING_CONTRACT_ADDRESS, maxUint256]
     });
   };
 
@@ -249,12 +248,12 @@ export default function StakingSection() {
               >
                 {isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
               </button>
-              {needsApproval && 
+              {needsApproval && (
                 <div className="flex items-center text-xs text-yellow-400 space-x-2">
                     <Info size={16}/>
                     <span>Approval required before staking. This is a one-time transaction (or until revoked).</span>
                 </div>
-              }
+              )}
             </div>
           ) : (
             <div className="space-y-4 text-center">
