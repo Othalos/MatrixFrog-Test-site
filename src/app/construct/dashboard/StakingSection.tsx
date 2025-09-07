@@ -223,12 +223,12 @@ export default function StakingSection() {
                 <p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p>
               </div>
               <button
-                onClick={handleUnstake}
-                disabled={isLoading || parseFloat(userStakedAmount) <= 0}
-                className="w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              
-                {isLoading ? 'Processing...' : 'Unstake All MFG'}
-              /button>
+                onClick={needsApproval ? handleApprove : handleStake}
+                disabled={isStakeButtonDisabled}
+                className="w-full px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+               {isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
+              </button>
             </div>
           )}
         </div>
