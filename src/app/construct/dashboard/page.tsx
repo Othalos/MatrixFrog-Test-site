@@ -61,10 +61,18 @@ const ERC20_ABI = [
   },
 ];
 
+const formatTokenBalance = (balance: bigint, decimals = 18) => {
+  const tokenAmount = formatUnits(balance, decimals);
+  const numericValue = parseFloat(tokenAmount);
+  return numericValue.toLocaleString("en-US", {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  });
+};
+
 // Custom hook for MFG balance
 const useMFGBalance = () => {
   const { address, isConnected } = useAccount();
-
   const {
     data: balance,
     error,
@@ -77,11 +85,7 @@ const useMFGBalance = () => {
     args: address ? [address] : undefined,
     account: isConnected && address ? address : undefined,
   });
-
-  const formattedBalance = balance
-    ? formatTokenBalance(balance as bigint, 18)
-    : "0";
-
+  const formattedBalance = balance ? formatTokenBalance(balance as bigint, 18) : "0";
   return {
     balance: formattedBalance,
     rawBalance: balance,
@@ -91,12 +95,9 @@ const useMFGBalance = () => {
   };
 };
 
-// Custom hook for voting wallet balances (Hybrid System)
+// Custom hook for voting wallet balances
 const useVotingWalletBalances = (episodeId: string) => {
-  // Get episode configuration first
   const episode = getEpisodeStatus(episodeId);
-
-  // Use episode-specific wallet addresses or defaults
   const redWalletAddress = episode?.redWalletAddress || "0x811e9Bceeab4D26Af545E1039dc37a32100570d3";
   const greenWalletAddress = episode?.greenWalletAddress || "0x81D1851281d12733DCF175A3476FD1f1B245aE53";
 
@@ -122,114 +123,61 @@ const useVotingWalletBalances = (episodeId: string) => {
     args: [greenWalletAddress],
   });
 
-  // Handle edge cases
   if (!episodeId || !episode) {
     return {
-      redPillVotes: 0,
-      greenPillVotes: 0,
-      totalVotes: 0,
-      redPillBalance: "0",
-      greenPillBalance: "0",
-      isLoading: false,
-      refetch: () => {
-        refetchRedPill();
-        refetchGreenPill();
-      },
+      redPillVotes: 0, greenPillVotes: 0, totalVotes: 0, redPillBalance: "0", greenPillBalance: "0", isLoading: false,
+      refetch: () => { refetchRedPill(); refetchGreenPill(); },
     };
   }
 
-  // Calculate current vote counts from wallet balances
   const currentRedVotes = redPillBalance ? Number(formatUnits(redPillBalance as bigint, 18)) / 25000 : 0;
   const currentGreenVotes = greenPillBalance ? Number(formatUnits(greenPillBalance as bigint, 18)) / 25000 : 0;
   const currentTotalVotes = currentRedVotes + currentGreenVotes;
 
-  // For completed episodes, use static results from episode config
   if (episode.status === 'completed') {
-    // Check if episode has static voting results defined
     if (episode.redVotes !== undefined && episode.greenVotes !== undefined && episode.totalVotes !== undefined) {
       return {
-        redPillVotes: episode.redVotes,
-        greenPillVotes: episode.greenVotes,
-        totalVotes: episode.totalVotes,
+        redPillVotes: episode.redVotes, greenPillVotes: episode.greenVotes, totalVotes: episode.totalVotes,
         redPillBalance: redPillBalance ? formatTokenBalance(redPillBalance as bigint, 18) : "0",
         greenPillBalance: greenPillBalance ? formatTokenBalance(greenPillBalance as bigint, 18) : "0",
-        isLoading: false,
-        refetch: () => {
-          refetchRedPill();
-          refetchGreenPill();
-        },
+        isLoading: false, refetch: () => { refetchRedPill(); refetchGreenPill(); },
       };
     }
-
-    // Fallback to cached results if no static results
     const cachedResults = typeof window !== 'undefined' ? getCachedVotingResults(episodeId) : null;
-
     if (cachedResults) {
       return {
-        redPillVotes: cachedResults.redVotes,
-        greenPillVotes: cachedResults.greenVotes,
-        totalVotes: cachedResults.totalVotes,
+        redPillVotes: cachedResults.redVotes, greenPillVotes: cachedResults.greenVotes, totalVotes: cachedResults.totalVotes,
         redPillBalance: redPillBalance ? formatTokenBalance(redPillBalance as bigint, 18) : "0",
         greenPillBalance: greenPillBalance ? formatTokenBalance(greenPillBalance as bigint, 18) : "0",
-        isLoading: redPillLoading || greenPillLoading,
-        refetch: () => {
-          refetchRedPill();
-          refetchGreenPill();
-        },
+        isLoading: redPillLoading || greenPillLoading, refetch: () => { refetchRedPill(); refetchGreenPill(); },
       };
     } else {
       const finalRedVotes = Math.floor(currentRedVotes);
       const finalGreenVotes = Math.floor(currentGreenVotes);
-      const finalTotalVotes = Math.floor(currentTotalVotes);
-
-      if (typeof window !== 'undefined') {
-        finalizeVotingResults(episodeId, finalRedVotes, finalGreenVotes);
-      }
-
+      if (typeof window !== 'undefined') { finalizeVotingResults(episodeId, finalRedVotes, finalGreenVotes); }
       return {
-        redPillVotes: finalRedVotes,
-        greenPillVotes: finalGreenVotes,
-        totalVotes: finalTotalVotes,
+        redPillVotes: finalRedVotes, greenPillVotes: finalGreenVotes, totalVotes: Math.floor(currentTotalVotes),
         redPillBalance: redPillBalance ? formatTokenBalance(redPillBalance as bigint, 18) : "0",
         greenPillBalance: greenPillBalance ? formatTokenBalance(greenPillBalance as bigint, 18) : "0",
-        isLoading: redPillLoading || greenPillLoading,
-        refetch: () => {
-          refetchRedPill();
-          refetchGreenPill();
-        },
+        isLoading: redPillLoading || greenPillLoading, refetch: () => { refetchRedPill(); refetchGreenPill(); },
       };
     }
   }
 
-  // For active and upcoming episodes, use current wallet balances
   return {
-    redPillVotes: Math.floor(currentRedVotes),
-    greenPillVotes: Math.floor(currentGreenVotes),
-    totalVotes: Math.floor(currentTotalVotes),
+    redPillVotes: Math.floor(currentRedVotes), greenPillVotes: Math.floor(currentGreenVotes), totalVotes: Math.floor(currentTotalVotes),
     redPillBalance: redPillBalance ? formatTokenBalance(redPillBalance as bigint, 18) : "0",
     greenPillBalance: greenPillBalance ? formatTokenBalance(greenPillBalance as bigint, 18) : "0",
-    isLoading: redPillLoading || greenPillLoading,
-    refetch: () => {
-      refetchRedPill();
-      refetchGreenPill();
-    },
+    isLoading: redPillLoading || greenPillLoading, refetch: () => { refetchRedPill(); refetchGreenPill(); },
   };
 };
 
 const getVotingBalances = async (episodeId: string) => {
   const episode = getEpisodeStatus(episodeId);
   if (!episode) return { redVotes: 0, greenVotes: 0 };
-
   try {
     const cachedResults = typeof window !== 'undefined' ? getCachedVotingResults(episodeId) : null;
-
-    if (cachedResults) {
-      return {
-        redVotes: cachedResults.redVotes,
-        greenVotes: cachedResults.greenVotes
-      };
-    }
-
+    if (cachedResults) { return { redVotes: cachedResults.redVotes, greenVotes: cachedResults.greenVotes }; }
     return { redVotes: 0, greenVotes: 0 };
   } catch (error) {
     console.error('Failed to get voting balances:', error);
@@ -237,14 +185,6 @@ const getVotingBalances = async (episodeId: string) => {
   }
 };
 
-const formatTokenBalance = (balance: bigint, decimals = 18) => {
-  const tokenAmount = formatUnits(balance, decimals);
-  const numericValue = parseFloat(tokenAmount);
-  return numericValue.toLocaleString("en-US", {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  });
-};
 
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-2");
@@ -260,16 +200,13 @@ export default function MatrixConstruct() {
 
   const { isConnected, address, chain } = useAccount();
   const router = useRouter();
-  
-  // Wallet Connect functionality
+
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
-  
-  // Check if we're on the correct network
+
   const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
 
-  // Prevent hydration mismatch
   useEffect(() => {
     setIsHydrated(true);
   }, []);
@@ -298,7 +235,6 @@ export default function MatrixConstruct() {
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
 
-  // Function to add Pepe Unchained network to wallet
   const addPepeUnchainedNetwork = async () => {
     try {
       if (typeof window !== "undefined" && window.ethereum) {
@@ -309,14 +245,8 @@ export default function MatrixConstruct() {
               chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
               chainName: "Pepe Unchained Mainnet",
               rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-              nativeCurrency: {
-                name: "PEPE",
-                symbol: "PEPU",
-                decimals: 18,
-              },
-              blockExplorerUrls: [
-                "https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz",
-              ],
+              nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
+              blockExplorerUrls: ["https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz"],
             },
           ],
         });
@@ -329,7 +259,6 @@ export default function MatrixConstruct() {
     }
   };
 
-  // Function to switch to Pepe Unchained network
   const switchToPepeUnchained = async () => {
     try {
       if (switchChain) {
@@ -343,18 +272,10 @@ export default function MatrixConstruct() {
     }
   };
 
-  // Wallet connection handlers für VotingSection
   const connectMetaMask = async () => {
     setIsConnecting(true);
     try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      if (isMobileDevice && typeof window !== 'undefined' && window.ethereum) {
-        await connect({ connector: injected() });
-      } else {
-        await connect({ connector: injected() });
-      }
-
+      await connect({ connector: injected() });
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
@@ -362,9 +283,6 @@ export default function MatrixConstruct() {
     } catch (error) {
       console.error("MetaMask connection failed:", error);
       setIsConnecting(false);
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        alert("Please install MetaMask");
-      }
     }
   };
 
@@ -372,36 +290,19 @@ export default function MatrixConstruct() {
     setIsConnecting(true);
     try {
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
       await connect({
         connector: walletConnect({
-          qrModalOptions: {
-            themeMode: 'dark',
-            themeVariables: {
-              '--wcm-z-index': '9999',
-            }
-          },
           projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
-          metadata: {
-            name: 'MatrixFrog',
-            description: 'MatrixFrog Voting Platform',
-            url: 'https://matrixfrog.one',
-            icons: ['https://matrixfrog.one/favicon.ico']
-          }
+          metadata: { name: 'MatrixFrog', description: 'MatrixFrog Voting Platform', url: 'https://matrixfrog.one', icons: ['https://matrixfrog.one/favicon.ico'] }
         }),
       });
-
-      const networkSwitchDelay = isMobileDevice ? 2000 : 1000;
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
-      }, networkSwitchDelay);
+      }, isMobileDevice ? 2000 : 1000);
     } catch (error) {
       console.error("WalletConnect connection failed:", error);
       setIsConnecting(false);
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        alert("WalletConnect connection failed. Please try again.");
-      }
     }
   };
 
@@ -409,7 +310,6 @@ export default function MatrixConstruct() {
     setIsConnecting(true);
     try {
       await connect({ connector: coinbaseWallet() });
-
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
@@ -425,38 +325,28 @@ export default function MatrixConstruct() {
     setVoteError(null);
   };
 
-  // Update localStorage when MFG balance changes
   useEffect(() => {
     if (mfgBalance && isConnected) {
       window.localStorage.setItem("Mat_bal", mfgBalance);
     }
   }, [mfgBalance, isConnected]);
 
-  // Handle successful transaction
   useEffect(() => {
     if (isConfirmed && hash) {
       setVoteSuccess(true);
       setIsVoting(false);
       setVoteError(null);
-
-      // Refresh voting stats and user balance
       refetchBalance();
       refetchVotingStats();
-
-      setTimeout(() => {
-        setVoteSuccess(false);
-      }, 5000);
+      setTimeout(() => { setVoteSuccess(false); }, 5000);
     }
   }, [isConfirmed, hash, refetchBalance, refetchVotingStats]);
 
-  // Handle transaction error
   useEffect(() => {
     if (writeError) {
       setVoteError(writeError.message);
       setIsVoting(false);
-      setTimeout(() => {
-        setVoteError(null);
-      }, 5000);
+      setTimeout(() => { setVoteError(null); }, 5000);
     }
   }, [writeError]);
 
@@ -464,46 +354,28 @@ export default function MatrixConstruct() {
     const checkVotingEnd = async () => {
       try {
         const results = await checkAndAutoFinalizeAllEpisodes(
-          async (episodeId) => {
-            const balances = await getVotingBalances(episodeId);
-            return balances.redVotes;
-          },
-          async (episodeId) => {
-            const balances = await getVotingBalances(episodeId);
-            return balances.greenVotes;
-          }
+          async (episodeId) => (await getVotingBalances(episodeId)).redVotes,
+          async (episodeId) => (await getVotingBalances(episodeId)).greenVotes
         );
-
-        if (results.length > 0) {
-          console.log('Auto-finalized episodes:', results);
-          refetchVotingStats();
-        }
+        if (results.length > 0) { refetchVotingStats(); }
       } catch (error) {
         console.error('Failed to check voting end:', error);
       }
     };
-
     checkVotingEnd();
-
     const interval = setInterval(checkVotingEnd, 60000);
-
     return () => clearInterval(interval);
   }, [refetchVotingStats]);
 
   useEffect(() => {
     const episode = getEpisodeStatus(selectedEpisode);
     if (!episode || episode.status !== 'active') return;
-
     const now = new Date();
-    const votingEndDate = episode.votingEndDate;
-
-    if (votingEndDate && now > votingEndDate) {
+    if (episode.votingEndDate && now > episode.votingEndDate) {
       const finalRedVotes = Math.floor(redPillVotes);
       const finalGreenVotes = Math.floor(greenPillVotes);
-
       if (finalRedVotes > 0 || finalGreenVotes > 0) {
         finalizeVotingResults(selectedEpisode, finalRedVotes, finalGreenVotes);
-        console.log(`Voting period ended for ${selectedEpisode}. Results cached.`);
         refetchVotingStats();
       }
     }
@@ -514,34 +386,25 @@ export default function MatrixConstruct() {
       setVoteError("Please connect your wallet first to vote");
       return;
     }
-
     if (!selected) {
       setVoteError("Please select a pill option first");
       return;
     }
-
     const episode = getEpisodeStatus(selectedEpisode);
     if (!episode || episode.status !== 'active') {
       setVoteError("Voting is not active for this episode");
       return;
     }
-
-    //Adjust MFG amount to be used here
     const requiredAmount = parseEther("25000");
-    if (!rawMfgBalance && (rawMfgBalance as bigint) < requiredAmount) {
-      setVoteError(
-        "Insufficient MFG balance. You need at least 25000 MFG to vote."
-      );
+    if (!rawMfgBalance || (rawMfgBalance as bigint) < requiredAmount) {
+      setVoteError("Insufficient MFG balance. You need at least 25000 MFG to vote.");
       return;
     }
-
     try {
       setIsVoting(true);
       setVoteError(null);
       setVoteSuccess(false);
-
       const receiverAddress = selected === "red" ? episode.redWalletAddress : episode.greenWalletAddress;
-
       await writeContract({
         address: MFG_TOKEN_ADDRESS,
         abi: ERC20_ABI,
@@ -554,66 +417,23 @@ export default function MatrixConstruct() {
       setIsVoting(false);
     }
   };
-  
-  // Find the currently selected episode object from the main config
-  const currentSagaEpisode = EPISODE_CONFIGS.find(
-    (ep) => ep.id === selectedEpisode
-  );
+
+  const currentSagaEpisode = EPISODE_CONFIGS.find((ep) => ep.id === selectedEpisode);
 
   const sidebarItems = [
-    {
-      icon: BarChart3,
-      label: "Dashboard",
-      subtitle: "Main control center",
-      href: "/",
-      active: false,
-    },
-    //Peptrix Saga
-    {
-      icon: User,
-      label: "The Peptrix Saga",
-      subtitle: "Interactive story",
-      href: "#",
-      active: activeSection === "saga",
-      onClick: () => setActiveSection("saga"),
-    },
-    //Blooper Section
-    {
-      icon: FileVideo,
-      label: "Bloopers",
-      subtitle: "Explore scene",
-      href: "#",
-      active: activeSection === "bloopers",
-      onClick: () => setActiveSection("bloopers"),
-    },
-    // Staking Section
-    {
-      icon: Database,
-      label: "Staking",
-      subtitle: "Stake MFG, earn PTX",
-      href: "#",
-      active: activeSection === "staking",
-      onClick: () => setActiveSection("staking"),
-    },
+    { icon: BarChart3, label: "Dashboard", subtitle: "Main control center", href: "/", active: false },
+    { icon: User, label: "The Peptrix Saga", subtitle: "Interactive story", href: "#", active: activeSection === "saga", onClick: () => setActiveSection("saga") },
+    { icon: FileVideo, label: "Bloopers", subtitle: "Explore scene", href: "#", active: activeSection === "bloopers", onClick: () => setActiveSection("bloopers") },
+    { icon: Database, label: "Staking", subtitle: "Stake MFG, earn PTX", href: "#", active: activeSection === "staking", onClick: () => setActiveSection("staking") },
   ];
 
   const blooperVideos = [
-    {
-      value: "blooper-1",
-      title: "Blooper 1: First Episode Bloopers",
-      src: "https://www.youtube.com/embed/54CTSANSdUU?enablejsapi=1",
-    },
-    {
-      value: "blooper-2",
-      title: "Blooper 2: Second Episode Bloopers",
-      src: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1",
-    },
+    { value: "blooper-1", title: "Blooper 1: First Episode Bloopers", src: "https://www.youtube.com/embed/54CTSANSdUU?enablejsapi=1" },
+    { value: "blooper-2", title: "Blooper 2: Second Episode Bloopers", src: "https://www.youtube.com/embed/si7PIkactfk?enablejsapi=1" },
   ];
 
   const handleVideoError = () => {
-    setVideoError(
-      "Failed to load video. The video may not be embeddable or there was a connection issue."
-    );
+    setVideoError("Failed to load video. The video may not be embeddable or there was a connection issue.");
   };
 
   return (
@@ -687,6 +507,7 @@ export default function MatrixConstruct() {
           </div>
         </div>
       </header>
+
       <div style={{ display: "flex" }} className="construct-dashboard">
         {/* Sidebar */}
         <div
@@ -745,305 +566,123 @@ export default function MatrixConstruct() {
 
         {/* Main Content */}
         <main style={{ flex: 1, padding: "24px" }} className="construct-main">
-  {activeSection === "saga" ? (
-    <>
-      {/* Video Player Section */}
-      <div style={{ marginBottom: "24px" }}>
-        <Card
-          style={{
-            backgroundColor: "black",
-            border: "1px solid rgba(34,197,94,0.3)",
-          }}
-        >
-          <CardContent style={{ padding: "32px", textAlign: "center" }}>
-            <div
-              className="video-container"
-              style={{
-                width: "100%",
-                margin: "0 auto",
-                border: "2px solid #22c55e",
-                borderRadius: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <iframe
-                key={currentSagaEpisode?.id}
-                width="100%"
-                height="315"
-                src={currentSagaEpisode?.videoUrl}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                style={{ display: "block" }}
-                onError={handleVideoError}
-              ></iframe>
-              {videoError && (
-                <p
-                  style={{
-                    color: "#dc2626",
-                    fontSize: "0.875rem",
-                    marginTop: "8px",
-                  }}
-                >
-                  {videoError}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {activeSection === "saga" ? (
+            <>
+              <div style={{ marginBottom: "24px" }}>
+                <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+                  <CardContent style={{ padding: "32px", textAlign: "center" }}>
+                    <div className="video-container" style={{ width: "100%", margin: "0 auto", border: "2px solid #22c55e", borderRadius: "8px", overflow: "hidden" }}>
+                      <iframe
+                        key={currentSagaEpisode?.id} width="100%" height="315" src={currentSagaEpisode?.videoUrl}
+                        title="YouTube video player" frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen style={{ display: "block" }} onError={handleVideoError}
+                      ></iframe>
+                      {videoError && <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "8px" }}>{videoError}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-      {/* Episode Selection and other Saga content... */}
-      <div style={{ marginBottom: "24px" }}>
-        <Select
-          value={selectedEpisode}
-          onValueChange={setSelectedEpisode}
-        >
-          <SelectTrigger
-            style={{
-              width: "100%",
-              backgroundColor: "black",
-              border: "1px solid rgba(34,197,94,0.3)",
-              color: "#4ade80",
-            }}
-          >
-            <SelectValue placeholder="Select Episode" />
-          </SelectTrigger>
-          <SelectContent
-            style={{
-              backgroundColor: "black",
-              border: "1px solid rgba(34,197,94,0.3)",
-            }}
-          >
-            {EPISODE_CONFIGS.map((episode) => (
-              <SelectItem
-                key={episode.id}
-                value={episode.id}
-                style={{
-                  color: "#4ade80",
-                  paddingTop: "4px",
-                  paddingBottom: "4px",
-                }}
-              >
-                {episode.title}{" "}
-                {episode.status === "completed"
-                  ? "✅"
-                  : episode.status === "active"
-                  ? "🔄"
-                  : "⏳"}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      {/* ... Other Saga components like Story and Voting Section go here ... */}
-      <Card
-        style={{
-          backgroundColor: "black",
-          border: "1px solid rgba(34,197,94,0.3)",
-          marginBottom: "24px",
-        }}
-      >
-        <CardHeader>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              paddingLeft: "16px",
-              paddingRight: "16px",
-            }}
-          >
-            <CardTitle style={{ color: "#4ade80" }}>
-              The Peptrix Saga (Active) - Episode 2 - Calling Card
-            </CardTitle>
-            <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>
-              20%
-            </span>
-          </div>
-          <div
-            style={{
-              fontSize: "0.75rem",
-              color: "#16a34a",
-              marginBottom: "8px",
-              paddingLeft: "16px",
-              paddingRight: "16px",
-            }}
-          >
-            Story Progress
-          </div>
-          <Progress
-            value={20}
-            style={{
-              height: "4px",
-              backgroundColor: "#065f46",
-              width: "98%",
-              margin: "0 auto",
-            }}
-          />
-        </CardHeader>
-        <CardContent>
-          <p
-            style={{
-              fontSize: "0.8rem",
-              color: "#86efac",
-              lineHeight: "1.6",
-              paddingLeft: "16px",
-              paddingRight: "16px",
-            }}
-          >
-            {(() => {
-              const episode = getEpisodeStatus(
-                selectedEpisode || "episode-2"
-              );
-              return (
-                episode?.description || "Episode description not available."
-              );
-            })()}
-          </p>
-        </CardContent>
-      </Card>
-      
-      {(() => {
-        const episode = getEpisodeStatus(selectedEpisode || "episode-2");
-        if (!episode) {
-          return (
-            <Card
-              style={{
-                backgroundColor: "black",
-                border: "1px solid rgba(34,197,94,0.3)",
-                padding: "16px",
-                textAlign: "center",
-              }}
-            >
-              <p style={{ color: "#4ade80" }}>
-                Episode not found. Please select a valid episode.
-              </p>
-            </Card>
-          );
-        }
-        return (
-          <VotingSection
-            episode={episode}
-            selected={selected}
-            setSelected={setSelected}
-            isVoting={isVoting}
-            voteSuccess={voteSuccess}
-            voteError={voteError}
-            isHydrated={isHydrated}
-            isConnected={isConnected}
-            isPending={isPending}
-            isConfirming={isConfirming}
-            onVote={handleVote}
-            redPillVotes={redPillVotes}
-            greenPillVotes={greenPillVotes}
-            totalVotes={totalVotes}
-            votingStatsLoading={votingStatsLoading}
-            isConnecting={isConnecting}
-            isCorrectNetwork={isCorrectNetwork}
-            connectMetaMask={connectMetaMask}
-            connectWalletConnect={connectWalletConnect}
-            connectCoinbase={connectCoinbase}
-            handleDisconnect={handleDisconnect}
-            switchToPepeUnchained={switchToPepeUnchained}
-            mfgBalance={mfgBalance}
-          />
-        );
-      })()}
-    </>
-  ) : activeSection === "bloopers" ? (
-    <>
-      {/* Bloopers Section */}
-      <div style={{ marginBottom: "24px" }}>
-        <Card
-          style={{
-            backgroundColor: "black",
-            border: "1px solid rgba(34,197,94,0.3)",
-          }}
-        >
-          <CardContent style={{ padding: "32px", textAlign: "center" }}>
-            <div
-              className="video-container"
-              style={{
-                width: "100%",
-                margin: "0 auto",
-                border: "2px solid #22c55e",
-                borderRadius: "8px",
-                overflow: "hidden",
-              }}
-            >
-              <iframe
-                key={selectedBlooper}
-                width="100%"
-                height="315"
-                src={
-                  blooperVideos.find((b) => b.value === selectedBlooper)
-                    ?.src
+              <div style={{ marginBottom: "24px" }}>
+                <Select value={selectedEpisode} onValueChange={setSelectedEpisode}>
+                  <SelectTrigger style={{ width: "100%", backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}>
+                    <SelectValue placeholder="Select Episode" />
+                  </SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+                    {EPISODE_CONFIGS.map((episode) => (
+                      <SelectItem key={episode.id} value={episode.id} style={{ color: "#4ade80", paddingTop: "4px", paddingBottom: "4px" }}>
+                        {episode.title}{" "}
+                        {episode.status === "completed" ? "✅" : episode.status === "active" ? "🔄" : "⏳"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", marginBottom: "24px" }}>
+                <CardHeader>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "16px", paddingRight: "16px" }}>
+                    <CardTitle style={{ color: "#4ade80" }}>The Peptrix Saga (Active) - Episode 2 - Calling Card</CardTitle>
+                    <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>20%</span>
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#16a34a", marginBottom: "8px", paddingLeft: "16px", paddingRight: "16px" }}>
+                    Story Progress
+                  </div>
+                  <Progress value={20} style={{ height: "4px", backgroundColor: "#065f46", width: "98%", margin: "0 auto" }}/>
+                </CardHeader>
+                <CardContent>
+                  <p style={{ fontSize: "0.8rem", color: "#86efac", lineHeight: "1.6", paddingLeft: "16px", paddingRight: "16px" }}>
+                    {(() => {
+                      const episode = getEpisodeStatus(selectedEpisode || "episode-2");
+                      return episode?.description || "Episode description not available.";
+                    })()}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {(() => {
+                const episode = getEpisodeStatus(selectedEpisode || "episode-2");
+                if (!episode) {
+                  return (
+                    <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", padding: "16px", textAlign: "center" }}>
+                      <p style={{ color: "#4ade80" }}>Episode not found. Please select a valid episode.</p>
+                    </Card>
+                  );
                 }
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                style={{ display: "block" }}
-                onError={handleVideoError}
-              ></iframe>
-              {videoError && (
-                <p
-                  style={{
-                    color: "#dc2626",
-                    fontSize: "0.875rem",
-                    marginTop: "8px",
-                  }}
-                >
-                  {videoError}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                return (
+                  <VotingSection
+                    episode={episode} selected={selected} setSelected={setSelected}
+                    isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
+                    isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
+                    isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
+                    greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
+                    isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
+                    connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
+                    connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
+                    switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
+                  />
+                );
+              })()}
+            </>
+          ) : activeSection === "bloopers" ? (
+            <>
+              <div style={{ marginBottom: "24px" }}>
+                <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+                  <CardContent style={{ padding: "32px", textAlign: "center" }}>
+                    <div className="video-container" style={{ width: "100%", margin: "0 auto", border: "2px solid #22c55e", borderRadius: "8px", overflow: "hidden" }}>
+                      <iframe
+                        key={selectedBlooper} width="100%" height="315"
+                        src={blooperVideos.find((b) => b.value === selectedBlooper)?.src}
+                        title="YouTube video player" frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen style={{ display: "block" }} onError={handleVideoError}
+                      ></iframe>
+                      {videoError && <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "8px" }}>{videoError}</p>}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              <div style={{ marginBottom: "24px" }}>
+                <Select value={selectedBlooper} onValueChange={setSelectedBlooper}>
+                  <SelectTrigger style={{ width: "100%", backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}>
+                    <SelectValue placeholder="Select Blooper" />
+                  </SelectTrigger>
+                  <SelectContent style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+                    {blooperVideos.map((blooper) => (
+                      <SelectItem key={blooper.value} value={blooper.value} style={{ color: "#4ade80", paddingTop: "4px", paddingBottom: "4px" }}>
+                        {blooper.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : (
+            <StakingSection />
+          )}
+        </main>
       </div>
-      {/* Blooper Selection */}
-      <div style={{ marginBottom: "24px" }}>
-        <Select
-          value={selectedBlooper}
-          onValueChange={setSelectedBlooper}
-        >
-          <SelectTrigger
-            style={{
-              width: "100%",
-              backgroundColor: "black",
-              border: "1px solid rgba(34,197,94,0.3)",
-              color: "#4ade80",
-            }}
-          >
-            <SelectValue placeholder="Select Blooper" />
-          </SelectTrigger>
-          <SelectContent
-            style={{
-              backgroundColor: "black",
-              border: "1px solid rgba(34,197,94,0.3)",
-            }}
-          >
-            {blooperVideos.map((blooper) => (
-              <SelectItem
-                key={blooper.value}
-                value={blooper.value}
-                style={{
-                  color: "#4ade80",
-                  paddingTop: "4px",
-                  paddingBottom: "4px",
-                }}
-              >
-                {blooper.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-       </div>
-      </>
-     ) : (
-    <StakingSection />
-  )}
-</main>
+    </div>
+  );
+}
