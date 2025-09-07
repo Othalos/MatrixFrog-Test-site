@@ -24,7 +24,7 @@ const STAKING_ABI = [
   {"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}
 ];
 
-// ABI for ERC20 Tokens (balanceOf, allowance, approve)
+// ABI for ERC20 Tokens
 const ERC20_ABI = [
   {"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},
   {"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},
@@ -38,7 +38,6 @@ const PTX_TOKEN_ADDRESS = "0x30aa9CB881E3cBf90184445995C605A668d2Cd569";
 
 const POOL_ID = 0;
 
-// Helper to format numbers with commas and decimals
 const formatNumber = (value: string | number, decimals: number = 2) => {
   const num = Number(value);
   if (isNaN(num)) return "0.00";
@@ -57,54 +56,37 @@ export default function StakingSection() {
 
   const { writeContract, data: hash, isPending: isTxPending } = useWriteContract({
     mutation: {
-        onSuccess: () => {
-          setNotification({ message: 'Transaction submitted successfully!', type: 'success' });
-        },
-        onError: (error) => {
-          const errorMessage = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
-          setNotification({ message: errorMessage, type: 'error' });
-        }
+      onSuccess: () => setNotification({ message: 'Transaction submitted!', type: 'success' }),
+      onError: (error) => {
+        const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
+        setNotification({ message: msg, type: 'error' });
+      }
     }
   });
 
-  // --- DATA FETCHING ---
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({
-    address: MFG_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    enabled: isConnected,
+    address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf",
+    args: address ? [address] : undefined, enabled: isConnected,
   });
 
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({
-    address: STAKING_CONTRACT_ADDRESS,
-    abi: STAKING_ABI,
-    functionName: "stakes",
-    args: [POOL_ID, address],
-    enabled: isConnected,
+    address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes",
+    args: [POOL_ID, address], enabled: isConnected,
   });
 
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({
-    address: STAKING_CONTRACT_ADDRESS,
-    abi: STAKING_ABI,
-    functionName: "pendingRewards",
-    args: [POOL_ID, address],
-    enabled: isConnected,
+    address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards",
+    args: [POOL_ID, address], enabled: isConnected,
   });
 
   const { data: poolData } = useReadContract({
-    address: STAKING_CONTRACT_ADDRESS,
-    abi: STAKING_ABI,
-    functionName: "pools",
+    address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools",
     args: [POOL_ID],
   });
 
-   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
-    address: MFG_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "allowance",
-    args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined,
-    enabled: isConnected,
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
+    address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance",
+    args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, enabled: isConnected,
   });
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
@@ -120,7 +102,6 @@ export default function StakingSection() {
     }
   }, [isConfirmed, refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance]);
 
-  // --- FORMATTED VALUES ---
   const mfgBalance = mfgBalanceData ? formatUnits(mfgBalanceData as bigint, 18) : "0";
   const userStakedAmount = userStakeData ? formatUnits((userStakeData as any).amount, 18) : "0";
   const pendingRewards = pendingRewardsData ? formatUnits(pendingRewardsData as bigint, 18) : "0";
@@ -129,53 +110,33 @@ export default function StakingSection() {
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
-  // --- HANDLER FUNCTIONS ---
   const handleApprove = () => {
     if (!isConnected) return;
-    writeContract({
-      address: MFG_TOKEN_ADDRESS,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [STAKING_CONTRACT_ADDRESS, maxUint256]
-    });
+    writeContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
   };
 
   const handleStake = () => {
     if (!isConnected || !stakeAmount || parseFloat(stakeAmount) <= 0) return;
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) {
-        setNotification({ message: 'Insufficient MFG balance.', type: 'error' });
-        return;
+      setNotification({ message: 'Insufficient MFG balance.', type: 'error' });
+      return;
     }
-    writeContract({
-        address: STAKING_CONTRACT_ADDRESS,
-        abi: STAKING_ABI,
-        functionName: 'stake',
-        args: [POOL_ID, parseUnits(stakeAmount, 18)]
-    });
+    writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
     setStakeAmount("");
   };
 
   const handleUnstake = () => {
     if (!isConnected || parseFloat(userStakedAmount) <= 0) return;
-    writeContract({
-        address: STAKING_CONTRACT_ADDRESS,
-        abi: STAKING_ABI,
-        functionName: 'unstake',
-        args: [POOL_ID]
-    });
+    writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] });
   };
 
   const handleClaim = () => {
     if (!isConnected || parseFloat(pendingRewards) <= 0) return;
-     writeContract({
-        address: STAKING_CONTRACT_ADDRESS,
-        abi: STAKING_ABI,
-        functionName: 'claimRewards',
-        args: [POOL_ID]
-    });
+    writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] });
   };
 
   const isLoading = isTxPending || isConfirming;
+  const isStakeButtonDisabled = isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount));
 
   return (
     <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
@@ -207,13 +168,13 @@ export default function StakingSection() {
 
         {/* Claim Rewards Section */}
         <div className="text-center">
-            <button
-                onClick={handleClaim}
-                disabled={isLoading || parseFloat(pendingRewards) <= 0}
-                className="w-full md:w-1/2 px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-            >
-                {isLoading ? 'Processing...' : `Claim ${formatNumber(pendingRewards, 6)} PTX`}
-            </button>
+          <button
+            onClick={handleClaim}
+            disabled={isLoading || parseFloat(pendingRewards) <= 0}
+            className="w-full md:w-1/2 px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {isLoading ? 'Processing...' : `Claim ${formatNumber(pendingRewards, 6)} PTX`}
+          </button>
         </div>
 
         {/* Staking/Unstaking Interface */}
@@ -227,8 +188,8 @@ export default function StakingSection() {
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between items-center mb-1">
-                    <label className="text-sm text-green-400">Amount to Stake</label>
-                    <span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span>
+                  <label className="text-sm text-green-400">Amount to Stake</label>
+                  <span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span>
                 </div>
                 <div className="flex items-center">
                   <input
@@ -243,24 +204,24 @@ export default function StakingSection() {
               </div>
               <button
                 onClick={needsApproval ? handleApprove : handleStake}
-                disabled={isLoading || ( !needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))}
+                disabled={isStakeButtonDisabled}
                 className="w-full px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               >
                 {isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
               </button>
               {needsApproval && (
                 <div className="flex items-center text-xs text-yellow-400 space-x-2">
-                    <Info size={16}/>
-                    <span>Approval required before staking. This is a one-time transaction (or until revoked).</span>
+                  <Info size={16}/>
+                  <span>Approval required before staking. This is a one-time transaction (or until revoked).</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="space-y-4 text-center">
-                <div className="text-lg text-white">
-                    <p className="text-sm text-green-400">Available to Unstake</p>
-                    <p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p>
-                </div>
+              <div className="text-lg text-white">
+                <p className="text-sm text-green-400">Available to Unstake</p>
+                <p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p>
+              </div>
               <button
                 onClick={handleUnstake}
                 disabled={isLoading || parseFloat(userStakedAmount) <= 0}
@@ -274,9 +235,9 @@ export default function StakingSection() {
 
         {/* Notification Area */}
         {notification && (
-            <div className={`p-3 rounded-md text-center text-sm ${notification.type === 'success' ? 'bg-green-900/80 text-green-300' : 'bg-red-900/80 text-red-300'}`}>
-                {notification.message}
-            </div>
+          <div className={`p-3 rounded-md text-center text-sm ${notification.type === 'success' ? 'bg-green-900/80 text-green-300' : 'bg-red-900/80 text-red-300'}`}>
+            {notification.message}
+          </div>
         )}
       </CardContent>
     </Card>
