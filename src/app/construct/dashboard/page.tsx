@@ -1,6 +1,8 @@
+//Main Construct page
 "use client";
+import StakingSection from "./StakingSection";
 import { Progress } from "@/app/components/ui/progress";
-import { BarChart3, FileVideo, User } from "lucide-react";
+import { BarChart3, FileVideo, User, Database } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -566,6 +568,7 @@ export default function MatrixConstruct() {
       href: "/",
       active: false,
     },
+    //Peptrix Saga
     {
       icon: User,
       label: "The Peptrix Saga",
@@ -574,6 +577,7 @@ export default function MatrixConstruct() {
       active: activeSection === "saga",
       onClick: () => setActiveSection("saga"),
     },
+    //Blooper Section
     {
       icon: FileVideo,
       label: "Bloopers",
@@ -582,9 +586,17 @@ export default function MatrixConstruct() {
       active: activeSection === "bloopers",
       onClick: () => setActiveSection("bloopers"),
     },
+    // Staking Section
+    {
+      icon: Database,
+      label: "Staking",
+      subtitle: "Stake MFG, earn PTX",
+      href: "#",
+      active: activeSection === "staking",
+      onClick: () => setActiveSection("staking"),
+    },
   ];
 
-  // ✅ FIX: Corrected typo from `scr` to `src` for blooper-1
   const blooperVideos = [
     {
       value: "blooper-1",
@@ -1023,7 +1035,7 @@ export default function MatrixConstruct() {
                   </SelectContent>
                 </Select>
               </div>
-            </>
+            <StakingSection />
           )}
         </main>
       </div>
