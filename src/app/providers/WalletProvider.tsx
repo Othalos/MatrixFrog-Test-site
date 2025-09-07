@@ -6,34 +6,57 @@ import { ReactNode, useState } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
 
-// Define the Pepe Unchained Mainnet network
+// 1. Define the Pepe Unchained Mainnet
 const pepeUnchained = {
-  id: 97741, // Correct chain ID
-  name: "Pepe Unchained Mainnet",
+  id: 97741,
+  name: "Pepe Unchained",
   iconUrl: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
   iconBackground: "#fff",
   nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
   rpcUrls: {
     default: {
-      http: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"], // Your specified RPC URL
+      http: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
     },
   },
   blockExplorers: {
     default: {
-      name: "Pepe Explorer",
-      url: "https://explorer-explorer-pepu-v2-mainnet-0.t.conduit.xyz", // Update if you have the correct explorer URL
+      name: "PepuScan",
+      url: "https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz", 
     },
   },
 };
 
-// MFG Token contract address
+// 2. Define the Pepe Unchained Testnet
+const pepuTestnet = {
+  id: 97740, // Your specified chain ID
+  name: "Pepu Testnet",
+  iconUrl: "https://s2.coinmarketcap.com/static/img/coins/64x64/5805.png",
+  iconBackground: "#fff",
+  nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
+  rpcUrls: {
+    default: {
+      http: ["https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "PepuScan Testnet",
+      url: "https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz",
+    },
+  },
+  testnet: true, // Mark this as a testnet
+};
+
+
+// MFG Token contract address (remains the same if it's on mainnet)
 export const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
+// 3. Update the config to include BOTH chains
 export const config = createConfig({
-  chains: [pepeUnchained],
+  chains: [pepeUnchained, pepuTestnet], // Add both chains to the array
   connectors: [
-    injected(), // For browser extension wallets like MetaMask
-    metaMask(), // Specifically for MetaMask
+    injected(),
+    metaMask(),
     walletConnect({
       projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
       metadata: {
@@ -51,7 +74,9 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [pepeUnchained.id]: http("https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"),
+    // Define a transport for each chain
+    [pepeUnchained.id]: http(),
+    [pepuTestnet.id]: http(),
   },
 });
 
