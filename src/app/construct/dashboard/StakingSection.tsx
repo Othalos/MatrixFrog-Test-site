@@ -226,9 +226,9 @@ export default function StakingSection() {
                 onClick={handleUnstake}
                 disabled={isLoading || parseFloat(userStakedAmount) <= 0}
                 className="w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
+              
                 {isLoading ? 'Processing...' : 'Unstake All MFG'}
-              </button>
+              /button>
             </div>
           )}
         </div>
