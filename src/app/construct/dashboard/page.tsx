@@ -745,300 +745,305 @@ export default function MatrixConstruct() {
 
         {/* Main Content */}
         <main style={{ flex: 1, padding: "24px" }} className="construct-main">
-          {activeSection === "saga" ? (
-            <>
-              {/* Video Player Section */}
-              <div style={{ marginBottom: "24px" }}>
-                <Card
+  {activeSection === "saga" ? (
+    <>
+      {/* Video Player Section */}
+      <div style={{ marginBottom: "24px" }}>
+        <Card
+          style={{
+            backgroundColor: "black",
+            border: "1px solid rgba(34,197,94,0.3)",
+          }}
+        >
+          <CardContent style={{ padding: "32px", textAlign: "center" }}>
+            <div
+              className="video-container"
+              style={{
+                width: "100%",
+                margin: "0 auto",
+                border: "2px solid #22c55e",
+                borderRadius: "8px",
+                overflow: "hidden",
+              }}
+            >
+              <iframe
+                key={currentSagaEpisode?.id}
+                width="100%"
+                height="315"
+                src={currentSagaEpisode?.videoUrl}
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{ display: "block" }}
+                onError={handleVideoError}
+              ></iframe>
+              {videoError && (
+                <p
                   style={{
-                    backgroundColor: "black",
-                    border: "1px solid rgba(34,197,94,0.3)",
+                    color: "#dc2626",
+                    fontSize: "0.875rem",
+                    marginTop: "8px",
                   }}
                 >
-                  <CardContent style={{ padding: "32px", textAlign: "center" }}>
-                    <div
-                      className="video-container"
-                      style={{
-                        width: "100%",
-                        margin: "0 auto",
-                        border: "2px solid #22c55e",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {/* ✅ FIX: Dynamically set the src from the selected episode's videoUrl */}
-                      <iframe
-                        key={currentSagaEpisode?.id} // Add key to force re-render on change
-                        width="100%"
-                        height="315"
-                        src={currentSagaEpisode?.videoUrl}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        style={{ display: "block" }}
-                        onError={handleVideoError}
-                      ></iframe>
-                      {videoError && (
-                        <p
-                          style={{
-                            color: "#dc2626",
-                            fontSize: "0.875rem",
-                            marginTop: "8px",
-                          }}
-                        >
-                          {videoError}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  {videoError}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-              {/* Episode Selection */}
-              <div style={{ marginBottom: "24px" }}>
-                <Select
-                  value={selectedEpisode}
-                  onValueChange={setSelectedEpisode}
-                >
-                  <SelectTrigger
-                    style={{
-                      width: "100%",
-                      backgroundColor: "black",
-                      border: "1px solid rgba(34,197,94,0.3)",
-                      color: "#4ade80",
-                    }}
-                  >
-                    <SelectValue placeholder="Select Episode" />
-                  </SelectTrigger>
-                  <SelectContent
-                    style={{
-                      backgroundColor: "black",
-                      border: "1px solid rgba(34,197,94,0.3)",
-                    }}
-                  >
-                    {EPISODE_CONFIGS.map((episode) => (
-                      <SelectItem
-                        key={episode.id}
-                        value={episode.id}
-                        style={{
-                          color: "#4ade80",
-                          paddingTop: "4px",
-                          paddingBottom: "4px",
-                        }}
-                      >
-                        {episode.title} {episode.status === 'completed' ? '✅' : episode.status === 'active' ? '🔄' : '⏳'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Story Section */}
-              <Card
+      {/* Episode Selection and other Saga content... */}
+      <div style={{ marginBottom: "24px" }}>
+        <Select
+          value={selectedEpisode}
+          onValueChange={setSelectedEpisode}
+        >
+          <SelectTrigger
+            style={{
+              width: "100%",
+              backgroundColor: "black",
+              border: "1px solid rgba(34,197,94,0.3)",
+              color: "#4ade80",
+            }}
+          >
+            <SelectValue placeholder="Select Episode" />
+          </SelectTrigger>
+          <SelectContent
+            style={{
+              backgroundColor: "black",
+              border: "1px solid rgba(34,197,94,0.3)",
+            }}
+          >
+            {EPISODE_CONFIGS.map((episode) => (
+              <SelectItem
+                key={episode.id}
+                value={episode.id}
                 style={{
-                  backgroundColor: "black",
-                  border: "1px solid rgba(34,197,94,0.3)",
-                  marginBottom: "24px",
+                  color: "#4ade80",
+                  paddingTop: "4px",
+                  paddingBottom: "4px",
                 }}
               >
-                <CardHeader>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingLeft: "16px",
-                      paddingRight: "16px",
-                    }}
-                  >
-                    <CardTitle style={{ color: "#4ade80" }}>
-                      The Peptrix Saga (Active) - Episode 2 - Calling Card
-                    </CardTitle>
-                    <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>
-                      20%
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      color: "#16a34a",
-                      marginBottom: "8px",
-                      paddingLeft: "16px",
-                      paddingRight: "16px",
-                    }}
-                  >
-                    Story Progress
-                  </div>
-                  <Progress
-                    value={20}
-                    style={{
-                      height: "4px",
-                      backgroundColor: "#065f46",
-                      width: "98%",
-                      margin: "0 auto",
-                    }}
-                  />
-                </CardHeader>
-                <CardContent>
-                  <p
-                    style={{
-                      fontSize: "0.8rem",
-                      color: "#86efac",
-                      lineHeight: "1.6",
-                      paddingLeft: "16px",
-                      paddingRight: "16px",
-                    }}
-                  >
-                    {(() => {
-                      const episode = getEpisodeStatus(selectedEpisode || "episode-2");
-                      return episode?.description || "Episode description not available.";
-                    })()}
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Voting Section */}
-              {(() => {
-                const episode = getEpisodeStatus(selectedEpisode || "episode-2");
-                if (!episode) {
-                  return (
-                    <Card
-                      style={{
-                        backgroundColor: "black",
-                        border: "1px solid rgba(34,197,94,0.3)",
-                        padding: "16px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <p style={{ color: "#4ade80" }}>Episode not found. Please select a valid episode.</p>
-                    </Card>
-                  );
+                {episode.title}{" "}
+                {episode.status === "completed"
+                  ? "✅"
+                  : episode.status === "active"
+                  ? "🔄"
+                  : "⏳"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* ... Other Saga components like Story and Voting Section go here ... */}
+      <Card
+        style={{
+          backgroundColor: "black",
+          border: "1px solid rgba(34,197,94,0.3)",
+          marginBottom: "24px",
+        }}
+      >
+        <CardHeader>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingLeft: "16px",
+              paddingRight: "16px",
+            }}
+          >
+            <CardTitle style={{ color: "#4ade80" }}>
+              The Peptrix Saga (Active) - Episode 2 - Calling Card
+            </CardTitle>
+            <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>
+              20%
+            </span>
+          </div>
+          <div
+            style={{
+              fontSize: "0.75rem",
+              color: "#16a34a",
+              marginBottom: "8px",
+              paddingLeft: "16px",
+              paddingRight: "16px",
+            }}
+          >
+            Story Progress
+          </div>
+          <Progress
+            value={20}
+            style={{
+              height: "4px",
+              backgroundColor: "#065f46",
+              width: "98%",
+              margin: "0 auto",
+            }}
+          />
+        </CardHeader>
+        <CardContent>
+          <p
+            style={{
+              fontSize: "0.8rem",
+              color: "#86efac",
+              lineHeight: "1.6",
+              paddingLeft: "16px",
+              paddingRight: "16px",
+            }}
+          >
+            {(() => {
+              const episode = getEpisodeStatus(
+                selectedEpisode || "episode-2"
+              );
+              return (
+                episode?.description || "Episode description not available."
+              );
+            })()}
+          </p>
+        </CardContent>
+      </Card>
+      
+      {(() => {
+        const episode = getEpisodeStatus(selectedEpisode || "episode-2");
+        if (!episode) {
+          return (
+            <Card
+              style={{
+                backgroundColor: "black",
+                border: "1px solid rgba(34,197,94,0.3)",
+                padding: "16px",
+                textAlign: "center",
+              }}
+            >
+              <p style={{ color: "#4ade80" }}>
+                Episode not found. Please select a valid episode.
+              </p>
+            </Card>
+          );
+        }
+        return (
+          <VotingSection
+            episode={episode}
+            selected={selected}
+            setSelected={setSelected}
+            isVoting={isVoting}
+            voteSuccess={voteSuccess}
+            voteError={voteError}
+            isHydrated={isHydrated}
+            isConnected={isConnected}
+            isPending={isPending}
+            isConfirming={isConfirming}
+            onVote={handleVote}
+            redPillVotes={redPillVotes}
+            greenPillVotes={greenPillVotes}
+            totalVotes={totalVotes}
+            votingStatsLoading={votingStatsLoading}
+            isConnecting={isConnecting}
+            isCorrectNetwork={isCorrectNetwork}
+            connectMetaMask={connectMetaMask}
+            connectWalletConnect={connectWalletConnect}
+            connectCoinbase={connectCoinbase}
+            handleDisconnect={handleDisconnect}
+            switchToPepeUnchained={switchToPepeUnchained}
+            mfgBalance={mfgBalance}
+          />
+        );
+      })()}
+    </>
+  ) : activeSection === "bloopers" ? (
+    <>
+      {/* Bloopers Section */}
+      <div style={{ marginBottom: "24px" }}>
+        <Card
+          style={{
+            backgroundColor: "black",
+            border: "1px solid rgba(34,197,94,0.3)",
+          }}
+        >
+          <CardContent style={{ padding: "32px", textAlign: "center" }}>
+            <div
+              className="video-container"
+              style={{
+                width: "100%",
+                margin: "0 auto",
+                border: "2px solid #22c55e",
+                borderRadius: "8px",
+                overflow: "hidden",
+              }}
+            >
+              <iframe
+                key={selectedBlooper}
+                width="100%"
+                height="315"
+                src={
+                  blooperVideos.find((b) => b.value === selectedBlooper)
+                    ?.src
                 }
-
-                return (
-                  <VotingSection
-                    episode={episode}
-                    selected={selected}
-                    setSelected={setSelected}
-                    isVoting={isVoting}
-                    voteSuccess={voteSuccess}
-                    voteError={voteError}
-                    isHydrated={isHydrated}
-                    isConnected={isConnected}
-                    isPending={isPending}
-                    isConfirming={isConfirming}
-                    onVote={handleVote}
-                    redPillVotes={redPillVotes}
-                    greenPillVotes={greenPillVotes}
-                    totalVotes={totalVotes}
-                    votingStatsLoading={votingStatsLoading}
-                    // Wallet Connect Props
-                    isConnecting={isConnecting}
-                    isCorrectNetwork={isCorrectNetwork}
-                    connectMetaMask={connectMetaMask}
-                    connectWalletConnect={connectWalletConnect}
-                    connectCoinbase={connectCoinbase}
-                    handleDisconnect={handleDisconnect}
-                    switchToPepeUnchained={switchToPepeUnchained}
-                    mfgBalance={mfgBalance}
-                  />
-                );
-              })()}
-            </>
-          ) : (
-            <>
-              {/* Bloopers Section */}
-              <div style={{ marginBottom: "24px" }}>
-                <Card
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                style={{ display: "block" }}
+                onError={handleVideoError}
+              ></iframe>
+              {videoError && (
+                <p
                   style={{
-                    backgroundColor: "black",
-                    border: "1px solid rgba(34,197,94,0.3)",
+                    color: "#dc2626",
+                    fontSize: "0.875rem",
+                    marginTop: "8px",
                   }}
                 >
-                  <CardContent style={{ padding: "32px", textAlign: "center" }}>
-                    <div
-                      className="video-container"
-                      style={{
-                        width: "100%",
-                        margin: "0 auto",
-                        border: "2px solid #22c55e",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <iframe
-                        key={selectedBlooper} // Add key to force re-render on change
-                        width="100%"
-                        height="315"
-                        src={
-                          blooperVideos.find((b) => b.value === selectedBlooper)
-                            ?.src
-                        }
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen
-                        style={{ display: "block" }}
-                        onError={handleVideoError}
-                      ></iframe>
-                      {videoError && (
-                        <p
-                          style={{
-                            color: "#dc2626",
-                            fontSize: "0.875rem",
-                            marginTop: "8px",
-                          }}
-                        >
-                          {videoError}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              {/* Blooper Selection */}
-              <div style={{ marginBottom: "24px" }}>
-                <Select
-                  value={selectedBlooper}
-                  onValueChange={setSelectedBlooper}
-                >
-                  <SelectTrigger
-                    style={{
-                      width: "100%",
-                      backgroundColor: "black",
-                      border: "1px solid rgba(34,197,94,0.3)",
-                      color: "#4ade80",
-                    }}
-                  >
-                    <SelectValue placeholder="Select Blooper" />
-                  </SelectTrigger>
-                  <SelectContent
-                    style={{
-                      backgroundColor: "black",
-                      border: "1px solid rgba(34,197,94,0.3)",
-                    }}
-                  >
-                    {blooperVideos.map((blooper) => (
-                      <SelectItem
-                        key={blooper.value}
-                        value={blooper.value}
-                        style={{
-                          color: "#4ade80",
-                          paddingTop: "4px",
-                          paddingBottom: "4px",
-                        }}
-                      >
-                        {blooper.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            <StakingSection />
-          )}
-        </main>
+                  {videoError}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </div>
-  );
-}
+      {/* Blooper Selection */}
+      <div style={{ marginBottom: "24px" }}>
+        <Select
+          value={selectedBlooper}
+          onValueChange={setSelectedBlooper}
+        >
+          <SelectTrigger
+            style={{
+              width: "100%",
+              backgroundColor: "black",
+              border: "1px solid rgba(34,197,94,0.3)",
+              color: "#4ade80",
+            }}
+          >
+            <SelectValue placeholder="Select Blooper" />
+          </SelectTrigger>
+          <SelectContent
+            style={{
+              backgroundColor: "black",
+              border: "1px solid rgba(34,197,94,0.3)",
+            }}
+          >
+            {blooperVideos.map((blooper) => (
+              <SelectItem
+                key={blooper.value}
+                value={blooper.value}
+                style={{
+                  color: "#4ade80",
+                  paddingTop: "4px",
+                  paddingBottom: "4px",
+                }}
+              >
+                {blooper.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+       </div>
+      </>
+     ) : (
+    <StakingSection />
+  )}
+</main>
