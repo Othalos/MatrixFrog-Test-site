@@ -164,8 +164,14 @@ export default function StakingSection() {
                 <div className="flex justify-between items-center mb-1"><label className="text-sm text-green-400">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
                 <div className="flex items-center"><input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" /><button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-800 text-white p-2 rounded-r-md hover:bg-green-700">MAX</button></div>
               </div>
-              <button onClick={needsApproval ? handleApprove : handleStake} disabled={isStakeButtonDisabled} className="w-full px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors">
-                {stakeButtonText}
+              <button
+                onClick={needsApproval ? handleApprove : handleStake}
+                disabled={isStakeButtonDisabled}
+                className="w-full px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {isLoading && 'Processing...'}
+                {!isLoading && needsApproval && 'Approve MFG'}
+                {!isLoading && !needsApproval && 'Stake MFG'}
               </button>
               {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking. This is a one-time transaction.</span></div>)}
             </div>
