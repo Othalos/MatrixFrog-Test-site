@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
 import { formatUnits, parseUnits, maxUint256, type Hash } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
-import { Button } from "@/app/components/ui/button"; // Assuming Button component for styling
+import { Button } from "@/app/components/ui/button";
 
 // --- CONFIGURATION ---
 const PEPU_TESTNET_ID = 97740;
@@ -27,7 +27,6 @@ const formatNumber = (value: string | number, decimals: number = 2) => {
   return num.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-// Props interface for wallet connection functions
 interface StakingSectionProps {
   connectMetaMask: () => void;
   connectWalletConnect: () => void;
@@ -59,29 +58,31 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: [POOL_ID, address], ...sharedReadConfig });
-  const { data: poolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], ...sharedReadConfig });
+  const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], ...sharedReadConfig });
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
+
+  const refetchAllData = useCallback(() => {
+    refetchMfgBalance();
+    refetchUserStake();
+    refetchPendingRewards();
+    refetchAllowance();
+    refetchPoolData();
+  }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
   useEffect(() => {
     if (isConfirmed) {
       setNotification({ message: 'Transaction confirmed!', type: 'success' });
-      refetchAllData();
+      refetchAllData(); // Use the memoized function
       setTimeout(() => setNotification(null), 5000);
     }
-  }, [isConfirmed]);
-  
-  const refetchAllData = () => {
-      refetchMfgBalance();
-      refetchUserStake();
-      refetchPendingRewards();
-      refetchAllowance();
-  };
+  }, [isConfirmed, refetchAllData]); // Add refetchAllData to the dependency array
 
-  const mfgBalance = mfgBalanceData ? formatUnits(mfgBalanceData, 18) : "0";
-  const userStakedAmount = userStakeData ? formatUnits((userStakeData as StakeInfo)?.amount ?? 0, 18) : "0";
-  const pendingRewards = pendingRewardsData ? formatUnits(pendingRewardsData ?? 0, 18) : "0";
-  const totalStaked = poolData ? formatUnits((poolData as PoolInfo)?.totalStaked ?? 0, 18) : "0";
-  const allowance = allowanceData ? formatUnits(allowanceData ?? 0, 18) : "0";
+  // FIX: Provide a default bigint value (0n) if data is undefined.
+  const mfgBalance = formatUnits(mfgBalanceData ?? 0n, 18);
+  const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
+  const pendingRewards = formatUnits(pendingRewardsData ?? 0n, 18);
+  const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? 0n, 18);
+  const allowance = formatUnits(allowanceData ?? 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
@@ -96,7 +97,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   
   const isLoading = isTxPending || isConfirming;
 
-  // --- STYLES ---
   const buttonBaseStyle = "w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg";
   const greenGlow = "border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]";
   const redGlow = "border-red-500 bg-red-900/50 text-red-300 hover:bg-red-800/60 hover:shadow-[0_0_15px_rgba(239,68,68,0.7)]";
@@ -109,15 +109,15 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         {!isConnected ? (
-            <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
-                <h3 className="text-lg font-bold text-green-400">ACCESS DENIED :: CONNECT WALLET</h3>
-                <p className="text-sm text-center text-gray-400">Connect your wallet to access staking terminal functions.</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-                    <Button onClick={connectMetaMask} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "MetaMask"}</Button>
-                    <Button onClick={connectWalletConnect} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
-                    <Button onClick={connectCoinbase} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "Coinbase"}</Button>
-                </div>
-            </div>
+          <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
+              <h3 className="text-lg font-bold text-green-400">ACCESS DENIED :: CONNECT WALLET</h3>
+              <p className="text-sm text-center text-gray-400">Connect your wallet to access staking terminal functions.</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+                  <Button onClick={connectMetaMask} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "MetaMask"}</Button>
+                  <Button onClick={connectWalletConnect} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
+                  <Button onClick={connectCoinbase} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "Coinbase"}</Button>
+              </div>
+          </div>
         ) : !isCorrectNetwork ? (
           <div className="p-4 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-3">
             <div className="flex items-center space-x-2"><AlertTriangle size={20}/><span className="font-bold">WRONG NETWORK</span></div>
