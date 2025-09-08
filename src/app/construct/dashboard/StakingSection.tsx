@@ -7,8 +7,8 @@ import { formatUnits, parseUnits, maxUint256 } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 
 // --- CONFIGURATION ---
-const PEPU_TESTNET_ID = 97740; // The chain ID for the staking contract
-const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
+const PEPU_TESTNET_ID = 97740;
+const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827"; // CORRECTED ADDRESS
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0;
 
