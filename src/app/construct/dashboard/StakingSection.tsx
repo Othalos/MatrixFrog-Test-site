@@ -112,6 +112,7 @@ export default function StakingSection() {
   const isStakeButtonDisabled = isLoading || !isCorrectNetwork || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount));
   const stakeButtonText = isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG');
 
+  //Syntax error on staking terminal
   return (
     <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
       <CardHeader>
