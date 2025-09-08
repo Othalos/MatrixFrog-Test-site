@@ -679,7 +679,12 @@ export default function MatrixConstruct() {
               </div>
             </>
           ) : (
-            <StakingSection />
+            <StakingSection
+              connectMetaMask={connectMetaMask}
+              connectWalletConnect={connectWalletConnect}
+              connectCoinbase={connectCoinbase}
+              isConnecting={isConnecting}
+            />
           )}
         </main>
       </div>
