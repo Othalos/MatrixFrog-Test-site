@@ -107,6 +107,7 @@ export default function StakingSection() {
   };
 
   const isLoading = isTxPending || isConfirming;
+  const stakeButtonText = isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG');
   const isStakeButtonDisabled = isLoading || !isCorrectNetwork || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount));
 
   return (
@@ -177,9 +178,13 @@ export default function StakingSection() {
           ) : (
             <div className="space-y-4 text-center">
               <div className="text-lg text-white"><p className="text-sm text-green-400">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
-              <button onClick={handleUnstake} disabled={isLoading || !isCorrectNetwork || parseFloat(userStakedAmount) <= 0} className="w-full px-4 py-2 bg-red-600 text-white font-bold rounded-md hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors">
-                {isLoading ? 'Processing...' : 'Unstake All MFG'}
-              </button>
+              <button
+                onClick={needsApproval ? handleApprove : handleStake}
+                disabled={isStakeButtonDisabled}
+                className="w-full px-4 py-2 bg-green-600 text-black font-bold rounded-md hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {stakeButtonText}
+              </button>  
             </div>
           )}
         </div>
