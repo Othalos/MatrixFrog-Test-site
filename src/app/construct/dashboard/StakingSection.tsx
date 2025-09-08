@@ -11,6 +11,22 @@ const PEPU_TESTNET_ID = 97740;
 const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827"; // CORRECTED ADDRESS
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0;
+type StakeInfo = {
+  amount: bigint;
+  timestamp: bigint;
+  unclaimed: bigint;
+};
+
+type PoolInfo = {
+  stakingToken: `0x${string}`;
+  rewardToken: `0x${string}`;
+  apyBasisPoints: bigint;
+  lockDuration: bigint;
+  active: boolean;
+  totalStaked: bigint;
+  rewardBudget: bigint;
+  rewardsExhausted: boolean;
+};
 
 // --- ABIs ---
 const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}];
@@ -90,9 +106,9 @@ export default function StakingSection() {
   }, [isConfirmed, refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance]);
 
   const mfgBalance = mfgBalanceData ? formatUnits(mfgBalanceData as bigint, 18) : "0";
-  const userStakedAmount = userStakeData ? formatUnits((userStakeData as any).amount, 18) : "0";
+  const userStakedAmount = userStakeData ? formatUnits((userStakeData as StakeInfo).amount, 18) : "0";
   const pendingRewards = pendingRewardsData ? formatUnits(pendingRewardsData as bigint, 18) : "0";
-  const totalStaked = poolData ? formatUnits((poolData as any).totalStaked, 18) : "0";
+  const totalStaked = poolData ? formatUnits((poolData as PoolInfo).totalStaked, 18) : "0";
   const allowance = allowanceData ? formatUnits(allowanceData as bigint, 18) : "0";
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
@@ -110,7 +126,6 @@ export default function StakingSection() {
 
   const isLoading = isTxPending || isConfirming;
   const isStakeButtonDisabled = isLoading || !isCorrectNetwork || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount));
-  const stakeButtonText = isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG');
 
   //Syntax error on staking terminal
   return (
