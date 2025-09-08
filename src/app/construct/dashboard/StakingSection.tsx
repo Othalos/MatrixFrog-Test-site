@@ -116,7 +116,7 @@ export default function StakingSection() {
     <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
       <CardHeader>
         <CardTitle style={{ color: "#4ade80", textShadow: "0 0 5px rgba(74, 222, 128, 0.5)" }}>
-          STAKING TERMINAL :: MFG > PTX (Testnet)
+          STAKING TERMINAL :: MFG {'>'} PTX (Testnet)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
