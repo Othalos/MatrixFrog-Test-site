@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
-import { formatUnits, parseUnits, maxUint256 } from "viem";
+import { formatUnits, parseUnits, maxUint256, type Hash } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -38,13 +38,14 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const [stakeAmount, setStakeAmount] = useState("");
   const [activeTab, setActiveTab] = useState("stake");
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [loadingAction, setLoadingAction] = useState<string | null>(null); // **FIX**: More precise loading state
+  const [txHash, setTxHash] = useState<Hash | undefined>();
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
+  // --- DATA FETCHING & REFETCHING LOGIC ---
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork };
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
@@ -60,23 +61,41 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchPoolData();
   }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
-  const { writeContract } = useWriteContract({
-    mutation: {
-      onSuccess: () => setNotification({ message: 'Transaction submitted! Waiting for confirmation...', type: 'success' }),
-      onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); setLoadingAction(null); },
-      onSettled: async (hash) => {
-        if (hash) {
-          const { L1BlockNumber } = await import('alchemy-sdk'); // Lazy import if needed
-          // Wait for confirmation then refetch
-          const { refetch } = useWaitForTransactionReceipt({ hash });
-          await refetch();
-          setNotification({ message: 'Transaction confirmed!', type: 'success' });
-          refetchAllData();
-        }
-        setLoadingAction(null); // **FIX**: Reset loading state when transaction is settled
-      }
+  // --- TRANSACTION HANDLING ---
+  const { writeContract, isPending: isTxPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // Use an effect to watch for confirmation and then refetch data
+  useEffect(() => {
+    if (isConfirmed) {
+      setNotification({ message: 'Transaction confirmed!', type: 'success' });
+      setTimeout(() => {
+        refetchAllData();
+        setNotification(null);
+      }, 2000); // 2 second delay for RPC to catch up before clearing notification
     }
-  });
+  }, [isConfirmed, refetchAllData]);
+
+  const submitTransaction = (args: any, action: string) => {
+    setLoadingAction(action);
+    writeContract(args, {
+      onSuccess: (hash) => {
+        setTxHash(hash);
+        setNotification({ message: 'Transaction submitted! Waiting for confirmation...', type: 'success' });
+      },
+      onError: (error) => {
+        const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
+        setNotification({ message: msg, type: 'error' });
+        setLoadingAction(null);
+      },
+      onSettled: () => {
+        // We now use the useEffect to handle actions after confirmation
+        setLoadingAction(null);
+      }
+    });
+  };
+  
+  const [loadingAction, setLoadingAction] = useState<string | null>(null);
   
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
@@ -86,15 +105,22 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
-  const handleApprove = () => { setLoadingAction('approve'); writeContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] }); };
-  const handleUnstake = () => { setLoadingAction('unstake'); writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] }); };
-  const handleClaim = () => { setLoadingAction('claim'); writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] }); };
+  const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] }, 'approve');
+  const handleUnstake = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] }, 'unstake');
+  const handleClaim = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] }, 'claim');
   const handleStake = () => {
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) { return setNotification({ message: 'Insufficient MFG balance.', type: 'error' }); }
-    setLoadingAction('stake');
-    writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
+    submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] }, 'stake');
     setStakeAmount("");
   };
+
+  const isLoading = isTxPending || isConfirming;
+
+  // --- STYLES ---
+  const buttonBaseStyle = "w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg";
+  const greenGlow = "border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]";
+  const redGlow = "border-red-500 bg-red-900/50 text-red-300 hover:bg-red-800/60 hover:shadow-[0_0_15px_rgba(239,68,68,0.7)]";
+  const disabledGlow = "border-gray-700 bg-black text-gray-500 cursor-not-allowed";
 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
@@ -106,9 +132,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
               <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-                  <Button onClick={connectMetaMask} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
-                  <Button onClick={connectWalletConnect} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
-                  <Button onClick={connectCoinbase} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
+                  <Button onClick={connectMetaMask} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "MetaMask"}</Button>
+                  <Button onClick={connectWalletConnect} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
+                  <Button onClick={connectCoinbase} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "Coinbase"}</Button>
               </div>
           </div>
         ) : !isCorrectNetwork ? (
@@ -127,7 +153,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
             </div>
 
             <div className="text-center">
-              <button onClick={handleClaim} disabled={!!loadingAction || parseFloat(pendingRewards) <= 0} className={`matrix-button-green ${!!loadingAction || parseFloat(pendingRewards) <= 0 ? 'disabled' : ''}`}>
+              <button onClick={handleClaim} disabled={isLoading || parseFloat(pendingRewards) <= 0} className={`${buttonBaseStyle} ${isLoading || parseFloat(pendingRewards) <= 0 ? disabledGlow : greenGlow}`}>
                 {loadingAction === 'claim' ? 'Processing...' : `Claim Rewards`}
               </button>
             </div>
@@ -146,7 +172,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                       <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4">MAX</button>
                     </div>
                   </div>
-                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={!!loadingAction || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`matrix-button-green ${!!loadingAction || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? 'disabled' : ''}`}>
+                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`${buttonBaseStyle} ${isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? disabledGlow : greenGlow}`}>
                     {loadingAction === 'approve' || loadingAction === 'stake' ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
                   </button>
                   {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
@@ -154,7 +180,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
               ) : (
                 <div className="space-y-4 text-center">
                   <div className="text-lg text-white"><p className="text-sm">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
-                  <button onClick={handleUnstake} disabled={!!loadingAction || parseFloat(userStakedAmount) <= 0} className={`matrix-button-red ${!!loadingAction || parseFloat(userStakedAmount) <= 0 ? 'disabled' : ''}`}>
+                  <button onClick={handleUnstake} disabled={isLoading || parseFloat(userStakedAmount) <= 0} className={`${buttonBaseStyle} ${isLoading || parseFloat(userStakedAmount) <= 0 ? disabledGlow : redGlow}`}>
                     {loadingAction === 'unstake' ? 'Processing...' : 'Unstake All MFG'}
                   </button>
                 </div>
