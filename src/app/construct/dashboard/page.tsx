@@ -326,8 +326,10 @@ export default function MatrixConstruct() {
   };
 
   useEffect(() => {
-    if (mfgBalance && isConnected) {
-      window.localStorage.setItem("Mat_bal", mfgBalance);
+     if (typeof window !== 'undefined') { // <-- Add this check
+      if (mfgBalance && isConnected) {
+        window.localStorage.setItem("Mat_bal", mfgBalance);
+      }
     }
   }, [mfgBalance, isConnected]);
 
