@@ -64,7 +64,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
       onSuccess: () => setNotification({ message: 'Transaction submitted!', type: 'success' }),
       onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); },
       onSettled: () => {
-        setTimeout(() => { refetchAllData(); }, 3000); // Delay to allow RPC to update
+        setTimeout(() => { refetchAllData(); }, 3000);
       }
     }
   });
@@ -72,11 +72,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
   const isLoading = isTxPending || isConfirming;
 
-  const mfgBalance = formatUnits(mfgBalanceData ?? 0n, 18);
+  const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
-  const pendingRewards = formatUnits(pendingRewardsData ?? 0n, 18);
+  const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
   const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? 0n, 18);
-  const allowance = formatUnits(allowanceData ?? 0n, 18);
+  const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
