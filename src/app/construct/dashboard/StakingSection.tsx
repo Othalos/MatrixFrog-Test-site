@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
-import { formatUnits, parseUnits, maxUint256, type Hash, type Abi } from "viem";
+import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useWatchContractEvent } from "wagmi";
+import { formatUnits, parseUnits, maxUint256, type Abi } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -42,7 +42,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const [stakeAmount, setStakeAmount] = useState("");
   const [activeTab, setActiveTab] = useState("stake");
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [txHash, setTxHash] = useState<Hash | undefined>();
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -56,37 +55,30 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], query: { enabled: isConnected && isCorrectNetwork } });
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
-  const refetchAllData = useCallback(() => {
-    refetchMfgBalance(); refetchUserStake(); refetchPendingRewards(); refetchAllowance(); refetchPoolData();
-  }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
-
   const { writeContract, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
-  // **FIX**: This useEffect hook is the most reliable way to refetch data after a transaction is confirmed.
-  useEffect(() => {
-    if (isConfirmed) {
-      setNotification({ message: 'Transaction confirmed!', type: 'success' });
-      setTimeout(() => {
-        refetchAllData();
-        setNotification(null);
-      }, 1000); // 1-second delay for RPC to update
-    }
-  }, [isConfirmed, refetchAllData]);
+  // **FIX**: This hook listens for the 'Approval' event and automatically refetches data.
+  useWatchContractEvent({
+    address: MFG_TOKEN_ADDRESS,
+    abi: ERC20_ABI,
+    eventName: 'Approval',
+    onLogs(logs) {
+      // Check if the event is for the current user and staking contract
+      const userLog = logs.find(log => 
+        log.args.owner === address && 
+        log.args.spender === STAKING_CONTRACT_ADDRESS
+      );
+      if (userLog) {
+        setNotification({ message: 'Approval confirmed!', type: 'success' });
+        setTimeout(() => {
+          refetchAllowance();
+          refetchMfgBalance();
+          setNotification(null);
+        }, 1000);
+      }
+    },
+  });
 
-  const submitTransaction = (args: WriteContractParameters) => {
-    writeContract(args, {
-      onSuccess: (hash) => {
-        setTxHash(hash);
-        setNotification({ message: 'Transaction submitted, waiting for confirmation...', type: 'success' });
-      },
-      onError: (error) => {
-        const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
-        setNotification({ message: msg, type: 'error' });
-      },
-    });
-  };
-  
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18);
   const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
@@ -94,14 +86,14 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
-  const isLoading = isPending || isConfirming;
 
-  const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
-  const handleUnstake = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] });
-  const handleClaim = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] });
+  const handleApprove = () => {
+    setNotification({ message: 'Check your wallet to approve...', type: 'success' });
+    writeContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
+  };
   const handleStake = () => {
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) { return setNotification({ message: 'Insufficient MFG balance.', type: 'error' }); }
-    submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
+    writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
     setStakeAmount("");
   };
 
@@ -134,11 +126,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
               <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
               <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
             </div>
-            <div className="text-center">
-              <button disabled={isLoading || parseFloat(pendingRewards) <= 0} onClick={handleClaim} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg md:w-1/2 border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                {isLoading ? 'Processing...' : `Claim Rewards`}
-              </button>
-            </div>
             <div className="border border-green-700/50 rounded-md p-4">
               <div className="flex border-b border-green-700/50 mb-4">
                 <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'stake' ? 'bg-green-900/50 text-white [text-shadow:0_0_5px_rgba(74,222,128,0.5)]' : 'text-gray-400'}`}>Stake MFG</button>
@@ -153,16 +140,16 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                       <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
                     </div>
                   </div>
-                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                    {isLoading ? 'Confirming...' : (isPending ? 'Check Wallet...' : (needsApproval ? 'Approve MFG' : 'Stake MFG'))}
+                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isPending || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isPending ? 'Check Wallet...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
                   </button>
                   {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
                 </div>
               ) : (
                 <div className="space-y-4 text-center">
                   <div className="text-lg text-white"><p className="text-sm">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
-                  <button onClick={handleUnstake} disabled={isLoading || parseFloat(userStakedAmount) <= 0} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                    {isLoading ? 'Confirming...' : (isPending ? 'Check Wallet...' : 'Unstake All MFG')}
+                   <button onClick={handleUnstake} disabled={isPending || parseFloat(userStakedAmount) <= 0} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isPending ? 'Check Wallet...' : 'Unstake All MFG'}
                   </button>
                 </div>
               )}
