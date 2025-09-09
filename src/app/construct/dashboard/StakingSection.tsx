@@ -13,14 +13,6 @@ const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
-// --- TYPE DEFINITIONS ---
-type WriteContractParameters = {
-  address: `0x${string}`;
-  abi: Abi;
-  functionName: string;
-  args: unknown[];
-};
-
 // --- ABIs ---
 const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}] as const;
 const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}] as const;
@@ -56,7 +48,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
   const { writeContract, isPending } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   const refetchAllData = useCallback(() => {
     refetchMfgBalance();
@@ -76,11 +68,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     }
   }, [isConfirmed, refetchAllData]);
 
-  const submitTransaction = (args: WriteContractParameters) => {
+  const submitTransaction = (args: any) => {
     writeContract(args, {
       onSuccess: (hash) => {
         setTxHash(hash);
-        setNotification({ message: 'Transaction submitted, confirming...', type: 'success' });
+        setNotification({ message: 'Transaction submitted, confirming on-chain...', type: 'success' });
       },
       onError: (error) => {
         const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
@@ -96,7 +88,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
-  const isLoading = isPending || isConfirming;
   const hasStaked = parseFloat(userStakedAmount) > 0;
 
   const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
@@ -110,7 +101,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
       <CardHeader className="text-center">
-        <CardTitle className="text-green-400 text-glow">STAKING TERMINAL :: 25% APR</CardTitle>
+        <CardTitle className="text-green-400 text-glow">Stake MFG to receive PTX at 25% APR</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         {!isConnected ? (
@@ -130,51 +121,45 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
           </div>
         ) : (
         <>
-            {/* NEW UI: Staking panel is now first */}
-            <div className="border border-green-700/50 rounded-md p-4 space-y-4">
-              {!hasStaked ? (
-                // VIEW 1: USER HAS NOT STAKED YET
-                <>
-                  <div>
-                    <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
-                    <div className="flex items-center">
-                      <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500 h-full" />
-                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
-                    </div>
-                  </div>
-                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                    {isLoading ? 'Confirming...' : (isPending ? 'Check Wallet...' : (needsApproval ? 'Approve MFG' : 'Stake MFG'))}
-                  </button>
-                  {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
-                </>
-              ) : (
-                // VIEW 2: USER HAS STAKED
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="border border-green-700/50 rounded-md p-4 space-y-3 text-center flex flex-col justify-between">
-                    <div>
-                      <p className="text-sm">Your Staked MFG</p>
-                      <p className="text-2xl font-bold text-white">{formatNumber(userStakedAmount)}</p>
-                    </div>
-                    <button onClick={handleUnstake} disabled={isLoading} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                      {isLoading ? 'Confirming...' : 'Unstake'}
-                    </button>
-                  </div>
-                  <div className="border border-green-700/50 rounded-md p-4 space-y-3 text-center flex flex-col justify-between">
-                    <div>
-                      <p className="text-sm">Pending PTX Rewards</p>
-                      <p className="text-2xl font-bold text-white">{formatNumber(pendingRewards, 6)}</p>
-                    </div>
-                    <button disabled={isLoading || parseFloat(pendingRewards) <= 0} onClick={handleClaim} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                      {isLoading ? 'Confirming...' : `Claim`}
-                    </button>
+            {!hasStaked ? (
+              <div className="border border-green-700/50 rounded-md p-4 space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
+                  <div className="flex items-center">
+                    <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500 h-full" />
+                    <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
                   </div>
                 </div>
-              )}
-            </div>
+                <button onClick={needsApproval ? handleApprove : handleStake} disabled={isPending || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                  {isPending ? 'Check Wallet...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
+                </button>
+                {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border border-green-700/50 rounded-md p-4 space-y-3 text-center flex flex-col justify-between">
+                  <div>
+                    <p className="text-sm">Your Staked MFG</p>
+                    <p className="text-2xl font-bold text-white">{formatNumber(userStakedAmount)}</p>
+                  </div>
+                  <button onClick={handleUnstake} disabled={isPending} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isPending ? 'Check Wallet...' : 'Unstake All'}
+                  </button>
+                </div>
+                <div className="border border-green-700/50 rounded-md p-4 space-y-3 text-center flex flex-col justify-between">
+                  <div>
+                    <p className="text-sm">Pending PTX Rewards</p>
+                    <p className="text-2xl font-bold text-white">{formatNumber(pendingRewards, 6)}</p>
+                  </div>
+                   <button disabled={isPending || parseFloat(pendingRewards) <= 0} onClick={handleClaim} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isPending ? 'Check Wallet...' : `Claim Rewards`}
+                  </button>
+                </div>
+              </div>
+            )}
             
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Your MFG Balance</div><div className="text-xl font-bold text-white">{formatNumber(mfgBalance)}</div></div>
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total MFG Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
+            <div className="grid grid-cols-1 gap-4 text-center pt-4">
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total MFG Staked in Pool</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
             </div>
         </>
         )}
