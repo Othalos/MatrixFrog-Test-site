@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useWatchContractEvent } from "wagmi";
-import { formatUnits, parseUnits, maxUint256, type Abi } from "viem";
+import { formatUnits, parseUnits, maxUint256 } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -43,8 +43,8 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const sharedReadConfig = { query: { enabled: isConnected && isCorrectNetwork && !!address } };
 
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
-  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
-  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: userStakeData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: pendingRewardsData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: poolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], query: { enabled: isConnected && isCorrectNetwork } });
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
@@ -66,46 +66,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
       }
     },
   });
-  
-  // This separate watcher is added to automatically refresh data after staking/unstaking
-  useWatchContractEvent({
-    address: STAKING_CONTRACT_ADDRESS,
-    abi: STAKING_ABI,
-    eventName: 'Staked',
-    onLogs(logs) {
-      const userLog = logs.find(log => log.args.user === address);
-      if (userLog) {
-        setNotification({ message: 'Stake confirmed!', type: 'success' });
-        setTimeout(() => {
-            refetchAllData();
-            setNotification(null);
-        }, 1000);
-      }
-    }
-  });
-  
-  useWatchContractEvent({
-    address: STAKING_CONTRACT_ADDRESS,
-    abi: STAKING_ABI,
-    eventName: 'Unstaked',
-    onLogs(logs) {
-      const userLog = logs.find(log => log.args.user === address);
-      if (userLog) {
-        setNotification({ message: 'Unstake confirmed!', type: 'success' });
-        setTimeout(() => {
-            refetchAllData();
-            setNotification(null);
-        }, 1000);
-      }
-    }
-  });
-
-  const refetchAllData = () => {
-      refetchMfgBalance();
-      refetchUserStake();
-      refetchPendingRewards();
-      refetchAllowance();
-  };
 
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18);
@@ -127,7 +87,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const handleUnstake = () => {
     writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] });
   };
-
 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
