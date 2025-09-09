@@ -21,7 +21,7 @@ type WriteContractParameters = {
   address: `0x${string}`;
   abi: Abi;
   functionName: string;
-  args: any[];
+  args: unknown[]; // <-- Corrected type
 };
 
 
