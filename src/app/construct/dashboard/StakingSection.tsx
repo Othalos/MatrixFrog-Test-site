@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useWatchContractEvent } from "wagmi";
-import { formatUnits, parseUnits, maxUint256 } from "viem";
+import { formatUnits, parseUnits, maxUint256, type Abi } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -13,9 +13,23 @@ const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
+// --- TYPE DEFINITIONS ---
+// **FIX**: Add specific types for the event logs to solve the type error
+type ApprovalLog = {
+  args: {
+    owner?: `0x${string}`;
+    spender?: `0x${string}`;
+  }
+}
+type StakingLog = {
+  args: {
+    user?: `0x${string}`;
+  }
+}
+
 // --- ABIs ---
-const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}] as const;
-const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}] as const;
+const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}, {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"poolId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Staked","type":"event"}, {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"poolId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Unstaked","type":"event"}] as const;
+const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}, {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"}] as const;
 
 const formatNumber = (value: string | number, decimals: number = 2) => {
   const num = Number(value);
@@ -41,30 +55,67 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
   const sharedReadConfig = { query: { enabled: isConnected && isCorrectNetwork && !!address } };
-
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
-  const { data: userStakeData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
-  const { data: pendingRewardsData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: poolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], query: { enabled: isConnected && isCorrectNetwork } });
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
   const { writeContract, isPending } = useWriteContract();
 
+  const refetchAllData = () => {
+    refetchMfgBalance();
+    refetchUserStake();
+    refetchPendingRewards();
+    refetchAllowance();
+  };
+
   useWatchContractEvent({
     address: MFG_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     eventName: 'Approval',
-    onLogs(logs) {
+    onLogs(logs: ApprovalLog[]) {
       const userLog = logs.find(log => log.args.owner === address && log.args.spender === STAKING_CONTRACT_ADDRESS);
       if (userLog) {
         setNotification({ message: 'Approval confirmed! Refreshing data...', type: 'success' });
         setTimeout(() => {
           refetchAllowance();
-          refetchMfgBalance();
           setNotification(null);
         }, 1000);
       }
     },
+  });
+
+  useWatchContractEvent({
+    address: STAKING_CONTRACT_ADDRESS,
+    abi: STAKING_ABI,
+    eventName: 'Staked',
+    onLogs(logs: StakingLog[]) {
+      const userLog = logs.find(log => log.args.user === address);
+      if (userLog) {
+        setNotification({ message: 'Stake confirmed!', type: 'success' });
+        setTimeout(() => {
+            refetchAllData();
+            setNotification(null);
+        }, 1000);
+      }
+    }
+  });
+  
+  useWatchContractEvent({
+    address: STAKING_CONTRACT_ADDRESS,
+    abi: STAKING_ABI,
+    eventName: 'Unstaked',
+    onLogs(logs: StakingLog[]) {
+      const userLog = logs.find(log => log.args.user === address);
+      if (userLog) {
+        setNotification({ message: 'Unstake confirmed!', type: 'success' });
+        setTimeout(() => {
+            refetchAllData();
+            setNotification(null);
+        }, 1000);
+      }
+    }
   });
 
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
