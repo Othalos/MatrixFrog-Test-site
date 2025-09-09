@@ -38,7 +38,8 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const [stakeAmount, setStakeAmount] = useState("");
   const [activeTab, setActiveTab] = useState("stake");
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  
+  const [loadingAction, setLoadingAction] = useState<string | null>(null); // **FIX**: More precise loading state
+
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -59,19 +60,24 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchPoolData();
   }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
-  const { writeContract, data: hash, isPending: isTxPending } = useWriteContract({
+  const { writeContract } = useWriteContract({
     mutation: {
-      onSuccess: () => setNotification({ message: 'Transaction submitted!', type: 'success' }),
-      onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); },
-      onSettled: () => {
-        setTimeout(() => { refetchAllData(); }, 3000);
+      onSuccess: () => setNotification({ message: 'Transaction submitted! Waiting for confirmation...', type: 'success' }),
+      onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); setLoadingAction(null); },
+      onSettled: async (hash) => {
+        if (hash) {
+          const { L1BlockNumber } = await import('alchemy-sdk'); // Lazy import if needed
+          // Wait for confirmation then refetch
+          const { refetch } = useWaitForTransactionReceipt({ hash });
+          await refetch();
+          setNotification({ message: 'Transaction confirmed!', type: 'success' });
+          refetchAllData();
+        }
+        setLoadingAction(null); // **FIX**: Reset loading state when transaction is settled
       }
     }
   });
-
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
-  const isLoading = isTxPending || isConfirming;
-
+  
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
   const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
@@ -80,34 +86,29 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
-  const handleApprove = () => writeContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
-  const handleUnstake = () => writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] });
-  const handleClaim = () => writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] });
+  const handleApprove = () => { setLoadingAction('approve'); writeContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] }); };
+  const handleUnstake = () => { setLoadingAction('unstake'); writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] }); };
+  const handleClaim = () => { setLoadingAction('claim'); writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] }); };
   const handleStake = () => {
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) { return setNotification({ message: 'Insufficient MFG balance.', type: 'error' }); }
+    setLoadingAction('stake');
     writeContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
     setStakeAmount("");
   };
-  
-  const buttonBaseStyle = "w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg";
-  const greenGlow = "border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]";
-  const redGlow = "border-red-500 bg-red-900/50 text-red-300 hover:bg-red-800/60 hover:shadow-[0_0_15px_rgba(239,68,68,0.7)]";
-  const disabledGlow = "border-gray-700 bg-black text-gray-500 cursor-not-allowed";
 
   return (
-    <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+    <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
       <CardHeader>
-        <CardTitle style={{ color: "#4ade80", textShadow: "0 0 5px rgba(74, 222, 128, 0.5)" }}>STAKING TERMINAL :: MFG {'>'} PTX (Testnet)</CardTitle>
+        <CardTitle className="text-green-400 text-glow">STAKING TERMINAL :: MFG {'>'} PTX (Testnet)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         {!isConnected ? (
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
-              <h3 className="text-lg font-bold text-green-400">ACCESS DENIED :: CONNECT WALLET</h3>
-              <p className="text-sm text-center text-gray-400">Connect your wallet to access staking terminal functions.</p>
+              <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-                  <Button onClick={connectMetaMask} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "MetaMask"}</Button>
-                  <Button onClick={connectWalletConnect} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
-                  <Button onClick={connectCoinbase} disabled={isConnecting} className={`${buttonBaseStyle} ${greenGlow}`}>{isConnecting ? "Connecting..." : "Coinbase"}</Button>
+                  <Button onClick={connectMetaMask} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
+                  <Button onClick={connectWalletConnect} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
+                  <Button onClick={connectCoinbase} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
               </div>
           </div>
         ) : !isCorrectNetwork ? (
@@ -119,42 +120,42 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
         ) : (
         <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm text-green-400">APR</div><div className="text-xl font-bold text-white">25.00%</div></div>
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm text-green-400">Total Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm text-green-400">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm text-green-400">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
+              <div className="matrix-stat-box"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25.00%</div></div>
+              <div className="matrix-stat-box"><div className="text-sm">Total Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
+              <div className="matrix-stat-box"><div className="text-sm">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
+              <div className="matrix-stat-box"><div className="text-sm">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
             </div>
 
             <div className="text-center">
-              <button onClick={handleClaim} disabled={isLoading || parseFloat(pendingRewards) <= 0} className={`${buttonBaseStyle} ${isLoading || parseFloat(pendingRewards) <= 0 ? disabledGlow : greenGlow}`}>
-                {isLoading ? 'Processing...' : `Claim Rewards`}
+              <button onClick={handleClaim} disabled={!!loadingAction || parseFloat(pendingRewards) <= 0} className={`matrix-button-green ${!!loadingAction || parseFloat(pendingRewards) <= 0 ? 'disabled' : ''}`}>
+                {loadingAction === 'claim' ? 'Processing...' : `Claim Rewards`}
               </button>
             </div>
 
             <div className="border border-green-700/50 rounded-md p-4">
               <div className="flex border-b border-green-700/50 mb-4">
-                <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 ${activeTab === 'stake' ? 'bg-green-900/50 text-white' : 'text-gray-400'}`}>Stake MFG</button>
-                <button onClick={() => setActiveTab('unstake')} className={`flex-1 py-2 ${activeTab === 'unstake' ? 'bg-green-900/50 text-white' : 'text-gray-400'}`}>Unstake</button>
+                <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'stake' ? 'bg-green-900/50 text-white text-glow-sm' : 'text-gray-400'}`}>Stake MFG</button>
+                <button onClick={() => setActiveTab('unstake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'unstake' ? 'bg-green-900/50 text-white text-glow-sm' : 'text-gray-400'}`}>Unstake</button>
               </div>
               {activeTab === 'stake' ? (
                 <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between items-center mb-1"><label className="text-sm text-green-400">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
+                    <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
                     <div className="flex items-center">
                       <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
-                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-transparent border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-900/50">MAX</button>
+                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4">MAX</button>
                     </div>
                   </div>
-                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`${buttonBaseStyle} ${isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? disabledGlow : greenGlow}`}>
-                    {isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
+                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={!!loadingAction || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`matrix-button-green ${!!loadingAction || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? 'disabled' : ''}`}>
+                    {loadingAction === 'approve' || loadingAction === 'stake' ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
                   </button>
                   {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
                 </div>
               ) : (
                 <div className="space-y-4 text-center">
-                  <div className="text-lg text-white"><p className="text-sm text-green-400">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
-                  <button onClick={handleUnstake} disabled={isLoading || parseFloat(userStakedAmount) <= 0} className={`${buttonBaseStyle} ${isLoading || parseFloat(userStakedAmount) <= 0 ? disabledGlow : redGlow}`}>
-                    {isLoading ? 'Processing...' : 'Unstake All MFG'}
+                  <div className="text-lg text-white"><p className="text-sm">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
+                  <button onClick={handleUnstake} disabled={!!loadingAction || parseFloat(userStakedAmount) <= 0} className={`matrix-button-red ${!!loadingAction || parseFloat(userStakedAmount) <= 0 ? 'disabled' : ''}`}>
+                    {loadingAction === 'unstake' ? 'Processing...' : 'Unstake All MFG'}
                   </button>
                 </div>
               )}
