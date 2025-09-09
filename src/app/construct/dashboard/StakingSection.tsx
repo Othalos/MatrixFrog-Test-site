@@ -38,22 +38,13 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const [stakeAmount, setStakeAmount] = useState("");
   const [activeTab, setActiveTab] = useState("stake");
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [txHash, setTxHash] = useState<Hash | undefined>();
-
+  
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  const { writeContract, isPending: isTxPending } = useWriteContract({
-    mutation: {
-      onSuccess: (hash) => { setTxHash(hash); setNotification({ message: 'Transaction submitted!', type: 'success' }); },
-      onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); }
-    }
-  });
-
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
-
+  // --- DATA FETCHING & REFETCHING LOGIC ---
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork };
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
@@ -69,20 +60,29 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchPoolData();
   }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
-  useEffect(() => {
-    if (isConfirmed) {
-      setNotification({ message: 'Transaction confirmed!', type: 'success' });
-      refetchAllData(); // Use the memoized function
-      setTimeout(() => setNotification(null), 5000);
+  // --- TRANSACTION HANDLING ---
+  const { writeContract, data: hash, isPending: isTxPending } = useWriteContract({
+    mutation: {
+      onSuccess: () => setNotification({ message: 'Transaction submitted!', type: 'success' }),
+      onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); },
+      // **FIX**: Use onSettled to reliably refetch data after a transaction is complete (success or fail)
+      onSettled: () => {
+        setTimeout(() => {
+          refetchAllData();
+        }, 2000); // A small delay to allow the RPC to catch up
+      }
     }
-  }, [isConfirmed, refetchAllData]); // Add refetchAllData to the dependency array
+  });
 
-  // FIX: Provide a default bigint value (0n) if data is undefined.
-  const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : BigInt(0), 18);
-  const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? BigInt(0), 18);
-  const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : BigInt(0), 18);
-  const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? BigInt(0), 18);
-  const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : BigInt(0), 18);
+  const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
+  const isLoading = isTxPending || isConfirming;
+
+  // --- DERIVED STATE & HANDLERS ---
+  const mfgBalance = formatUnits(mfgBalanceData ?? 0n, 18);
+  const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
+  const pendingRewards = formatUnits(pendingRewardsData ?? 0n, 18);
+  const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? 0n, 18);
+  const allowance = formatUnits(allowanceData ?? 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
@@ -95,13 +95,12 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     setStakeAmount("");
   };
   
-  const isLoading = isTxPending || isConfirming;
-
+  // --- STYLES ---
   const buttonBaseStyle = "w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg";
   const greenGlow = "border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]";
   const redGlow = "border-red-500 bg-red-900/50 text-red-300 hover:bg-red-800/60 hover:shadow-[0_0_15px_rgba(239,68,68,0.7)]";
-  const disabledGlow = "border-gray-700 bg-gray-900/50 text-gray-500 cursor-not-allowed animate-pulse";
-
+  const disabledGlow = "border-gray-700 bg-black text-gray-500 cursor-not-allowed";
+  
   return (
     <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
       <CardHeader>
@@ -148,7 +147,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-1"><label className="text-sm text-green-400">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
-                    <div className="flex items-center"><input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" /><button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-800 text-white p-2 rounded-r-md hover:bg-green-700">MAX</button></div>
+                    <div className="flex items-center">
+                      <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      {/* STYLE FIX: Updated MAX button style */}
+                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-transparent border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-900/50">MAX</button>
+                    </div>
                   </div>
                   <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`${buttonBaseStyle} ${isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? disabledGlow : greenGlow}`}>
                     {isLoading ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
