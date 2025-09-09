@@ -78,11 +78,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   }, [isConfirmed, refetchAllData]); // Add refetchAllData to the dependency array
 
   // FIX: Provide a default bigint value (0n) if data is undefined.
-  const mfgBalance = formatUnits(mfgBalanceData ?? 0n, 18);
+  const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
-  const pendingRewards = formatUnits(pendingRewardsData ?? 0n, 18);
+  const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
   const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? 0n, 18);
-  const allowance = formatUnits(allowanceData ?? 0n, 18);
+  const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
 
