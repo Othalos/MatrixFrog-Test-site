@@ -52,13 +52,13 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  // **THE FIX IS HERE**: Added '!!address' to ensure the hook only runs when the address is available
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
 
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
-  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
-  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: [POOL_ID, address], ...sharedReadConfig });
-  const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], ...sharedReadConfig });
+  // **FIX IS HERE**: Explicitly make args undefined if address doesn't exist
+  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], enabled: isConnected && isCorrectNetwork }); // This one doesn't need address
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
   const refetchAllData = useCallback(() => {
