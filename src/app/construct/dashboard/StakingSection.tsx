@@ -11,7 +11,7 @@ import { Button } from "@/app/components/ui/button";
 const PEPU_TESTNET_ID = 97740;
 const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
-const POOL_ID = 0n; // **FIX**: Changed to bigint
+const POOL_ID = 0n;
 
 // --- TYPE DEFINITIONS ---
 type StakeInfo = { amount: bigint; timestamp: bigint; unclaimed: bigint; };
@@ -52,7 +52,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  const sharedReadConfig = { enabled: isConnected && isCorrectNetwork };
+  // **FIX**: Add '!!address' to the enabled flag to prevent running hooks with an undefined address
+  const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
+
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: [POOL_ID, address], ...sharedReadConfig });
@@ -105,7 +107,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
-
   const isLoading = isTxPending || isConfirming;
 
   const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] }, 'approve');
@@ -146,13 +147,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
               <div className="matrix-stat-box"><div className="text-sm">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
               <div className="matrix-stat-box"><div className="text-sm">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
             </div>
-
             <div className="text-center">
               <button onClick={handleClaim} disabled={isLoading || parseFloat(pendingRewards) <= 0} className={`matrix-button-green ${isLoading || parseFloat(pendingRewards) <= 0 ? 'disabled' : ''}`}>
                 {loadingAction === 'claim' ? 'Processing...' : `Claim Rewards`}
               </button>
             </div>
-
             <div className="border border-green-700/50 rounded-md p-4">
               <div className="flex border-b border-green-700/50 mb-4">
                 <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'stake' ? 'bg-green-900/50 text-white text-glow-sm' : 'text-gray-400'}`}>Stake MFG</button>
