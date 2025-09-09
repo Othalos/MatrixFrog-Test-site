@@ -13,6 +13,15 @@ const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
+// --- TYPE DEFINITIONS ---
+// **FIX**: Re-add this type definition to fix the 'any' error
+type WriteContractParameters = {
+  address: `0x${string}`;
+  abi: Abi;
+  functionName: string;
+  args: unknown[];
+};
+
 // --- ABIs ---
 const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}] as const;
 const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}] as const;
@@ -68,7 +77,8 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     }
   }, [isConfirmed, refetchAllData]);
 
-  const submitTransaction = (args: any) => {
+  // **FIX**: Use the specific 'WriteContractParameters' type instead of 'any'
+  const submitTransaction = (args: WriteContractParameters) => {
     writeContract(args, {
       onSuccess: (hash) => {
         setTxHash(hash);
@@ -160,7 +170,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
             )}
             
             <div className="grid grid-cols-2 gap-4 text-center pt-4">
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total MFG Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
               <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25.00%</div></div>
             </div>
         </>
