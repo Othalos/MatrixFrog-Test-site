@@ -52,7 +52,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  // **FIX**: Add '!!address' to the enabled flag to prevent running hooks with an undefined address
+  // **FIX**: Add '!!address' to ensure the hook only runs when the address is available
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
 
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
