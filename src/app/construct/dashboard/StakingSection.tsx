@@ -14,8 +14,6 @@ const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
 // --- TYPE DEFINITIONS ---
-type StakeInfo = { amount: bigint; timestamp: bigint; unclaimed: bigint; };
-type PoolInfo = { totalStaked: bigint; /* other fields */ };
 type WriteContractParameters = {
   address: `0x${string}`;
   abi: Abi;
@@ -52,6 +50,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
+
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
