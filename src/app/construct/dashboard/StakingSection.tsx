@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
-import { formatUnits, parseUnits, maxUint256, type Hash } from "viem";
+import { formatUnits, parseUnits, maxUint256 } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -44,7 +44,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  // --- DATA FETCHING & REFETCHING LOGIC ---
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork };
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: [POOL_ID, address], ...sharedReadConfig });
@@ -60,16 +59,12 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchPoolData();
   }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
-  // --- TRANSACTION HANDLING ---
   const { writeContract, data: hash, isPending: isTxPending } = useWriteContract({
     mutation: {
       onSuccess: () => setNotification({ message: 'Transaction submitted!', type: 'success' }),
       onError: (error) => { const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.'; setNotification({ message: msg, type: 'error' }); },
-      // **FIX**: Use onSettled to reliably refetch data after a transaction is complete (success or fail)
       onSettled: () => {
-        setTimeout(() => {
-          refetchAllData();
-        }, 2000); // A small delay to allow the RPC to catch up
+        setTimeout(() => { refetchAllData(); }, 3000); // Delay to allow RPC to update
       }
     }
   });
@@ -77,7 +72,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
   const isLoading = isTxPending || isConfirming;
 
-  // --- DERIVED STATE & HANDLERS ---
   const mfgBalance = formatUnits(mfgBalanceData ?? 0n, 18);
   const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
   const pendingRewards = formatUnits(pendingRewardsData ?? 0n, 18);
@@ -95,12 +89,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     setStakeAmount("");
   };
   
-  // --- STYLES ---
   const buttonBaseStyle = "w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg";
   const greenGlow = "border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]";
   const redGlow = "border-red-500 bg-red-900/50 text-red-300 hover:bg-red-800/60 hover:shadow-[0_0_15px_rgba(239,68,68,0.7)]";
   const disabledGlow = "border-gray-700 bg-black text-gray-500 cursor-not-allowed";
-  
+
   return (
     <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
       <CardHeader>
@@ -149,7 +142,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                     <div className="flex justify-between items-center mb-1"><label className="text-sm text-green-400">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
                     <div className="flex items-center">
                       <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
-                      {/* STYLE FIX: Updated MAX button style */}
                       <button onClick={() => setStakeAmount(mfgBalance)} className="bg-transparent border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-900/50">MAX</button>
                     </div>
                   </div>
