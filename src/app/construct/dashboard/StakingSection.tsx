@@ -13,15 +13,6 @@ const STAKING_CONTRACT_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
-// --- TYPE DEFINITIONS ---
-// **FIX**: Re-add this type definition to fix both the 'any' and 'Abi unused' errors
-type WriteContractParameters = {
-  address: `0x${string}`;
-  abi: Abi;
-  functionName: string;
-  args: unknown[];
-};
-
 // --- ABIs ---
 const STAKING_ABI = [{"inputs":[{"internalType":"address","name":"initialOwner","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"BASIS_POINTS_DIVISOR","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"pendingRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"pools","outputs":[{"internalType":"contract IERC20","name":"stakingToken","type":"address"},{"internalType":"contract IERC20","name":"rewardToken","type":"address"},{"internalType":"uint256","name":"apyBasisPoints","type":"uint256"},{"internalType":"uint256","name":"lockDuration","type":"uint256"},{"internalType":"bool","name":"active","type":"bool"},{"internalType":"uint256","name":"totalStaked","type":"uint256"},{"internalType":"uint256","name":"rewardBudget","type":"uint256"},{"internalType":"bool","name":"rewardsExhausted","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"unstake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"}],"name":"claimRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"poolId","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"stakes","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"unclaimed","type":"uint256"}],"stateMutability":"view","type":"function"}] as const;
 const ERC20_ABI = [{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"}] as const;
@@ -53,7 +44,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
-  const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], query: { enabled: isConnected && isCorrectNetwork } });
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
   const { writeContract, isPending } = useWriteContract();
@@ -64,8 +54,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchUserStake();
     refetchPendingRewards();
     refetchAllowance();
-    refetchPoolData();
-  }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
+  }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance]);
 
   useEffect(() => {
     if (isConfirmed) {
@@ -77,11 +66,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     }
   }, [isConfirmed, refetchAllData]);
 
-  const submitTransaction = (args: WriteContractParameters) => {
+  const submitTransaction = (args: any) => {
     writeContract(args, {
       onSuccess: (hash) => {
         setTxHash(hash);
-        setNotification({ message: 'Transaction submitted, confirming...', type: 'success' });
+        setNotification({ message: 'Transaction submitted, confirming on-chain...', type: 'success' });
       },
       onError: (error) => {
         const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
@@ -93,7 +82,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
   const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18);
   const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
-  const totalStaked = formatUnits(poolData?.[5] ?? 0n, 18);
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
@@ -106,7 +94,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const handleStake = () => {
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) { return setNotification({ message: 'Insufficient MFG balance.', type: 'error' }); }
     submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
-    setStakeAmount("");
   };
 
   return (
@@ -134,8 +121,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
         <>
             {!hasStaked ? (
               <div className="border border-green-700/50 rounded-md p-4 space-y-4">
+                <div className="flex justify-between items-center mb-1"><label className="text-sm">Your MFG Balance</label><span className="text-xs text-gray-400">{formatNumber(mfgBalance)} MFG</span></div>
                 <div>
-                  <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
+                  <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label></div>
                   <div className="flex items-center">
                     <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500 h-full" />
                     <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
@@ -154,7 +142,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                     <p className="text-2xl font-bold text-white">{formatNumber(userStakedAmount)}</p>
                   </div>
                   <button onClick={handleUnstake} disabled={isLoading} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                    {isLoading ? 'Confirming...' : 'Unstake'}
+                    {isLoading ? 'Confirming...' : 'Unstake All & Claim'}
                   </button>
                 </div>
                 <div className="border border-green-700/50 rounded-md p-4 space-y-3 text-center flex flex-col justify-between">
@@ -163,15 +151,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
                     <p className="text-2xl font-bold text-white">{formatNumber(pendingRewards, 6)}</p>
                   </div>
                    <button disabled={isLoading || parseFloat(pendingRewards) <= 0} onClick={handleClaim} className="w-full px-4 py-2 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
-                    {isLoading ? 'Confirming...' : `Claim`}
+                    {isLoading ? 'Confirming...' : `Claim Rewards`}
                   </button>
                 </div>
               </div>
             )}
-            
-            <div className="grid grid-cols-1 gap-4 text-center pt-4">
-              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total MFG Staked in Pool</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
-            </div>
         </>
         )}
         {notification && (
