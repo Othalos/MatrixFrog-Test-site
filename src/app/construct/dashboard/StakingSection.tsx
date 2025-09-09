@@ -14,6 +14,8 @@ const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
 // --- TYPE DEFINITIONS ---
+type StakeInfo = { amount: bigint; timestamp: bigint; unclaimed: bigint; };
+type PoolInfo = { totalStaked: bigint; /* other fields */ };
 type WriteContractParameters = {
   address: `0x${string}`;
   abi: Abi;
@@ -43,7 +45,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const [activeTab, setActiveTab] = useState("stake");
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [txHash, setTxHash] = useState<Hash | undefined>();
-  const [loadingAction, setLoadingAction] = useState<string | null>(null);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -51,7 +52,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
   const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
-
   const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
@@ -66,7 +66,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     refetchPoolData();
   }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance, refetchPoolData]);
 
-  const { writeContract, isPending: isTxPending } = useWriteContract();
+  const { writeContract, isPending } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   useEffect(() => {
@@ -79,8 +79,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     }
   }, [isConfirmed, refetchAllData]);
 
-  const submitTransaction = (args: WriteContractParameters, action: string) => {
-    setLoadingAction(action);
+  const submitTransaction = (args: WriteContractParameters) => {
     writeContract(args, {
       onSuccess: (hash) => {
         setTxHash(hash);
@@ -89,46 +88,41 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
       onError: (error) => {
         const msg = error.message.includes('User rejected') ? 'Transaction rejected.' : 'Transaction failed.';
         setNotification({ message: msg, type: 'error' });
-        setLoadingAction(null);
       },
-      onSettled: () => {
-        setLoadingAction(null);
-      }
     });
   };
   
-  // **FIX**: Access struct data by array index, not object property.
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
-  const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18); // `amount` is at index 0
+  const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18);
   const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
-  const totalStaked = formatUnits(poolData?.[5] ?? 0n, 18); // `totalStaked` is at index 5
+  const totalStaked = formatUnits(poolData?.[5] ?? 0n, 18);
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
-  const isLoading = isTxPending || isConfirming;
+  const isLoading = isPending || isConfirming;
 
-  const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] }, 'approve');
-  const handleUnstake = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] }, 'unstake');
-  const handleClaim = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] }, 'claim');
+  const handleApprove = () => submitTransaction({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: 'approve', args: [STAKING_CONTRACT_ADDRESS, maxUint256] });
+  const handleUnstake = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'unstake', args: [POOL_ID] });
+  const handleClaim = () => submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'claimRewards', args: [POOL_ID] });
   const handleStake = () => {
     if (parseFloat(stakeAmount) > parseFloat(mfgBalance)) { return setNotification({ message: 'Insufficient MFG balance.', type: 'error' }); }
-    submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] }, 'stake');
+    submitTransaction({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: 'stake', args: [POOL_ID, parseUnits(stakeAmount, 18)] });
     setStakeAmount("");
   };
 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
       <CardHeader>
-        <CardTitle className="text-green-400 text-glow">STAKING TERMINAL :: MFG {'>'} PTX (Testnet)</CardTitle>
+        <CardTitle className="text-green-400 [text-shadow:0_0_8px_rgba(74,222,128,0.7)]">STAKING TERMINAL :: MFG {'>'} PTX (Testnet)</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         {!isConnected ? (
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
-              <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
+              <h3 className="text-lg font-bold text-green-400 [text-shadow:0_0_8px_rgba(74,222,128,0.7)]">ACCESS DENIED :: CONNECT WALLET</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-                  <Button onClick={connectMetaMask} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
-                  <Button onClick={connectWalletConnect} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
-                  <Button onClick={connectCoinbase} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
+                  <Button onClick={connectMetaMask} disabled={isConnecting} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
+                  <Button onClick={connectWalletConnect} disabled={isConnecting} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
+                  <Button onClick={connectCoinbase} disabled={isConnecting} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
               </div>
           </div>
         ) : !isCorrectNetwork ? (
@@ -140,40 +134,40 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
         ) : (
         <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div className="matrix-stat-box"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25.00%</div></div>
-              <div className="matrix-stat-box"><div className="text-sm">Total Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
-              <div className="matrix-stat-box"><div className="text-sm">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
-              <div className="matrix-stat-box"><div className="text-sm">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25.00%</div></div>
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Total Staked</div><div className="text-xl font-bold text-white">{formatNumber(totalStaked)}</div></div>
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Your Stake</div><div className="text-xl font-bold text-white">{formatNumber(userStakedAmount)}</div></div>
+              <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">PTX Rewards</div><div className="text-xl font-bold text-white">{formatNumber(pendingRewards, 6)}</div></div>
             </div>
             <div className="text-center">
-              <button onClick={handleClaim} disabled={isLoading || parseFloat(pendingRewards) <= 0} className={`matrix-button-green ${isLoading || parseFloat(pendingRewards) <= 0 ? 'disabled' : ''}`}>
-                {loadingAction === 'claim' ? 'Processing...' : `Claim Rewards`}
+              <button disabled={isLoading || parseFloat(pendingRewards) <= 0} onClick={handleClaim} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg md:w-1/2 border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                {isConfirming ? 'Confirming...' : isPending ? 'Check Wallet...' : `Claim Rewards`}
               </button>
             </div>
             <div className="border border-green-700/50 rounded-md p-4">
               <div className="flex border-b border-green-700/50 mb-4">
-                <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'stake' ? 'bg-green-900/50 text-white text-glow-sm' : 'text-gray-400'}`}>Stake MFG</button>
-                <button onClick={() => setActiveTab('unstake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'unstake' ? 'bg-green-900/50 text-white text-glow-sm' : 'text-gray-400'}`}>Unstake</button>
+                <button onClick={() => setActiveTab('stake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'stake' ? 'bg-green-900/50 text-white [text-shadow:0_0_5px_rgba(74,222,128,0.5)]' : 'text-gray-400'}`}>Stake MFG</button>
+                <button onClick={() => setActiveTab('unstake')} className={`flex-1 py-2 text-sm font-bold ${activeTab === 'unstake' ? 'bg-green-900/50 text-white [text-shadow:0_0_5px_rgba(74,222,128,0.5)]' : 'text-gray-400'}`}>Unstake</button>
               </div>
               {activeTab === 'stake' ? (
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-1"><label className="text-sm">Amount to Stake</label><span className="text-xs text-gray-400">Balance: {formatNumber(mfgBalance)} MFG</span></div>
                     <div className="flex items-center">
-                      <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" />
-                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4">MAX</button>
+                      <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500 h-full" />
+                      <button onClick={() => setStakeAmount(mfgBalance)} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
                     </div>
                   </div>
-                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className={`matrix-button-green ${isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount)) ? 'disabled' : ''}`}>
-                    {loadingAction === 'approve' || loadingAction === 'stake' ? 'Processing...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
+                  <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || (!needsApproval && (parseFloat(stakeAmount) <= 0 || !stakeAmount))} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isConfirming ? 'Confirming...' : isPending ? 'Check Wallet...' : (needsApproval ? 'Approve MFG' : 'Stake MFG')}
                   </button>
                   {needsApproval && (<div className="flex items-center text-xs text-yellow-400 space-x-2"><Info size={16}/><span>Approval required before staking.</span></div>)}
                 </div>
               ) : (
                 <div className="space-y-4 text-center">
                   <div className="text-lg text-white"><p className="text-sm">Available to Unstake</p><p className="text-2xl font-bold">{formatNumber(userStakedAmount)} MFG</p></div>
-                  <button onClick={handleUnstake} disabled={isLoading || parseFloat(userStakedAmount) <= 0} className={`matrix-button-red ${isLoading || parseFloat(userStakedAmount) <= 0 ? 'disabled' : ''}`}>
-                    {loadingAction === 'unstake' ? 'Processing...' : 'Unstake All MFG'}
+                  <button onClick={handleUnstake} disabled={isLoading || parseFloat(userStakedAmount) <= 0} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
+                    {isConfirming ? 'Confirming...' : isPending ? 'Check Wallet...' : 'Unstake All MFG'}
                   </button>
                 </div>
               )}
