@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
-import { formatUnits, parseUnits, maxUint256, type Hash, type Abi } from "viem";
+import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain } from "wagmi";
+import { formatUnits, parseUnits, maxUint256, type Abi } from "viem";
 import { Info, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -106,7 +106,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
-      {/* STYLE FIX: Added text-center to center the title */}
       <CardHeader className="text-center">
         <CardTitle className="text-green-400 [text-shadow:0_0_8px_rgba(74,222,128,0.7)]">STAKING TERMINAL :: MFG {'>'} PTX (Testnet)</CardTitle>
       </CardHeader>
@@ -128,7 +127,6 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
           </div>
         ) : (
         <>
-            {/* FUNCTIONAL FIX: Add a manual Refresh button */}
             <div className="flex justify-end">
               <button onClick={handleRefresh} disabled={isRefreshing} className="flex items-center gap-2 px-3 py-1 text-xs border border-green-700 rounded-md hover:bg-green-900/50 disabled:cursor-wait disabled:animate-pulse">
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
