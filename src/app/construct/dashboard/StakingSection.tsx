@@ -14,8 +14,6 @@ const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
 // --- TYPE DEFINITIONS ---
-type StakeInfo = { amount: bigint; timestamp: bigint; unclaimed: bigint; };
-type PoolInfo = { totalStaked: bigint; /* other fields */ };
 type WriteContractParameters = {
   address: `0x${string}`;
   abi: Abi;
@@ -52,16 +50,13 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const { switchChain } = useSwitchChain();
   const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
 
-  const queryConfig = { 
-    enabled: isConnected && isCorrectNetwork && !!address,
-  };
+  const sharedReadConfig = { enabled: isConnected && isCorrectNetwork && !!address };
 
-  // **FIX**: The 'enabled' flag and other options now go inside a 'query' object.
-  const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, query: queryConfig });
-  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, query: queryConfig });
-  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, query: queryConfig });
+  const { data: mfgBalanceData, refetch: refetchMfgBalance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf", args: address ? [address] : undefined, ...sharedReadConfig });
+  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "stakes", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
+  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards", args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig });
   const { data: poolData, refetch: refetchPoolData } = useReadContract({ address: STAKING_CONTRACT_ADDRESS, abi: STAKING_ABI, functionName: "pools", args: [POOL_ID], query: { enabled: isConnected && isCorrectNetwork } });
-  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, query: queryConfig });
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({ address: MFG_TOKEN_ADDRESS, abi: ERC20_ABI, functionName: "allowance", args: address ? [address, STAKING_CONTRACT_ADDRESS] : undefined, ...sharedReadConfig });
 
   const refetchAllData = useCallback(() => {
     refetchMfgBalance();
@@ -102,10 +97,11 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
     });
   };
   
+  // **FIX**: Access struct data by array index, not object property.
   const mfgBalance = formatUnits(typeof mfgBalanceData === 'bigint' ? mfgBalanceData : 0n, 18);
-  const userStakedAmount = formatUnits((userStakeData as StakeInfo)?.amount ?? 0n, 18);
+  const userStakedAmount = formatUnits(userStakeData?.[0] ?? 0n, 18); // `amount` is at index 0
   const pendingRewards = formatUnits(typeof pendingRewardsData === 'bigint' ? pendingRewardsData : 0n, 18);
-  const totalStaked = formatUnits((poolData as PoolInfo)?.totalStaked ?? 0n, 18);
+  const totalStaked = formatUnits(poolData?.[5] ?? 0n, 18); // `totalStaked` is at index 5
   const allowance = formatUnits(typeof allowanceData === 'bigint' ? allowanceData : 0n, 18);
   
   const needsApproval = parseFloat(stakeAmount) > 0 && parseFloat(stakeAmount) > parseFloat(allowance);
