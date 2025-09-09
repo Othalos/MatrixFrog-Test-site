@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useReadContract, useWriteContract, useChainId, useSwitchChain, useWatchContractEvent } from "wagmi";
-import { formatUnits, parseUnits, maxUint256, type Abi } from "viem";
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain, useWatchContractEvent } from "wagmi";
+import { formatUnits, parseUnits, maxUint256, type Hash } from "viem";
 import { Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -14,7 +14,6 @@ const MFG_TOKEN_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
 // --- TYPE DEFINITIONS ---
-// **FIX**: Add specific types for the event logs to solve the type error
 type ApprovalLog = {
   args: {
     owner?: `0x${string}`;
@@ -63,12 +62,12 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
 
   const { writeContract, isPending } = useWriteContract();
 
-  const refetchAllData = () => {
+  const refetchAllData = useCallback(() => {
     refetchMfgBalance();
     refetchUserStake();
     refetchPendingRewards();
     refetchAllowance();
-  };
+  }, [refetchMfgBalance, refetchUserStake, refetchPendingRewards, refetchAllowance]);
 
   useWatchContractEvent({
     address: MFG_TOKEN_ADDRESS,
