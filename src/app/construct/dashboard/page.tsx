@@ -32,8 +32,8 @@ import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
 
-// Pepe Unchained Chain ID
-const PEPE_UNCHAINED_CHAIN_ID = 97741;
+// Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
+const PEPE_UNCHAINED_CHAIN_ID = 97740;
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
