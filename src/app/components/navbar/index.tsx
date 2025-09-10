@@ -19,8 +19,8 @@ import { formatUnits } from "viem";
 // Fixed contract address (removed extra 's')
 const MATRIX_FROG_CONTRACT = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
-// Pepe Unchained Chain ID
-const PEPE_UNCHAINED_CHAIN_ID = 97741;
+// Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
+const PEPE_UNCHAINED_CHAIN_ID = 97740;
 
 const ABI = [
   {
