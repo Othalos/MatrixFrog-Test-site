@@ -4,14 +4,13 @@ import { useState, useEffect } from "react";
 import {
   useAccount,
   useConnect,
-  useDisconnect,
   useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
-  injected,
-  walletConnect,
-  coinbaseWallet,
 } from "wagmi";
+import { injected } from "wagmi/connectors/injected";
+import { WalletConnectConnector } from "wagmi/connectors/walletConnect";
+import { CoinbaseWalletConnector } from "wagmi/connectors/coinbaseWallet";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
 
 // --- Chain IDs ---
@@ -39,7 +38,6 @@ type UserInfo = [bigint, bigint]; // [amountStaked, rewardDebt]
 export default function StakingSection() {
   const { address, isConnected, chain } = useAccount();
   const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
 
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{
@@ -54,7 +52,6 @@ export default function StakingSection() {
 
   // --- Set addresses dynamically ---
   const MFG_ADDRESS = isTestnet ? MFG_TEST_ADDRESS : MFG_MAIN_ADDRESS;
-  const PTX_ADDRESS = isTestnet ? PTX_TEST_ADDRESS : PTX_MAIN_ADDRESS;
   const STAKING_ADDRESS = isTestnet ? STAKING_TEST_ADDRESS : undefined;
 
   // --- Read allowance, balance, staked, rewards ---
@@ -156,8 +153,10 @@ export default function StakingSection() {
 
   // --- Wallet connections ---
   const connectMetaMask = async () => connect({ connector: injected() });
-  const connectWalletConnect = async () => connect({ connector: walletConnect({ projectId: "YOUR_PROJECT_ID" }) });
-  const connectCoinbase = async () => connect({ connector: coinbaseWallet() });
+  const connectWalletConnect = async () =>
+    connect({ connector: new WalletConnectConnector({ projectId: "YOUR_PROJECT_ID" }) });
+  const connectCoinbase = async () =>
+    connect({ connector: new CoinbaseWalletConnector({ options: { appName: "MatrixFrog" } }) });
 
   // --- UI ---
   if (!isConnected) {
