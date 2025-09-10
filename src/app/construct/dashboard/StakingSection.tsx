@@ -1,29 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { parseUnits, formatUnits, maxUint256, type Hash } from "viem";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Button } from "@/app/components/ui/button";
 import { Info, AlertTriangle } from "lucide-react";
+import { Button } from "@/app/components/ui/button";
 
 // --- ABI imports ---
-import ERC20_ABI from "../../../abis/ERC20.json";
-import STAKING_ABI from "../../../abis/Staking.json";
+import ERC20_ABI from "@abis/ERC20.json";
+import STAKING_ABI from "@abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
-const STAKING_TEST_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
-const MFG_TEST_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
+const STAKING_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
+const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
 
 // --- Helper Functions ---
-const formatBalance = (balance: bigint | undefined, decimals = 18) => {
-  if (balance === undefined) return "0.00";
-  return formatNumber(formatUnits(balance, decimals));
-};
-const formatNumber = (value: string | number) => {
+const formatDisplayNumber = (value: string | number) => {
   const num = Number(value);
   if (isNaN(num)) return "0.00";
   return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 });
@@ -44,19 +40,19 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
 
   // --- Read Contract Data ---
   const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
-    address: MFG_TEST_ADDRESS, abi: ERC20_ABI, functionName: "allowance",
-    args: address ? [address, STAKING_TEST_ADDRESS] : undefined, ...sharedReadConfig,
+    address: MFG_ADDRESS, abi: ERC20_ABI, functionName: "allowance",
+    args: address ? [address, STAKING_ADDRESS] : undefined, ...sharedReadConfig,
   });
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
-    address: MFG_TEST_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf",
+    address: MFG_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf",
     args: address ? [address] : undefined, ...sharedReadConfig,
   });
   const { data: userStakeData, refetch: refetchUserStake } = useReadContract({
-    address: STAKING_TEST_ADDRESS, abi: STAKING_ABI, functionName: "stakes",
+    address: STAKING_ADDRESS, abi: STAKING_ABI, functionName: "stakes",
     args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig,
   });
   const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({
-    address: STAKING_TEST_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards",
+    address: STAKING_ADDRESS, abi: STAKING_ABI, functionName: "pendingRewards",
     args: address ? [POOL_ID, address] : undefined, ...sharedReadConfig,
   });
 
@@ -82,10 +78,10 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   }, [txConfirmed, refetchAllData]);
 
   // --- Derived Values ---
-  const allowance: bigint = allowanceData as bigint ?? 0n;
+  const allowance: bigint = (allowanceData as bigint) ?? 0n;
   const stakeAmountBN: bigint = stakeAmount ? parseUnits(stakeAmount, 18) : 0n;
   const needsApproval = stakeAmountBN > allowance;
-  const userStakedAmount = (userStakeData as [bigint, bigint])?.[0] ?? 0n;
+  const userStakedAmount = (userStakeData as [bigint])?.[0] ?? 0n;
   const hasStaked = userStakedAmount > 0n;
   const isLoading = isPending || isConfirming;
 
@@ -96,15 +92,15 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
       onError: (err) => setNotification({ message: err.message, type: "error" }),
     });
   };
-  const handleApprove = () => submitTransaction({ address: MFG_TEST_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [STAKING_TEST_ADDRESS, maxUint256] });
+  const handleApprove = () => submitTransaction({ address: MFG_ADDRESS, abi: ERC20_ABI, functionName: "approve", args: [STAKING_ADDRESS, maxUint256] });
   const handleStake = () => {
-    if (stakeAmountBN > (balanceData ?? 0n)) {
+    if (stakeAmountBN > (balanceData as bigint ?? 0n)) {
       return setNotification({ message: "Insufficient balance.", type: "error" });
     }
-    submitTransaction({ address: STAKING_TEST_ADDRESS, abi: STAKING_ABI, functionName: "stake", args: [POOL_ID, stakeAmountBN] });
+    submitTransaction({ address: STAKING_ADDRESS, abi: STAKING_ABI, functionName: "stake", args: [POOL_ID, stakeAmountBN] });
   };
-  const handleUnstake = () => submitTransaction({ address: STAKING_TEST_ADDRESS, abi: STAKING_ABI, functionName: "unstake", args: [POOL_ID] });
-  const handleClaim = () => submitTransaction({ address: STAKING_TEST_ADDRESS, abi: STAKING_ABI, functionName: "claimRewards", args: [POOL_ID] });
+  const handleUnstake = () => submitTransaction({ address: STAKING_ADDRESS, abi: STAKING_ABI, functionName: "unstake", args: [POOL_ID] });
+  const handleClaim = () => submitTransaction({ address: STAKING_ADDRESS, abi: STAKING_ABI, functionName: "claimRewards", args: [POOL_ID] });
 
   return (
     <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
@@ -116,9 +112,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
             <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-              <Button onClick={() => connect({ connector: injected() })} disabled={isConnecting} className="matrix-button-green">MetaMask</Button>
-              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} disabled={isConnecting} className="matrix-button-green">WalletConnect</Button>
-              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} disabled={isConnecting} className="matrix-button-green">Coinbase</Button>
+              <Button onClick={() => connect({ connector: injected() })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
+              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
+              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
             </div>
           </div>
         ) : !isCorrectNetwork ? (
@@ -130,9 +126,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="matrix-stat-box"><div className="text-sm">Balance</div><div className="text-xl font-bold text-white">{formatBalance(balanceData)}</div></div>
-                <div className="matrix-stat-box"><div className="text-sm">Staked</div><div className="text-xl font-bold text-white">{formatBalance(userStakedAmount)}</div></div>
-                <div className="matrix-stat-box"><div className="text-sm">Rewards</div><div className="text-xl font-bold text-white">{formatBalance(pendingRewardsData, 6)}</div></div>
+                <div className="matrix-stat-box"><div className="text-sm">Balance</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(balanceData ?? 0n, 18))}</div></div>
+                <div className="matrix-stat-box"><div className="text-sm">Staked</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(userStakedAmount, 18))}</div></div>
+                <div className="matrix-stat-box"><div className="text-sm">Rewards</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(pendingRewardsData ?? 0n, 18))}</div></div>
                 <div className="matrix-stat-box"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25%</div></div>
             </div>
             {!hasStaked ? (
@@ -148,10 +144,10 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
             ) : (
               <div className="flex space-x-4">
                 <button onClick={handleUnstake} disabled={isLoading} className="matrix-button-red w-full">Unstake All</button>
-                <button onClick={handleClaim} disabled={isLoading || pendingRewardsData === 0n} className="matrix-button-green w-full">Claim PTX</button>
+                <button onClick={handleClaim} disabled={isLoading || (pendingRewardsData ?? 0n) === 0n} className="matrix-button-green w-full">Claim PTX</button>
               </div>
             )}
-            {notification && <p className={`mt-2 text-center ${notification.type === "error" ? "text-red-500" : "text-green-400"}`}>{notification.message}</p>}
+            {notification && <p className={`mt-2 text-center text-sm ${notification.type === "error" ? "text-red-500" : "text-green-400"}`}>{notification.message}</p>}
           </div>
         )}
       </CardContent>
