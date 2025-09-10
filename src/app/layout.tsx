@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { WagmiProvider } from "@/components/providers/WagmiProvider";
+import { WagmiProvider } from "../components/providers/WagmiProvider";
 
 export const metadata: Metadata = {
   title: "MatrixFrog - DeFi Staking Platform",
@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body>
         <WagmiProvider>
           {children}
         </WagmiProvider>
