@@ -3,7 +3,7 @@
 import { ReactNode } from 'react'
 import { WagmiProvider as WagmiProviderBase } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { config } from '@/lib/wagmi'
+import { config } from '../../lib/wagmi'
 
 const queryClient = new QueryClient({
   defaultOptions: {
