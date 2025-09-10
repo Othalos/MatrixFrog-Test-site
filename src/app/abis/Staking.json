@@ -17,8 +17,8 @@
     ],
     "name": "pools",
     "outputs": [
-      { "internalType": "contract IERC20", "name": "stakingToken", "type": "address" },
-      { "internalType": "contract IERC20", "name": "rewardToken", "type": "address" },
+      { "internalType": "address", "name": "stakingToken", "type": "address" },
+      { "internalType": "address", "name": "rewardToken", "type": "address" },
       { "internalType": "uint256", "name": "apyBasisPoints", "type": "uint256" },
       { "internalType": "uint256", "name": "lockDuration", "type": "uint256" },
       { "internalType": "bool", "name": "active", "type": "bool" },
