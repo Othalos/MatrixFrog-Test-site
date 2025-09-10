@@ -1,46 +1,53 @@
 [
   {
     "constant": true,
-    "inputs": [],
-    "name": "decimals",
-    "outputs": [{ "name": "", "type": "uint8" }],
-    "type": "function"
-  },
-  {
-    "constant": true,
-    "inputs": [{ "name": "owner", "type": "address" }],
+    "inputs": [
+      { "name": "_owner", "type": "address" }
+    ],
     "name": "balanceOf",
-    "outputs": [{ "name": "balance", "type": "uint256" }],
+    "outputs": [
+      { "name": "balance", "type": "uint256" }
+    ],
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "constant": true,
     "inputs": [
-      { "name": "owner", "type": "address" },
-      { "name": "spender", "type": "address" }
+      { "name": "_owner", "type": "address" },
+      { "name": "_spender", "type": "address" }
     ],
     "name": "allowance",
-    "outputs": [{ "name": "remaining", "type": "uint256" }],
+    "outputs": [
+      { "name": "remaining", "type": "uint256" }
+    ],
+    "payable": false,
+    "stateMutability": "view",
     "type": "function"
   },
   {
     "constant": false,
     "inputs": [
-      { "name": "spender", "type": "address" },
-      { "name": "value", "type": "uint256" }
+      { "name": "_spender", "type": "address" },
+      { "name": "_value", "type": "uint256" }
     ],
     "name": "approve",
-    "outputs": [{ "name": "", "type": "bool" }],
+    "outputs": [
+      { "name": "", "type": "bool" }
+    ],
+    "payable": false,
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "constant": false,
+    "anonymous": false,
     "inputs": [
-      { "name": "to", "type": "address" },
-      { "name": "value", "type": "uint256" }
+      { "indexed": true, "internalType": "address", "name": "owner", "type": "address" },
+      { "indexed": true, "internalType": "address", "name": "spender", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "value", "type": "uint256" }
     ],
-    "name": "transfer",
-    "outputs": [{ "name": "", "type": "bool" }],
-    "type": "function"
+    "name": "Approval",
+    "type": "event"
   }
 ]
