@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { parseUnits, formatUnits, maxUint256, type Hash } from "viem";
-import { AlertTriangle, Wallet, TrendingUp } from "lucide-react";
+import { AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
 // **FIX**: Corrected relative path to the abis folder
@@ -38,7 +38,6 @@ export default function StakingSection() {
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [txHash, setTxHash] = useState<Hash | undefined>();
-  const [isApproved, setIsApproved] = useState(false);
   
   const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
   const sharedReadConfig = { 
