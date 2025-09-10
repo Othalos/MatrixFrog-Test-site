@@ -1,5 +1,9 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
+
 import { useState, useEffect } from "react";
 import {
   useAccount,
@@ -14,8 +18,19 @@ const PEPU_MAINNET_ID = 97741;
 const PEPU_TESTNET_ID = 97740;
 
 // --- Contracts ---
-const MFG_TOKEN_ADDRESS = "0xYourMFGToken"; // replace with your deployed MFG address
-const STAKING_CONTRACT_ADDRESS = "0xYourStakingContract"; // replace with deployed staking contract
+const CONTRACTS = {
+  [PEPU_MAINNET_ID]: {
+    token: "0x434dd2afe3baf277ffcfe9bef9787eda6b4c38d5", // MFG Mainnet
+    staking: "0xYourMainnetStakingContract", // 🔴 Replace once deployed
+    rewards: "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2", // PTX Mainnet
+  },
+  [PEPU_TESTNET_ID]: {
+    token: "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889", // MFG Testnet
+    staking: "0x33272A9aad7E7f89CeEE14659b04c183f382b827", // Staking Testnet
+    rewards: "0x30aa9CB881E3cBf9018445995C605A668d2Cd569", // PTX Testnet
+  },
+};
+
 const POOL_ID = 0;
 
 // --- ABIs ---
@@ -30,56 +45,54 @@ export default function StakingSection() {
   });
 
   const [stakeAmount, setStakeAmount] = useState("");
-  const [notification, setNotification] = useState<
-    { message: string; type: "success" | "error" } | null
-  >(null);
+  const [notification, setNotification] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
-  // ✅ Only allow staking on PepU Testnet (97740)
-  const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
+  // ✅ Check if connected network is supported
+  const isSupportedNetwork =
+    chainId === PEPU_MAINNET_ID || chainId === PEPU_TESTNET_ID;
 
-  // --- Contract reads ---
-  const {
-    data: allowanceData,
-    refetch: refetchAllowance,
-  } = useReadContract({
+  // ✅ Resolve contract addresses
+  const MFG_TOKEN_ADDRESS = isSupportedNetwork
+    ? CONTRACTS[chainId!].token
+    : undefined;
+  const STAKING_CONTRACT_ADDRESS = isSupportedNetwork
+    ? CONTRACTS[chainId!].staking
+    : undefined;
+
+  // --- Reads ---
+  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
     address: MFG_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: "allowance",
-    args: [address!, STAKING_CONTRACT_ADDRESS],
-    query: { enabled: isConnected && isCorrectNetwork && !!address },
+    args: [address!, STAKING_CONTRACT_ADDRESS!],
+    query: { enabled: isConnected && isSupportedNetwork && !!address },
   });
 
-  const {
-    data: balanceData,
-    refetch: refetchBalance,
-  } = useReadContract({
+  const { data: balanceData, refetch: refetchBalance } = useReadContract({
     address: MFG_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [address!],
-    query: { enabled: isConnected && isCorrectNetwork && !!address },
+    query: { enabled: isConnected && isSupportedNetwork && !!address },
   });
 
-  const {
-    data: stakedData,
-    refetch: refetchStaked,
-  } = useReadContract({
+  const { data: stakedData, refetch: refetchStaked } = useReadContract({
     address: STAKING_CONTRACT_ADDRESS,
     abi: STAKING_ABI,
     functionName: "userInfo",
     args: [POOL_ID, address!],
-    query: { enabled: isConnected && isCorrectNetwork && !!address },
+    query: { enabled: isConnected && isSupportedNetwork && !!address },
   });
 
-  const {
-    data: pendingRewardsData,
-    refetch: refetchRewards,
-  } = useReadContract({
+  const { data: pendingRewardsData, refetch: refetchRewards } = useReadContract({
     address: STAKING_CONTRACT_ADDRESS,
     abi: STAKING_ABI,
     functionName: "pendingRewards",
     args: [POOL_ID, address!],
-    query: { enabled: isConnected && isCorrectNetwork && !!address },
+    query: { enabled: isConnected && isSupportedNetwork && !!address },
   });
 
   // --- Derived values ---
@@ -97,20 +110,16 @@ export default function StakingSection() {
 
   // --- Actions ---
   const handleApprove = () => {
-    console.log("Approving max allowance...");
     writeContract({
-      address: MFG_TOKEN_ADDRESS,
+      address: MFG_TOKEN_ADDRESS!,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [STAKING_CONTRACT_ADDRESS, maxUint256],
+      args: [STAKING_CONTRACT_ADDRESS!, maxUint256],
     });
-
-    // force refetch shortly after approve tx
     setTimeout(() => refetchAllowance(), 5000);
   };
 
   const handleStake = () => {
-    console.log("Staking", stakeAmountBN.toString(), "wei");
     if (parseFloat(stakeAmount) > parseFloat(balance)) {
       return setNotification({
         message: "Insufficient MFG balance.",
@@ -118,7 +127,7 @@ export default function StakingSection() {
       });
     }
     writeContract({
-      address: STAKING_CONTRACT_ADDRESS,
+      address: STAKING_CONTRACT_ADDRESS!,
       abi: STAKING_ABI,
       functionName: "stake",
       args: [POOL_ID, stakeAmountBN],
@@ -127,9 +136,8 @@ export default function StakingSection() {
   };
 
   const handleUnstake = () => {
-    console.log("Unstaking all...");
     writeContract({
-      address: STAKING_CONTRACT_ADDRESS,
+      address: STAKING_CONTRACT_ADDRESS!,
       abi: STAKING_ABI,
       functionName: "unstake",
       args: [POOL_ID, stakedData ? (stakedData as any)[0] : 0n],
@@ -137,9 +145,8 @@ export default function StakingSection() {
   };
 
   const handleClaim = () => {
-    console.log("Claiming rewards...");
     writeContract({
-      address: STAKING_CONTRACT_ADDRESS,
+      address: STAKING_CONTRACT_ADDRESS!,
       abi: STAKING_ABI,
       functionName: "claimRewards",
       args: [POOL_ID],
@@ -158,62 +165,92 @@ export default function StakingSection() {
     }
   }, [txConfirmed]);
 
-  // --- UI ---
-  if (!isConnected) {
-    return <p>Please connect your wallet.</p>;
-  }
-  if (!isCorrectNetwork) {
+  // --- Auto refresh every 10s ---
+  useEffect(() => {
+    if (!isConnected || !isSupportedNetwork) return;
+
+    const interval = setInterval(() => {
+      refetchBalance();
+      refetchStaked();
+      refetchRewards();
+    }, 10000); // every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [isConnected, isSupportedNetwork]);
+
+  // --- UI States ---
+  if (!isConnected) return <p>Please connect your wallet.</p>;
+
+  if (!isSupportedNetwork) {
     return (
       <p>
-        Please switch to <b>PepU Testnet (Chain ID 97740)</b> to use staking.
+        Please switch to <b>PepU Mainnet (97741)</b> or{" "}
+        <b>PepU Testnet (97740)</b> to use staking.
       </p>
     );
   }
 
+  if (
+    chainId === PEPU_MAINNET_ID &&
+    CONTRACTS[PEPU_MAINNET_ID].staking.startsWith("0xYour")
+  ) {
+    return <p>Staking on PepU Mainnet is not live yet. Please try again later.</p>;
+  }
+
+  // --- Main UI ---
   return (
-    <div className="p-4 border rounded-xl shadow-md space-y-4">
-      <h2 className="text-xl font-bold">Staking</h2>
+    <div className="p-6 border rounded-2xl shadow-lg space-y-6 bg-white">
+      <h2 className="text-2xl font-bold text-center">MFG ↔ PTX Staking</h2>
 
-      <p>
-        Balance: {balance} MFG | Staked: {staked} MFG | Rewards: {rewards} MFG
-      </p>
+      {/* Stake input */}
+      <div className="space-y-2">
+        <p>Wallet Balance: {balance} MFG</p>
+        <input
+          type="number"
+          placeholder="Amount to stake"
+          value={stakeAmount}
+          onChange={(e) => setStakeAmount(e.target.value)}
+          className="border p-2 rounded w-full"
+        />
 
-      <input
-        type="number"
-        placeholder="Amount to stake"
-        value={stakeAmount}
-        onChange={(e) => setStakeAmount(e.target.value)}
-        className="border p-2 rounded w-full"
-      />
+        {needsApproval ? (
+          <button
+            onClick={handleApprove}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl w-full"
+          >
+            Approve
+          </button>
+        ) : (
+          <button
+            onClick={handleStake}
+            className="bg-green-600 text-white px-4 py-2 rounded-xl w-full"
+          >
+            Stake
+          </button>
+        )}
+      </div>
 
-      {needsApproval ? (
-        <button
-          onClick={handleApprove}
-          className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-        >
-          Approve
-        </button>
-      ) : (
-        <button
-          onClick={handleStake}
-          className="bg-green-600 text-white px-4 py-2 rounded-xl"
-        >
-          Stake
-        </button>
-      )}
-
-      <div className="flex space-x-4">
+      {/* Staked MFG Section */}
+      <div className="p-4 border rounded-xl bg-gray-50 shadow-sm">
+        <h3 className="text-lg font-semibold">Your Staked MFG</h3>
+        <p className="text-xl font-mono">{staked} MFG</p>
         <button
           onClick={handleUnstake}
-          className="bg-red-600 text-white px-4 py-2 rounded-xl"
+          className="mt-2 bg-red-600 text-white px-4 py-2 rounded-xl w-full"
         >
-          Unstake
+          Unstake All (MFG + PTX)
         </button>
+      </div>
+
+      {/* Rewards Section */}
+      <div className="p-4 border rounded-xl bg-yellow-50 shadow-sm">
+        <h3 className="text-lg font-semibold">Unclaimed Rewards</h3>
+        <p className="text-xl font-mono">{rewards} PTX</p>
         <button
           onClick={handleClaim}
-          className="bg-yellow-600 text-black px-4 py-2 rounded-xl"
+          className="mt-2 bg-yellow-600 text-black px-4 py-2 rounded-xl w-full"
         >
-          Claim Rewards
+          Claim Rewards (PTX Only)
         </button>
       </div>
 
