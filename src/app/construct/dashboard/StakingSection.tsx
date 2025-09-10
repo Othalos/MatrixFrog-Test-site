@@ -3,36 +3,52 @@
 import { useState, useEffect } from "react";
 import {
   useAccount,
-  useConnect,
+  useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
-  useReadContract,
 } from "wagmi";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
 
 // --- Chain IDs ---
 const PEPU_MAINNET_ID = 97741;
 const PEPU_TESTNET_ID = 97740;
 
-// --- Contract addresses ---
+// --- Contracts ---
+// Testnet
 const MFG_TEST_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
-const PTX_TEST_ADDRESS = "0x30aa9CB881E3cBf9018445995C605A668d2Cd569";
 const STAKING_TEST_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
+const PTX_TEST_ADDRESS = "0x30aa9CB881E3cBf9018445995C605A668d2Cd569";
 
+// Mainnet
 const MFG_MAIN_ADDRESS = "0x434dd2afe3baf277ffcfe9bef9787eda6b4c38d5";
+// Staking contract not deployed yet
+const STAKING_MAIN_ADDRESS = "";
 const PTX_MAIN_ADDRESS = "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2";
+
+// Pool ID
+const POOL_ID = 0;
 
 // --- ABIs ---
 import ERC20_ABI from "@abis/ERC20.json";
 import STAKING_ABI from "@abis/Staking.json";
 
-// --- Pool ID ---
-const POOL_ID = 0;
+// --- Type Definitions ---
+type UserInfo = {
+  amount: bigint;
+  rewardDebt: bigint;
+};
 
 export default function StakingSection() {
-  const { isConnected, address, chain } = useAccount();
-  const { connect } = useConnect();
+  const { address, chain } = useAccount();
+  const isConnected = !!address;
+
+  const isTestnet = chain?.id === PEPU_TESTNET_ID;
+  const isMainnet = chain?.id === PEPU_MAINNET_ID;
+
+  const MFG_ADDRESS = isTestnet ? MFG_TEST_ADDRESS : MFG_MAIN_ADDRESS;
+  const STAKING_ADDRESS = isTestnet ? STAKING_TEST_ADDRESS : STAKING_MAIN_ADDRESS;
+  const PTX_ADDRESS = isTestnet ? PTX_TEST_ADDRESS : PTX_MAIN_ADDRESS;
+
   const { writeContract, data: txHash } = useWriteContract();
   const { isSuccess: txConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
@@ -42,14 +58,6 @@ export default function StakingSection() {
     type: "success" | "error";
   } | null>(null);
 
-  // --- Determine network ---
-  const isTestnet = chain?.id === PEPU_TESTNET_ID;
-  const isMainnet = chain?.id === PEPU_MAINNET_ID;
-
-  const MFG_ADDRESS = isTestnet ? MFG_TEST_ADDRESS : MFG_MAIN_ADDRESS;
-  const PTX_ADDRESS = isTestnet ? PTX_TEST_ADDRESS : PTX_MAIN_ADDRESS;
-  const STAKING_ADDRESS = isTestnet ? STAKING_TEST_ADDRESS : undefined; // Mainnet staking contract not deployed yet
-
   const isCorrectNetwork = isTestnet || isMainnet;
 
   // --- Reads ---
@@ -58,10 +66,149 @@ export default function StakingSection() {
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [address!, STAKING_ADDRESS!],
-    query: { enabled: isConnected && !!STAKING_ADDRESS && !!address },
+    query: { enabled: isConnected && !!STAKING_ADDRESS },
   });
 
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
+    address: MFG_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: [address!],
+    query: { enabled: isConnected },
+  });
+
+  const { data: stakedData, refetch: refetchStaked } = useReadContract({
+    address: STAKING_ADDRESS,
+    abi: STAKING_ABI,
+    functionName: "userInfo",
+    args: [POOL_ID, address!],
+    query: { enabled: isConnected && !!STAKING_ADDRESS },
+  });
+
+  const { data: pendingRewardsData, refetch: refetchRewards } = useReadContract({
+    address: STAKING_ADDRESS,
+    abi: STAKING_ABI,
+    functionName: "pendingRewards",
+    args: [POOL_ID, address!],
+    query: { enabled: isConnected && !!STAKING_ADDRESS },
+  });
+
+  // --- Derived values ---
+  const allowance: bigint = (allowanceData as bigint) ?? 0n;
+  const stakeAmountBN: bigint = stakeAmount ? parseUnits(stakeAmount, 18) : 0n;
+  const needsApproval = stakeAmountBN > allowance;
+
+  const balance = balanceData ? formatUnits(balanceData as bigint, 18) : "0";
+  const staked = stakedData ? formatUnits((stakedData as UserInfo).amount, 18) : "0";
+  const rewards = pendingRewardsData ? formatUnits(pendingRewardsData as bigint, 18) : "0";
+
+  // --- Actions ---
+  const handleApprove = () => {
+    writeContract({
+      address: MFG_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: "approve",
+      args: [STAKING_ADDRESS, maxUint256],
+    });
+
+    setTimeout(() => refetchAllowance(), 5000);
+  };
+
+  const handleStake = () => {
+    if (parseFloat(stakeAmount) > parseFloat(balance)) {
+      setNotification({ message: "Insufficient MFG balance.", type: "error" });
+      return;
+    }
+    writeContract({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: "stake",
+      args: [POOL_ID, stakeAmountBN],
+    });
+    setStakeAmount("");
+  };
+
+  const handleUnstake = () => {
+    if (!stakedData) return;
+    writeContract({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: "unstake",
+      args: [POOL_ID, (stakedData as UserInfo).amount],
+    });
+  };
+
+  const handleClaim = () => {
+    writeContract({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: "claimRewards",
+      args: [POOL_ID],
+    });
+  };
+
+  // --- Refetch on tx success ---
+  useEffect(() => {
+    if (txConfirmed) {
+      Promise.all([refetchAllowance(), refetchBalance(), refetchStaked(), refetchRewards()]);
+    }
+  }, [txConfirmed, refetchAllowance, refetchBalance, refetchStaked, refetchRewards]);
+
+  // --- UI ---
+  if (!isConnected) {
+    return <p>Please connect your wallet.</p>;
+  }
+
+  if (!isCorrectNetwork) {
+    return (
+      <p>
+        Please switch to <b>PepU Testnet or Mainnet</b> to use staking.
+      </p>
+    );
+  }
+
+  return (
+    <div className="p-4 border rounded-xl shadow-md space-y-4">
+      <h2 className="text-xl font-bold">Staking</h2>
+      <p>
+        Balance: {balance} MFG | Staked: {staked} MFG | Rewards: {rewards} PTX
+      </p>
+
+      <input
+        type="number"
+        placeholder="Amount to stake"
+        value={stakeAmount}
+        onChange={(e) => setStakeAmount(e.target.value)}
+        className="border p-2 rounded w-full"
+      />
+
+      {needsApproval ? (
+        <button onClick={handleApprove} className="bg-blue-600 text-white px-4 py-2 rounded-xl">
+          Approve
+        </button>
+      ) : (
+        <button onClick={handleStake} className="bg-green-600 text-white px-4 py-2 rounded-xl">
+          Stake
+        </button>
+      )}
+
+      <div className="flex space-x-4">
+        <button onClick={handleUnstake} className="bg-red-600 text-white px-4 py-2 rounded-xl">
+          Unstake
+        </button>
+        <button onClick={handleClaim} className="bg-yellow-600 text-black px-4 py-2 rounded-xl">
+          Claim Rewards
+        </button>
+      </div>
+
+      {notification && (
+        <p className={`mt-2 ${notification.type === "error" ? "text-red-600" : "text-green-600"}`}>
+          {notification.message}
+        </p>
+      )}
+    </div>
+  );
+}
     address: MFG_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
