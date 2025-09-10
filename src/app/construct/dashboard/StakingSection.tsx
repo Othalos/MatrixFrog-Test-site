@@ -19,8 +19,8 @@ const STAKING_CONTRACT_ADDRESS = "0xYourStakingContract"; // replace with deploy
 const POOL_ID = 0;
 
 // --- ABIs ---
-import ERC20_ABI from "../abis/ERC20.json";
-import STAKING_ABI from "../abis/Staking.json";
+import ERC20_ABI from "@abis/ERC20.json";
+import STAKING_ABI from "@abis/Staking.json";
 
 export default function StakingSection() {
   const { address, chainId, isConnected } = useAccount();
