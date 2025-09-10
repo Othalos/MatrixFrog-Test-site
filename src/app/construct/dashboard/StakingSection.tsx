@@ -2,29 +2,21 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
+import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { parseUnits, formatUnits, maxUint256, type Hash, type Abi } from "viem";
+import { parseUnits, formatUnits, maxUint256, type Hash } from "viem";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
-// --- ABI imports ---
-import ERC20_ABI from "../../../abis/ERC20.json";
-import STAKING_ABI from "../../../abis/Staking.json";
+// **FIX**: Corrected relative path to the abis folder
+import ERC20_ABI from "../../abis/ERC20.json";
+import STAKING_ABI from "../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
 const STAKING_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
-
-// --- Type Definitions ---
-type WriteContractParameters = {
-  address: `0x${string}`;
-  abi: Abi;
-  functionName: string;
-  args: unknown[];
-};
 
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number) => {
@@ -94,7 +86,7 @@ export default function StakingSection() {
   const isLoading = isPending || isConfirming;
 
   // --- Actions ---
-  const submitTransaction = (args: WriteContractParameters) => {
+  const submitTransaction = (args: any) => {
     writeContract(args, {
       onSuccess: (hash) => setTxHash(hash),
       onError: (err) => setNotification({ message: err.message, type: "error" }),
@@ -120,9 +112,9 @@ export default function StakingSection() {
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
             <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-              <Button onClick={() => connect({ connector: injected() })} className="matrix-button-green">MetaMask</Button>
-              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} className="matrix-button-green">WalletConnect</Button>
-              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} className="matrix-button-green">Coinbase</Button>
+              <Button onClick={() => connect({ connector: injected() })} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">MetaMask</Button>
+              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">WalletConnect</Button>
+              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">Coinbase</Button>
             </div>
           </div>
         ) : !isCorrectNetwork ? (
@@ -134,10 +126,10 @@ export default function StakingSection() {
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div className="matrix-stat-box"><div className="text-sm">Balance</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(balanceData ?? 0n, 18))}</div></div>
-                <div className="matrix-stat-box"><div className="text-sm">Staked</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(userStakedAmount, 18))}</div></div>
-                <div className="matrix-stat-box"><div className="text-sm">Rewards</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(pendingRewardsData ?? 0n, 18))}</div></div>
-                <div className="matrix-stat-box"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25%</div></div>
+                <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Balance</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(balanceData ?? 0n, 18))}</div></div>
+                <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Staked</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(userStakedAmount, 18))}</div></div>
+                <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">Rewards</div><div className="text-xl font-bold text-white">{formatDisplayNumber(formatUnits(pendingRewardsData ?? 0n, 18))}</div></div>
+                <div className="p-3 border border-green-700/50 rounded-md"><div className="text-sm">APR</div><div className="text-xl font-bold text-white">25%</div></div>
             </div>
             {!hasStaked ? (
               <div className="border border-green-700/50 rounded-md p-4 space-y-4">
@@ -145,14 +137,14 @@ export default function StakingSection() {
                   <input type="number" value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)} placeholder="0.0" className="w-full bg-black border border-green-700/50 p-2 rounded-l-md text-white focus:outline-none focus:ring-2 focus:ring-green-500 h-full" />
                   <button onClick={() => setStakeAmount(balanceData ? formatUnits(balanceData, 18) : "0")} className="bg-green-900/50 border border-green-700 text-green-400 p-2 rounded-r-md hover:bg-green-800/50 h-full px-4 font-bold">MAX</button>
                 </div>
-                <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || parseFloat(stakeAmount) <= 0} className="matrix-button-green w-full">
+                <button onClick={needsApproval ? handleApprove : handleStake} disabled={isLoading || parseFloat(stakeAmount) <= 0} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">
                   {isLoading ? "Confirming..." : (isPending ? "Check Wallet..." : (needsApproval ? "Approve MFG" : "Stake MFG"))}
                 </button>
               </div>
             ) : (
               <div className="flex space-x-4">
-                <button onClick={handleUnstake} disabled={isLoading} className="matrix-button-red w-full">Unstake All</button>
-                <button onClick={handleClaim} disabled={isLoading || (pendingRewardsData ?? 0n) === 0n} className="matrix-button-green w-full">Claim PTX</button>
+                <button onClick={handleUnstake} disabled={isLoading} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">Unstake All</button>
+                <button onClick={handleClaim} disabled={isLoading || (pendingRewardsData ?? 0n) === 0n} className="w-full px-4 py-3 font-bold rounded-md transition-all duration-300 ease-in-out border text-lg border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed disabled:shadow-none disabled:animate-pulse">Claim PTX</button>
               </div>
             )}
             {notification && <p className={`mt-2 text-center text-sm ${notification.type === "error" ? "text-red-500" : "text-green-400"}`}>{notification.message}</p>}
