@@ -132,7 +132,12 @@ export default function StakingSection() {
   const pendingRewards = (pendingRewardsData as bigint) ?? 0n;
 
   // --- Actions ---
-  const submitTransaction = useCallback((args: any) => {
+  const submitTransaction = useCallback((args: {
+    address: `0x${string}`;
+    abi: readonly unknown[];
+    functionName: string;
+    args: readonly unknown[];
+  }) => {
     setNotification(null); // Clear any existing notifications
     writeContract(args, {
       onSuccess: (hash) => {
