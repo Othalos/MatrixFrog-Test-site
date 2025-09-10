@@ -146,11 +146,6 @@ export default function StakingSection() {
   const pendingRewards = (pendingRewardsData as bigint) ?? 0n;
   const isLoading = isPending || isConfirming;
 
-  // Check if approved for current stake amount
-  useEffect(() => {
-    setIsApproved(stakeAmountBN > 0n && allowance >= stakeAmountBN);
-  }, [allowance, stakeAmountBN]);
-
   // --- Actions ---
   const submitTransaction = useCallback((args: {
     address: `0x${string}`;
