@@ -8,7 +8,6 @@ import {
   useWaitForTransactionReceipt,
   useConnect,
   useDisconnect,
-  useSwitchChain,
 } from "wagmi";
 import { parseUnits, formatUnits, maxUint256 } from "viem";
 
@@ -19,15 +18,16 @@ const PEPU_TESTNET_ID = 97740;
 // --- Contracts ---
 const MFG_TEST_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const MFG_MAIN_ADDRESS = "0x434dd2afe3baf277ffcfe9bef9787eda6b4c38d5";
-const PTX_TEST_ADDRESS = "0x30aa9CB881E3cBf9018445995C605A668d2Cd569";
-const PTX_MAIN_ADDRESS = "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2";
 const STAKING_TEST_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
-const STAKING_MAIN_ADDRESS = undefined; // not deployed yet
+const STAKING_MAIN_ADDRESS = undefined; // Not deployed yet
 const POOL_ID = 0;
 
 // --- ABIs ---
 import ERC20_ABI from "@abis/ERC20.json";
 import STAKING_ABI from "@abis/Staking.json";
+
+// Type for userInfo response
+type UserInfo = [bigint, bigint]; // [amountStaked, rewardDebt]
 
 export default function StakingSection() {
   const { address, chain } = useAccount();
@@ -38,16 +38,13 @@ export default function StakingSection() {
   const isTestnet = chainId === PEPU_TESTNET_ID;
   const isMainnet = chainId === PEPU_MAINNET_ID;
   const MFG_ADDRESS = isTestnet ? MFG_TEST_ADDRESS : MFG_MAIN_ADDRESS;
-  const PTX_ADDRESS = isTestnet ? PTX_TEST_ADDRESS : PTX_MAIN_ADDRESS;
   const STAKING_ADDRESS = isTestnet ? STAKING_TEST_ADDRESS : STAKING_MAIN_ADDRESS;
 
   // --- Wallet connection ---
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
 
   const connectMetaMask = async () => connect({ connector: (await import("wagmi/connectors")).injected() });
-  const handleDisconnect = () => disconnect();
 
   // --- State ---
   const [stakeAmount, setStakeAmount] = useState("");
@@ -70,7 +67,7 @@ export default function StakingSection() {
     query: { enabled: isConnected && !!address },
   });
 
-  const { data: stakedData, refetch: refetchStaked } = useReadContract({
+  const { data: stakedData, refetch: refetchStaked } = useReadContract<UserInfo>({
     address: STAKING_ADDRESS,
     abi: STAKING_ABI,
     functionName: "userInfo",
@@ -91,7 +88,7 @@ export default function StakingSection() {
   const stakeAmountBN: bigint = stakeAmount ? parseUnits(stakeAmount, 18) : 0n;
   const needsApproval = stakeAmountBN > allowance;
   const balance = balanceData ? formatUnits(balanceData as bigint, 18) : "0";
-  const staked = stakedData ? formatUnits((stakedData as any)[0], 18) : "0";
+  const staked = stakedData ? formatUnits(stakedData[0], 18) : "0";
   const rewards = pendingRewardsData ? formatUnits(pendingRewardsData as bigint, 18) : "0";
 
   // --- Contract Writes ---
@@ -127,7 +124,7 @@ export default function StakingSection() {
       address: STAKING_ADDRESS!,
       abi: STAKING_ABI,
       functionName: "unstake",
-      args: [POOL_ID, stakedData ? (stakedData as any)[0] : 0n],
+      args: [POOL_ID, stakedData ? stakedData[0] : 0n],
     });
   };
 
