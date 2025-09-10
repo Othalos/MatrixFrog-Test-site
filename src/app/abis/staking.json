@@ -1,0 +1,7 @@
+[
+  { "inputs": [ { "name": "pid", "type": "uint256" }, { "name": "user", "type": "address" } ], "name": "userInfo", "outputs": [ { "name": "amount", "type": "uint256" }, { "name": "rewardDebt", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+  { "inputs": [ { "name": "pid", "type": "uint256" }, { "name": "user", "type": "address" } ], "name": "pendingRewards", "outputs": [ { "name": "", "type": "uint256" } ], "stateMutability": "view", "type": "function" },
+  { "inputs": [ { "name": "pid", "type": "uint256" }, { "name": "amount", "type": "uint256" } ], "name": "stake", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+  { "inputs": [ { "name": "pid", "type": "uint256" }, { "name": "amount", "type": "uint256" } ], "name": "unstake", "outputs": [], "stateMutability": "nonpayable", "type": "function" },
+  { "inputs": [ { "name": "pid", "type": "uint256" } ], "name": "claimRewards", "outputs": [], "stateMutability": "nonpayable", "type": "function" }
+]
