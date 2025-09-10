@@ -1,7 +1,8 @@
 // src/app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
-import WalletProvider from "../app/providers/WalletProvider";
+// 1. IMPORT THE NEW DYNAMIC PROVIDER
+import DynamicWalletProvider from "../app/providers/DynamicWalletProvider";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -19,10 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body cz-shortcut-listen="true">
-        <WalletProvider>
+        {/* 2. USE THE NEW DYNAMIC PROVIDER HERE */}
+        <DynamicWalletProvider>
           {children}
           <ToastContainer />
-        </WalletProvider>
+        </DynamicWalletProvider>
       </body>
     </html>
   );
