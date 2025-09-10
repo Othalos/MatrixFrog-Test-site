@@ -116,7 +116,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (writeError) {
       setNotification({ 
-        message: `Error: ${writeError.shortMessage || writeError.message}`, 
+        message: `Error: ${writeError.message || 'Transaction failed'}`, 
         type: "error" 
       });
       setTxHash(undefined);
