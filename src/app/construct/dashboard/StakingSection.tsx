@@ -140,10 +140,20 @@ export default function StakingSection() {
   const stakeAmountBN: bigint = stakeAmount && !isNaN(parseFloat(stakeAmount)) 
     ? parseUnits(stakeAmount, 18) 
     : 0n;
-  const needsApproval = stakeAmountBN > 0n && stakeAmountBN > allowance;
+  const needsApproval = stakeAmountBN > 0n && allowance < stakeAmountBN;
   const userStakedAmount = (userStakeData as [bigint])?.[0] ?? 0n;
   const pendingRewards = (pendingRewardsData as bigint) ?? 0n;
   const isLoading = isPending || isConfirming;
+
+  // Debug current state
+  console.log("Current state:", {
+    stakeAmount,
+    stakeAmountBN: stakeAmountBN.toString(),
+    allowance: allowance.toString(),
+    needsApproval,
+    balance: balance.toString(),
+    isLoading
+  });
 
   // --- Actions ---
   const submitTransaction = useCallback((args: {
