@@ -2,21 +2,29 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain, useChainId } from "wagmi";
+import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { parseUnits, formatUnits, maxUint256, type Hash } from "viem";
-import { Info, AlertTriangle } from "lucide-react";
+import { parseUnits, formatUnits, maxUint256, type Hash, type Abi } from "viem";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
 // --- ABI imports ---
-import ERC20_ABI from "@abis/ERC20.json";
-import STAKING_ABI from "@abis/Staking.json";
+import ERC20_ABI from "../../../abis/ERC20.json";
+import STAKING_ABI from "../../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
 const STAKING_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827";
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889";
 const POOL_ID = 0n;
+
+// --- Type Definitions ---
+type WriteContractParameters = {
+  address: `0x${string}`;
+  abi: Abi;
+  functionName: string;
+  args: unknown[];
+};
 
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number) => {
@@ -26,7 +34,7 @@ const formatDisplayNumber = (value: string | number) => {
 };
 
 // --- Main Component ---
-export default function StakingSection({ connectMetaMask, connectWalletConnect, connectCoinbase, isConnecting }: any) {
+export default function StakingSection() {
   const { address, isConnected, chain } = useAccount();
   const { connect } = useConnect();
   const { switchChain } = useSwitchChain();
@@ -86,7 +94,7 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
   const isLoading = isPending || isConfirming;
 
   // --- Actions ---
-  const submitTransaction = (args: any) => {
+  const submitTransaction = (args: WriteContractParameters) => {
     writeContract(args, {
       onSuccess: (hash) => setTxHash(hash),
       onError: (err) => setNotification({ message: err.message, type: "error" }),
@@ -112,9 +120,9 @@ export default function StakingSection({ connectMetaMask, connectWalletConnect, 
           <div className="p-4 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
             <h3 className="text-lg font-bold text-green-400 text-glow">ACCESS DENIED :: CONNECT WALLET</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-              <Button onClick={() => connect({ connector: injected() })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "MetaMask"}</Button>
-              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "WalletConnect"}</Button>
-              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} disabled={isConnecting} className="matrix-button-green">{isConnecting ? "Connecting..." : "Coinbase"}</Button>
+              <Button onClick={() => connect({ connector: injected() })} className="matrix-button-green">MetaMask</Button>
+              <Button onClick={() => connect({ connector: walletConnect({ projectId: "efce48a19d0c7b8b8da21be2c1c8c271" }) })} className="matrix-button-green">WalletConnect</Button>
+              <Button onClick={() => connect({ connector: coinbaseWallet({ appName: "MatrixFrog" }) })} className="matrix-button-green">Coinbase</Button>
             </div>
           </div>
         ) : !isCorrectNetwork ? (
