@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
 import { useConnect, useAccount, useSwitchChain } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
@@ -43,6 +42,90 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
     minimumFractionDigits: decimals, 
     maximumFractionDigits: decimals 
   });
+};
+
+// Custom Button Component that overrides all styles
+const MatrixButton = ({ 
+  onClick, 
+  disabled = false, 
+  children, 
+  variant = "primary",
+  className = ""
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  variant?: "primary" | "secondary" | "warning" | "cancel";
+  className?: string;
+}) => {
+  const getVariantStyles = () => {
+    switch (variant) {
+      case "primary":
+        return {
+          backgroundColor: '#16a34a',
+          color: '#000000',
+          border: '2px solid #16a34a',
+          hoverBg: '#15803d'
+        };
+      case "secondary":
+        return {
+          backgroundColor: '#166534',
+          color: '#4ade80',
+          border: '2px solid #15803d',
+          hoverBg: '#15803d'
+        };
+      case "warning":
+        return {
+          backgroundColor: '#a16207',
+          color: '#fbbf24',
+          border: '2px solid #d97706',
+          hoverBg: '#92400e'
+        };
+      case "cancel":
+        return {
+          backgroundColor: '#374151',
+          color: '#d1d5db',
+          border: '2px solid #6b7280',
+          hoverBg: '#4b5563'
+        };
+      default:
+        return {
+          backgroundColor: '#16a34a',
+          color: '#000000',
+          border: '2px solid #16a34a',
+          hoverBg: '#15803d'
+        };
+    }
+  };
+
+  const styles = getVariantStyles();
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full px-4 py-3 font-bold rounded-md transition-all duration-200 disabled:opacity-50 ${className}`}
+      style={{
+        backgroundColor: styles.backgroundColor,
+        color: styles.color,
+        border: styles.border,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        fontFamily: 'monospace'
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = styles.hoverBg;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = styles.backgroundColor;
+        }
+      }}
+    >
+      {children}
+    </button>
+  );
 };
 
 // --- Main Component ---
@@ -311,168 +394,200 @@ export default function StakingSection() {
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-8 px-8 pb-8">
+        <div style={{ padding: '16px', margin: '0 24px 24px 24px' }}>
           {!isConnected ? (
-            <div className="p-8 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-6">
+            <div style={{ 
+              padding: '32px', 
+              border: '1px solid #15803d', 
+              borderRadius: '8px', 
+              backgroundColor: '#000000',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '24px'
+            }}>
               <h3 className="text-lg font-bold text-green-400">Connect Wallet to Continue</h3>
               
               {!showWalletOptions ? (
-                <Button 
-                  onClick={() => setShowWalletOptions(true)}
-                  className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
-                >
+                <MatrixButton onClick={() => setShowWalletOptions(true)}>
                   Connect Wallet
-                </Button>
+                </MatrixButton>
               ) : (
-                <div className="w-full space-y-3">
-                  <Button 
-                    onClick={connectMetaMask}
-                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
-                  >
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <MatrixButton onClick={connectMetaMask}>
                     MetaMask
-                  </Button>
-                  <Button 
-                    onClick={connectWalletConnect}
-                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
-                  >
+                  </MatrixButton>
+                  <MatrixButton onClick={connectWalletConnect}>
                     WalletConnect
-                  </Button>
-                  <Button 
-                    onClick={connectCoinbase}
-                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
-                  >
+                  </MatrixButton>
+                  <MatrixButton onClick={connectCoinbase}>
                     Coinbase Wallet
-                  </Button>
-                  <Button 
-                    onClick={() => setShowWalletOptions(false)}
-                    className="w-full px-4 py-2 font-bold rounded-md border border-gray-500 bg-gray-900/50 text-gray-300 hover:bg-gray-800/60"
-                  >
+                  </MatrixButton>
+                  <MatrixButton onClick={() => setShowWalletOptions(false)} variant="cancel">
                     Cancel
-                  </Button>
+                  </MatrixButton>
                 </div>
               )}
             </div>
           ) : !isCorrectNetwork ? (
-            <div className="p-8 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-6">
-              <div className="flex items-center space-x-2">
+            <div style={{ 
+              padding: '32px', 
+              border: '1px solid #d97706', 
+              borderRadius: '8px', 
+              backgroundColor: 'rgba(120, 53, 15, 0.8)',
+              color: '#fbbf24',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '24px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={24} />
-                <span className="font-bold text-lg">Wrong Network</span>
+                <span style={{ fontWeight: 'bold', fontSize: '18px' }}>Wrong Network</span>
               </div>
-              <p className="text-center">Please switch to Pepu Testnet</p>
-              <Button 
-                onClick={switchNetwork}
-                className="px-6 py-2 bg-yellow-600 text-black font-bold rounded-md hover:bg-yellow-500"
-              >
+              <p style={{ textAlign: 'center' }}>Please switch to Pepu Testnet</p>
+              <MatrixButton onClick={switchNetwork} variant="warning">
                 Switch to Pepu Testnet
-              </Button>
+              </MatrixButton>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               {/* Wallet Balance */}
-              <div className="p-6 border border-green-700/50 rounded-md bg-green-900/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Wallet size={20} className="text-green-400" />
-                    <span className="text-green-400 font-bold">Your MFG Balance:</span>
-                  </div>
-                  <span className="text-2xl font-bold text-white">
-                    {formatDisplayNumber(formatUnits(balance, 18))} MFG
-                  </span>
+              <div style={{ 
+                padding: '24px', 
+                border: '1px solid rgba(21, 128, 61, 0.5)', 
+                borderRadius: '8px', 
+                backgroundColor: 'rgba(21, 128, 61, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Wallet size={20} className="text-green-400" />
+                  <span className="text-green-400 font-bold">Your MFG Balance:</span>
                 </div>
+                <span className="text-2xl font-bold text-white">
+                  {formatDisplayNumber(formatUnits(balance, 18))} MFG
+                </span>
               </div>
 
               {/* Staking Input Section */}
-              <div className="border border-green-700/50 rounded-md p-6 space-y-6 bg-green-900/5">
-                <h3 className="text-lg font-bold text-green-400 text-center">Stake MFG Tokens</h3>
-                
-                <div className="flex items-center space-x-3">
-                  <input 
-                    type="number" 
-                    value={stakeAmount} 
-                    onChange={(e) => setStakeAmount(e.target.value)} 
-                    placeholder="Enter amount to stake" 
-                    className="flex-1 bg-black border border-green-700/50 p-3 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-green-500" 
-                    disabled={isLoading}
-                  />
-                  <Button 
-                    onClick={handleMaxClick} 
-                    disabled={isLoading || balance === 0n}
-                    className="px-4 py-3 bg-green-900/50 border border-green-700 text-green-400 rounded-md hover:bg-green-800/50 font-bold"
-                  >
-                    MAX
-                  </Button>
+              <div style={{ 
+                border: '1px solid rgba(21, 128, 61, 0.5)', 
+                borderRadius: '8px', 
+                backgroundColor: 'rgba(21, 128, 61, 0.05)'
+              }}>
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <h3 className="text-lg font-bold text-green-400 text-center">Stake MFG Tokens</h3>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <input 
+                      type="number" 
+                      value={stakeAmount} 
+                      onChange={(e) => setStakeAmount(e.target.value)} 
+                      placeholder="Enter amount to stake" 
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#000000',
+                        border: '1px solid rgba(21, 128, 61, 0.5)',
+                        padding: '12px',
+                        borderRadius: '6px',
+                        color: '#ffffff',
+                        fontFamily: 'monospace'
+                      }}
+                      disabled={isLoading}
+                    />
+                    <MatrixButton 
+                      onClick={handleMaxClick} 
+                      disabled={isLoading || balance === 0n}
+                      variant="secondary"
+                      className="!w-auto px-6"
+                    >
+                      MAX
+                    </MatrixButton>
+                  </div>
+                  
+                  {needsApproval ? (
+                    <MatrixButton 
+                      onClick={handleApprove} 
+                      disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0}
+                      variant="warning"
+                    >
+                      {isLoading ? "Processing..." : "Approve MFG"}
+                    </MatrixButton>
+                  ) : (
+                    <MatrixButton 
+                      onClick={handleStake} 
+                      disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0}
+                    >
+                      {isLoading ? "Processing..." : "Stake MFG"}
+                    </MatrixButton>
+                  )}
                 </div>
-                
-                {needsApproval ? (
-                  <Button 
-                    onClick={handleApprove} 
-                    disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-yellow-500 bg-yellow-900/50 text-yellow-300 hover:enabled:bg-yellow-800/60 disabled:opacity-50"
-                  >
-                    {isLoading ? "Processing..." : "Approve MFG"}
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={handleStake} 
-                    disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0} 
-                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
-                  >
-                    {isLoading ? "Processing..." : "Stake MFG"}
-                  </Button>
-                )}
               </div>
 
               {/* Staked & Rewards Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border border-green-700/50 rounded-md p-6 bg-blue-900/10">
-                  <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
-                  <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-white">
-                      {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                <div style={{ 
+                  border: '1px solid rgba(21, 128, 61, 0.5)', 
+                  borderRadius: '8px', 
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                }}>
+                  <div style={{ padding: '24px' }}>
+                    <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                      <div className="text-3xl font-bold text-white">
+                        {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
+                      </div>
+                      <div className="text-sm text-gray-400">MFG Tokens</div>
                     </div>
-                    <div className="text-sm text-gray-400">MFG Tokens</div>
+                    <MatrixButton 
+                      onClick={handleUnstake} 
+                      disabled={isLoading || userStakedAmount === 0n}
+                    >
+                      {isLoading ? "Processing..." : "Unstake All"}
+                    </MatrixButton>
                   </div>
-                  <Button 
-                    onClick={handleUnstake} 
-                    disabled={isLoading || userStakedAmount === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
-                  >
-                    {isLoading ? "Processing..." : "Unstake All"}
-                  </Button>
                 </div>
 
-                <div className="border border-green-700/50 rounded-md p-6 bg-purple-900/10">
-                  <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
-                  <div className="text-center mb-6">
-                    <div className="text-3xl font-bold text-white">
-                      {formatDisplayNumber(formatUnits(pendingRewards, 18))}
+                <div style={{ 
+                  border: '1px solid rgba(21, 128, 61, 0.5)', 
+                  borderRadius: '8px', 
+                  backgroundColor: 'rgba(147, 51, 234, 0.1)'
+                }}>
+                  <div style={{ padding: '24px' }}>
+                    <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                      <div className="text-3xl font-bold text-white">
+                        {formatDisplayNumber(formatUnits(pendingRewards, 18))}
+                      </div>
+                      <div className="text-sm text-gray-400">PTX Earned</div>
                     </div>
-                    <div className="text-sm text-gray-400">PTX Earned</div>
+                    <MatrixButton 
+                      onClick={handleClaim} 
+                      disabled={isLoading || pendingRewards === 0n}
+                    >
+                      {isLoading ? "Processing..." : "Claim PTX"}
+                    </MatrixButton>
                   </div>
-                  <Button 
-                    onClick={handleClaim} 
-                    disabled={isLoading || pendingRewards === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md !bg-green-600 !text-black hover:enabled:!bg-green-500 disabled:opacity-50 !border-green-600"
-                    style={{ backgroundColor: '#16a34a', color: '#000000', borderColor: '#16a34a' }}
-                  >
-                    {isLoading ? "Processing..." : "Claim PTX"}
-                  </Button>
                 </div>
               </div>
 
               {/* Notification */}
               {notification && (
-                <div className={`p-6 rounded-md border-2 ${
-                  notification.type === "error" 
-                    ? "bg-red-900/50 border-red-500 text-red-300" 
-                    : "bg-green-900/50 border-green-500 text-green-300"
-                }`}>
-                  <p className="text-center font-bold">{notification.message}</p>
+                <div style={{
+                  padding: '24px',
+                  borderRadius: '8px',
+                  border: notification.type === "error" ? '2px solid #ef4444' : '2px solid #22c55e',
+                  backgroundColor: notification.type === "error" ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                  color: notification.type === "error" ? '#fca5a5' : '#bbf7d0'
+                }}>
+                  <p style={{ textAlign: 'center', fontWeight: 'bold' }}>{notification.message}</p>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
+        </div>
       </Card>
     </div>
   );
