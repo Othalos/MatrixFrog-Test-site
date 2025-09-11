@@ -5,24 +5,34 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactNode, useState } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
+import { defineChain } from "viem";
 
-// Define the Pepu Testnet (focus on testnet only for now)
-const pepuTestnet = {
+// Define the Pepu Testnet using defineChain for proper typing
+const pepuTestnet = defineChain({
   id: 97740,
   name: "Pepu Testnet",
-  nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
+  nativeCurrency: { 
+    name: "PEPE", 
+    symbol: "PEPU", 
+    decimals: 18 
+  },
   rpcUrls: {
-    default: { http: ["/api/rpc"] }, // Use your RPC proxy
+    default: { 
+      http: ["/api/rpc"] 
+    },
   },
   blockExplorers: {
-    default: { name: "PepuScan Testnet", url: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz" },
+    default: { 
+      name: "Pepu Explorer", 
+      url: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz" 
+    },
   },
   testnet: true,
-};
+});
 
 // Config with only testnet for now
 export const config = createConfig({
-  chains: [pepuTestnet], // Only testnet
+  chains: [pepuTestnet],
   connectors: [
     injected(),
     metaMask(),
