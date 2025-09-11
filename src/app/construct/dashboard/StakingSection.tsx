@@ -178,9 +178,9 @@ export default function StakingSection() {
   // Submit transaction
   const submitTransaction = useCallback(async (args: {
     address: `0x${string}`;
-    abi: any;
+    abi: readonly unknown[];
     functionName: string;
-    args: any[];
+    args: readonly unknown[];
   }) => {
     if (!account) return;
 
@@ -196,7 +196,6 @@ export default function StakingSection() {
         account,
       });
 
-      setTxHash(hash);
       setNotification({ 
         message: "Transaction submitted! Waiting for confirmation...", 
         type: "success" 
@@ -219,15 +218,15 @@ export default function StakingSection() {
       } else {
         throw new Error('Transaction failed');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Transaction error:', error);
+      const err = error as { message?: string };
       setNotification({ 
-        message: `Error: ${error.message || 'Transaction failed'}`, 
+        message: `Error: ${err.message || 'Transaction failed'}`, 
         type: "error" 
       });
     } finally {
       setIsLoading(false);
-      setTxHash(undefined);
     }
   }, [account, getWalletClient, publicClient, readContractData]);
 
