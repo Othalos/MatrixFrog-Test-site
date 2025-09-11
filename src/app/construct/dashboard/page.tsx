@@ -186,7 +186,6 @@ const getVotingBalances = async (episodeId: string) => {
   }
 };
 
-
 export default function MatrixConstruct() {
   const [selectedEpisode, setSelectedEpisode] = useState("episode-2");
   const [selectedBlooper, setSelectedBlooper] = useState("blooper-2");
@@ -199,9 +198,91 @@ export default function MatrixConstruct() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
 
+  return (
+    <ClientOnly fallback={
+      <div style={{
+        minHeight: "100vh",
+        backgroundColor: "black",
+        color: "#4ade80",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "monospace"
+      }}>
+        Loading dashboard...
+      </div>
+    }>
+      <MatrixConstructContent
+        selectedEpisode={selectedEpisode}
+        setSelectedEpisode={setSelectedEpisode}
+        selectedBlooper={selectedBlooper}
+        setSelectedBlooper={setSelectedBlooper}
+        selected={selected}
+        setSelected={setSelected}
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        videoError={videoError}
+        setVideoError={setVideoError}
+        isVoting={isVoting}
+        setIsVoting={setIsVoting}
+        voteSuccess={voteSuccess}
+        setVoteSuccess={setVoteSuccess}
+        voteError={voteError}
+        setVoteError={setVoteError}
+        isHydrated={isHydrated}
+        setIsHydrated={setIsHydrated}
+        isConnecting={isConnecting}
+        setIsConnecting={setIsConnecting}
+      />
+    </ClientOnly>
+  );
+}
+
+function MatrixConstructContent({
+  selectedEpisode,
+  setSelectedEpisode,
+  selectedBlooper,
+  setSelectedBlooper,
+  selected,
+  setSelected,
+  activeSection,
+  setActiveSection,
+  videoError,
+  setVideoError,
+  isVoting,
+  setIsVoting,
+  voteSuccess,
+  setVoteSuccess,
+  voteError,
+  setVoteError,
+  isHydrated,
+  setIsHydrated,
+  isConnecting,
+  setIsConnecting,
+}: {
+  selectedEpisode: string;
+  setSelectedEpisode: (value: string) => void;
+  selectedBlooper: string;
+  setSelectedBlooper: (value: string) => void;
+  selected: string | null;
+  setSelected: (value: string | null) => void;
+  activeSection: string;
+  setActiveSection: (value: string) => void;
+  videoError: string | null;
+  setVideoError: (value: string | null) => void;
+  isVoting: boolean;
+  setIsVoting: (value: boolean) => void;
+  voteSuccess: boolean;
+  setVoteSuccess: (value: boolean) => void;
+  voteError: string | null;
+  setVoteError: (value: string | null) => void;
+  isHydrated: boolean;
+  setIsHydrated: (value: boolean) => void;
+  isConnecting: boolean;
+  setIsConnecting: (value: boolean) => void;
+}) {
   const { isConnected, address, chain } = useAccount();
   const router = useRouter();
-
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
@@ -210,7 +291,7 @@ export default function MatrixConstruct() {
 
   useEffect(() => {
     setIsHydrated(true);
-  }, []);
+  }, [setIsHydrated]);
 
   const {
     balance: mfgBalance,
@@ -327,7 +408,7 @@ export default function MatrixConstruct() {
   };
 
   useEffect(() => {
-     if (typeof window !== 'undefined') { // <-- Add this check
+     if (typeof window !== 'undefined') {
       if (mfgBalance && isConnected) {
         window.localStorage.setItem("Mat_bal", mfgBalance);
       }
@@ -343,7 +424,7 @@ export default function MatrixConstruct() {
       refetchVotingStats();
       setTimeout(() => { setVoteSuccess(false); }, 5000);
     }
-  }, [isConfirmed, hash, refetchBalance, refetchVotingStats]);
+  }, [isConfirmed, hash, refetchBalance, refetchVotingStats, setVoteSuccess, setIsVoting, setVoteError]);
 
   useEffect(() => {
     if (writeError) {
@@ -351,7 +432,7 @@ export default function MatrixConstruct() {
       setIsVoting(false);
       setTimeout(() => { setVoteError(null); }, 5000);
     }
-  }, [writeError]);
+  }, [writeError, setVoteError, setIsVoting]);
 
   useEffect(() => {
     const checkVotingEnd = async () => {
@@ -440,7 +521,6 @@ export default function MatrixConstruct() {
   };
 
   return (
-    <ClientOnly fallback={
     <div
       style={{
         paddingBottom: "20px",
@@ -450,7 +530,6 @@ export default function MatrixConstruct() {
         fontFamily: "monospace",
       }}
     >
-      {/* Header */}
       <header
         style={{
           display: "flex",
@@ -513,7 +592,6 @@ export default function MatrixConstruct() {
       </header>
 
       <div style={{ display: "flex" }} className="construct-dashboard">
-        {/* Sidebar */}
         <div
           style={{
             width: "18rem",
@@ -568,7 +646,6 @@ export default function MatrixConstruct() {
           </nav>
         </div>
 
-        {/* Main Content */}
         <main style={{ flex: 1, padding: "24px" }} className="construct-main">
           {activeSection === "saga" ? (
             <>
@@ -635,19 +712,17 @@ export default function MatrixConstruct() {
                   );
                 }
                 return (
-                  <ClientOnly>
-                    <VotingSection
-                      episode={episode} selected={selected} setSelected={setSelected}
-                      isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
-                      isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
-                      isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
-                      greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
-                      isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
-                      connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
-                      connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
-                      switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
-                    />
-                 </ClientOnly>
+                  <VotingSection
+                    episode={episode} selected={selected} setSelected={setSelected}
+                    isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
+                    isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
+                    isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
+                    greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
+                    isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
+                    connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
+                    connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
+                    switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
+                  />
                 );
               })()}
             </>
@@ -690,6 +765,5 @@ export default function MatrixConstruct() {
         </main>
       </div>
     </div>
-   </ClientOnly>
   );
 }
