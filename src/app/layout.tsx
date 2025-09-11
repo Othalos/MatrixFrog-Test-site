@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import WalletProvider from "./providers/WalletProvider";
 
 export const metadata: Metadata = {
   title: "MatrixFrog - DeFi Staking Platform",
@@ -15,9 +14,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <WalletProvider>
-          {children}
-        </WalletProvider>
+        {children}
       </body>
     </html>
   );
