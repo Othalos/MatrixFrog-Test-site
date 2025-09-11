@@ -1,5 +1,4 @@
 // File: app/api/rpc/route.ts
-
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -7,8 +6,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('RPC Request received:', body);
     
-    // Use environment variable or fallback to public RPC
-    const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
+    // Use environment variable or fallback to PEPU v2 testnet
+    const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz';
     console.log('Using RPC URL:', rpcUrl);
     
     const response = await fetch(rpcUrl, {
@@ -45,7 +44,8 @@ export async function POST(request: NextRequest) {
       { 
         error: 'RPC request failed', 
         details: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        rpcUrl: process.env.ETHEREUM_RPC_URL || 'https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'
       },
       { status: 500 }
     );
@@ -69,7 +69,9 @@ export async function GET() {
   return Response.json(
     { 
       error: 'Method not allowed. Use POST for RPC calls.',
-      status: 'RPC endpoint is running',
+      status: 'RPC endpoint is running on PEPU testnet',
+      network: 'PEPU v2 Testnet (Chain ID: 97740)',
+      rpcUrl: process.env.ETHEREUM_RPC_URL || 'https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz',
       timestamp: new Date().toISOString()
     }, 
     { status: 405 }
