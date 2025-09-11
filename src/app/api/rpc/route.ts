@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const PEPU_RPC_URL = 'https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'
 
+export async function GET() {
+  return NextResponse.json({ message: 'RPC Proxy is running' }, { status: 200 })
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
