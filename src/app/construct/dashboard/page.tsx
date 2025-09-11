@@ -440,6 +440,7 @@ export default function MatrixConstruct() {
   };
 
   return (
+    <ClientOnly fallback={
     <div
       style={{
         paddingBottom: "20px",
@@ -689,5 +690,6 @@ export default function MatrixConstruct() {
         </main>
       </div>
     </div>
+   </ClientOnly>
   );
 }
