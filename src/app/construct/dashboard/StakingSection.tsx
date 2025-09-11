@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256, type Hash } from "viem";
+import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -50,7 +50,6 @@ export default function StakingSection() {
   const [chainId, setChainId] = useState<number | undefined>();
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
-  const [txHash, setTxHash] = useState<Hash | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   
   // Contract data states
@@ -109,8 +108,9 @@ export default function StakingSection() {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${PEPU_TESTNET_ID.toString(16)}` }],
       });
-    } catch (error: any) {
-      if (error.code === 4902) {
+    } catch (error: unknown) {
+      const err = error as { code?: number };
+      if (err.code === 4902) {
         // Chain not added, try to add it
         try {
           await window.ethereum.request({
@@ -142,25 +142,25 @@ export default function StakingSection() {
       const [balanceResult, allowanceResult, stakeResult, rewardsResult] = await Promise.all([
         publicClient.readContract({
           address: MFG_ADDRESS,
-          abi: ERC20_ABI,
+          abi: ERC20_ABI as readonly unknown[],
           functionName: 'balanceOf',
           args: [account],
         }),
         publicClient.readContract({
           address: MFG_ADDRESS,
-          abi: ERC20_ABI,
+          abi: ERC20_ABI as readonly unknown[],
           functionName: 'allowance',
           args: [account, STAKING_ADDRESS],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: STAKING_ABI,
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'stakes',
           args: [POOL_ID, account],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: STAKING_ABI,
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'pendingRewards',
           args: [POOL_ID, account],
         }),
@@ -234,7 +234,7 @@ export default function StakingSection() {
   const handleApprove = useCallback(() => {
     submitTransaction({
       address: MFG_ADDRESS,
-      abi: ERC20_ABI,
+      abi: ERC20_ABI as readonly unknown[],
       functionName: 'approve',
       args: [STAKING_ADDRESS, maxUint256],
     });
@@ -255,7 +255,7 @@ export default function StakingSection() {
 
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI,
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'stake',
       args: [POOL_ID, stakeAmountBN],
     });
@@ -264,7 +264,7 @@ export default function StakingSection() {
   const handleUnstake = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI,
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'unstake',
       args: [POOL_ID],
     });
@@ -273,7 +273,7 @@ export default function StakingSection() {
   const handleClaim = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI,
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'claimRewards',
       args: [POOL_ID],
     });
