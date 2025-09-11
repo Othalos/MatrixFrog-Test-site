@@ -1,5 +1,6 @@
 //Main Construct page
 "use client";
+import { ClientOnly } from "../../components/ClientOnly";
 import StakingSection from "./StakingSection";
 import { Progress } from "@/app/components/ui/progress";
 import { BarChart3, FileVideo, User, Database } from "lucide-react";
@@ -633,17 +634,19 @@ export default function MatrixConstruct() {
                   );
                 }
                 return (
-                  <VotingSection
-                    episode={episode} selected={selected} setSelected={setSelected}
-                    isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
-                    isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
-                    isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
-                    greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
-                    isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
-                    connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
-                    connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
-                    switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
-                  />
+                  <ClientOnly>
+                    <VotingSection
+                      episode={episode} selected={selected} setSelected={setSelected}
+                      isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
+                      isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
+                      isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
+                      greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
+                      isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
+                      connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
+                      connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
+                      switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
+                    />
+                 </ClientOnly>
                 );
               })()}
             </>
