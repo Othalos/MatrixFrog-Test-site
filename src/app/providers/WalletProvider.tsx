@@ -6,36 +6,23 @@ import { ReactNode, useState } from "react";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { injected, metaMask, walletConnect } from "wagmi/connectors";
 
-// Define the Pepe Unchained Mainnet
-const pepeUnchained = {
-  id: 97741,
-  name: "Pepe Unchained",
-  nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
-  rpcUrls: {
-    default: { http: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"] },
-  },
-  blockExplorers: {
-    default: { name: "PepuScan", url: "https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz" },
-  },
-};
-
-// Define the Pepe Unchained Testnet
+// Define the Pepu Testnet (focus on testnet only for now)
 const pepuTestnet = {
   id: 97740,
   name: "Pepu Testnet",
   nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
   rpcUrls: {
-    default: { http: ["https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz"] },
+    default: { http: ["/api/rpc"] }, // Use your RPC proxy
   },
   blockExplorers: {
-    default: { name: "PepuScan Testnet", url: "https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz" },
+    default: { name: "PepuScan Testnet", url: "https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz" },
   },
   testnet: true,
 };
 
-// Update the config to include BOTH chains
+// Config with only testnet for now
 export const config = createConfig({
-  chains: [pepeUnchained, pepuTestnet],
+  chains: [pepuTestnet], // Only testnet
   connectors: [
     injected(),
     metaMask(),
@@ -50,13 +37,28 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [pepeUnchained.id]: http(),
-    [pepuTestnet.id]: http(),
+    [pepuTestnet.id]: http("/api/rpc", {
+      batch: true,
+      retryCount: 3,
+      retryDelay: 1000,
+    }),
   },
+  batch: {
+    multicall: true,
+  },
+  pollingInterval: 4_000,
 });
 
 export default function WalletProvider({ children }: { children: ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: 3,
+        staleTime: 30_000,
+      },
+    },
+  }));
 
   return (
     <QueryClientProvider client={queryClient}>
