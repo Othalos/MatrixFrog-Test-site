@@ -1,6 +1,6 @@
 //Main Construct page
 "use client";
-import { ClientOnly } from "../../components/ClientOnly";
+import { ClientOnly } from "../../../components/ClientOnly";
 import StakingSection from "./StakingSection";
 import { Progress } from "@/app/components/ui/progress";
 import { BarChart3, FileVideo, User, Database } from "lucide-react";
