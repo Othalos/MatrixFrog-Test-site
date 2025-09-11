@@ -27,7 +27,7 @@ const pepuTestnet = {
 } as const
 
 const config = createConfig({
-  chains: [pepuTestnet as any], // Type assertion to bypass conflicts
+  chains: [pepuTestnet as unknown as any], // ESLint-friendly type assertion
   connectors: [injected()],
   transports: { 
     [pepuTestnet.id]: http('/api/rpc', {
@@ -51,7 +51,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config as any}>
+      <WagmiProvider config={config as unknown as Parameters<typeof WagmiProvider>[0]['config']}>
         {children}
       </WagmiProvider>
     </QueryClientProvider>
