@@ -452,7 +452,8 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleClaim} 
                     disabled={isLoading || pendingRewards === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
+                    className="w-full px-4 py-3 font-bold rounded-md !bg-green-600 !text-black hover:enabled:!bg-green-500 disabled:opacity-50 !border-green-600"
+                    style={{ backgroundColor: '#16a34a', color: '#000000', borderColor: '#16a34a' }}
                   >
                     {isLoading ? "Processing..." : "Claim PTX"}
                   </Button>
