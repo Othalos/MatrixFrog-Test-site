@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { useConnect, useAccount, useSwitchChain } from "wagmi";
