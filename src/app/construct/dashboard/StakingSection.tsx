@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import { useConnect, useAccount, useSwitchChain } from "wagmi";
+import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
 // **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
@@ -45,12 +47,14 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
 
 // --- Main Component ---
 export default function StakingSection() {
-  const [account, setAccount] = useState<`0x${string}` | undefined>();
-  const [isConnected, setIsConnected] = useState(false);
-  const [chainId, setChainId] = useState<number | undefined>();
+  const { address, isConnected, chain } = useAccount();
+  const { connect } = useConnect();
+  const { switchChain } = useSwitchChain();
+  
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showWalletOptions, setShowWalletOptions] = useState(false);
   
   // Contract data states
   const [balance, setBalance] = useState<bigint>(0n);
@@ -58,7 +62,7 @@ export default function StakingSection() {
   const [userStakedAmount, setUserStakedAmount] = useState<bigint>(0n);
   const [pendingRewards, setPendingRewards] = useState<bigint>(0n);
 
-  const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
+  const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
 
   // Create clients
   const publicClient = createPublicClient({
@@ -74,69 +78,69 @@ export default function StakingSection() {
     });
   }, []);
 
-  // Connect to MetaMask
-  const connectWallet = useCallback(async () => {
-    if (!window.ethereum) {
-      setNotification({ message: "MetaMask not found!", type: "error" });
-      return;
-    }
+  // Wallet connection functions using wagmi
+  const connectMetaMask = useCallback(() => {
+    connect({ connector: injected() });
+    setShowWalletOptions(false);
+  }, [connect]);
 
-    try {
-      const accounts = await window.ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      });
-      
-      const chainId = await window.ethereum.request({ 
-        method: 'eth_chainId' 
-      });
+  const connectWalletConnect = useCallback(() => {
+    connect({ 
+      connector: walletConnect({ 
+        projectId: 'efce48a19d0c7b8b8da21be2c1c8c271',
+        showQrModal: true 
+      }) 
+    });
+    setShowWalletOptions(false);
+  }, [connect]);
 
-      setAccount(accounts[0]);
-      setIsConnected(true);
-      setChainId(parseInt(chainId, 16));
-    } catch (error) {
-      console.error('Failed to connect:', error);
-      setNotification({ message: "Failed to connect wallet", type: "error" });
-    }
-  }, []);
+  const connectCoinbase = useCallback(() => {
+    connect({ 
+      connector: coinbaseWallet({ 
+        appName: 'MatrixFrog',
+        appLogoUrl: 'https://matrixfrog.one/logo.png'
+      }) 
+    });
+    setShowWalletOptions(false);
+  }, [connect]);
 
   // Switch to correct network
   const switchNetwork = useCallback(async () => {
-    if (!window.ethereum) return;
+    if (!switchChain) return;
 
     try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: `0x${PEPU_TESTNET_ID.toString(16)}` }],
-      });
+      await switchChain({ chainId: PEPU_TESTNET_ID });
     } catch (error: unknown) {
       const err = error as { code?: number };
       if (err.code === 4902) {
         // Chain not added, try to add it
         try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
-              chainName: 'Pepu Testnet',
-              nativeCurrency: {
-                name: 'PEPU',
-                symbol: 'PEPU',
-                decimals: 18,
-              },
-              rpcUrls: ['https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
-              blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
-            }],
-          });
+          if (window.ethereum) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
+                chainName: 'Pepu Testnet',
+                nativeCurrency: {
+                  name: 'PEPU',
+                  symbol: 'PEPU',
+                  decimals: 18,
+                },
+                rpcUrls: ['https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+                blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+              }],
+            });
+          }
         } catch (addError) {
           console.error('Failed to add network:', addError);
         }
       }
     }
-  }, []);
+  }, [switchChain]);
 
   // Read contract data
   const readContractData = useCallback(async () => {
-    if (!account || !isCorrectNetwork) return;
+    if (!address || !isCorrectNetwork) return;
 
     try {
       const [balanceResult, allowanceResult, stakeResult, rewardsResult] = await Promise.all([
@@ -144,25 +148,25 @@ export default function StakingSection() {
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
           functionName: 'balanceOf',
-          args: [account],
+          args: [address],
         }),
         publicClient.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
           functionName: 'allowance',
-          args: [account, STAKING_ADDRESS],
+          args: [address, STAKING_ADDRESS],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'stakes',
-          args: [POOL_ID, account],
+          args: [POOL_ID, address],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'pendingRewards',
-          args: [POOL_ID, account],
+          args: [POOL_ID, address],
         }),
       ]);
 
@@ -173,7 +177,7 @@ export default function StakingSection() {
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
-  }, [account, isCorrectNetwork, publicClient]);
+  }, [address, isCorrectNetwork, publicClient]);
 
   // Submit transaction
   const submitTransaction = useCallback(async (args: {
@@ -182,7 +186,7 @@ export default function StakingSection() {
     functionName: string;
     args: readonly unknown[];
   }) => {
-    if (!account) return;
+    if (!address) return;
 
     setIsLoading(true);
     setNotification(null);
@@ -193,7 +197,7 @@ export default function StakingSection() {
 
       const hash = await walletClient.writeContract({
         ...args,
-        account,
+        account: address,
       });
 
       setNotification({ 
@@ -228,7 +232,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [account, getWalletClient, publicClient, readContractData]);
+  }, [address, getWalletClient, publicClient, readContractData]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -287,19 +291,6 @@ export default function StakingSection() {
 
   // Effects
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
-        setAccount(accounts[0] as `0x${string}` || undefined);
-        setIsConnected(accounts.length > 0);
-      });
-
-      window.ethereum.on('chainChanged', (chainId: string) => {
-        setChainId(parseInt(chainId, 16));
-      });
-    }
-  }, []);
-
-  useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
       const interval = setInterval(readContractData, 5000);
@@ -324,12 +315,42 @@ export default function StakingSection() {
           {!isConnected ? (
             <div className="p-6 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
               <h3 className="text-lg font-bold text-green-400">Connect Wallet to Continue</h3>
-              <Button 
-                onClick={connectWallet}
-                className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
-              >
-                Connect MetaMask
-              </Button>
+              
+              {!showWalletOptions ? (
+                <Button 
+                  onClick={() => setShowWalletOptions(true)}
+                  className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
+                >
+                  Connect Wallet
+                </Button>
+              ) : (
+                <div className="w-full space-y-3">
+                  <Button 
+                    onClick={connectMetaMask}
+                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
+                  >
+                    MetaMask
+                  </Button>
+                  <Button 
+                    onClick={connectWalletConnect}
+                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
+                  >
+                    WalletConnect
+                  </Button>
+                  <Button 
+                    onClick={connectCoinbase}
+                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
+                  >
+                    Coinbase Wallet
+                  </Button>
+                  <Button 
+                    onClick={() => setShowWalletOptions(false)}
+                    className="w-full px-4 py-2 font-bold rounded-md border border-gray-500 bg-gray-900/50 text-gray-300 hover:bg-gray-800/60"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              )}
             </div>
           ) : !isCorrectNetwork ? (
             <div className="p-6 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-4">
