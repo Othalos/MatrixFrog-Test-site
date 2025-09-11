@@ -1,13 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { useState } from 'react'
-import { type Chain } from 'viem'
 
-// Create a properly typed chain object
-const pepuTestnet: Chain = {
+// Simple chain definition to avoid type conflicts
+const pepuTestnet = {
   id: 97740,
   name: 'Pepu Testnet',
   nativeCurrency: { 
@@ -16,24 +16,16 @@ const pepuTestnet: Chain = {
     decimals: 18 
   },
   rpcUrls: { 
-    default: { 
-      http: ['/api/rpc'],
-      webSocket: undefined
-    },
-    public: { 
-      http: ['/api/rpc'],
-      webSocket: undefined
-    }
+    default: { http: ['/api/rpc'] } 
   },
   blockExplorers: { 
     default: { 
       name: 'Pepu Explorer', 
-      url: 'https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz',
-      apiUrl: undefined
+      url: 'https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz' 
     } 
   },
   testnet: true,
-}
+} as any
 
 const config = createConfig({
   chains: [pepuTestnet],
@@ -60,7 +52,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WagmiProvider config={config}>
+      <WagmiProvider config={config as any}>
         {children}
       </WagmiProvider>
     </QueryClientProvider>
