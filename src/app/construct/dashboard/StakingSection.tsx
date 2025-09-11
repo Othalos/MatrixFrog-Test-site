@@ -305,15 +305,15 @@ export default function StakingSection() {
   return (
     <div className="max-w-2xl mx-auto">
       <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
-        <CardHeader className="text-center pb-4">
+        <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl text-green-400">
             Stake MFG for PTX at 25% APR
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-6 p-6">
+        <CardContent className="space-y-8 px-8 pb-8">
           {!isConnected ? (
-            <div className="p-6 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
+            <div className="p-8 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-6">
               <h3 className="text-lg font-bold text-green-400">Connect Wallet to Continue</h3>
               
               {!showWalletOptions ? (
@@ -353,7 +353,7 @@ export default function StakingSection() {
               )}
             </div>
           ) : !isCorrectNetwork ? (
-            <div className="p-6 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-4">
+            <div className="p-8 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-6">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={24} />
                 <span className="font-bold text-lg">Wrong Network</span>
@@ -367,9 +367,9 @@ export default function StakingSection() {
               </Button>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-8">
               {/* Wallet Balance */}
-              <div className="p-4 border border-green-700/50 rounded-md bg-green-900/10">
+              <div className="p-6 border border-green-700/50 rounded-md bg-green-900/10">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Wallet size={20} className="text-green-400" />
@@ -382,10 +382,10 @@ export default function StakingSection() {
               </div>
 
               {/* Staking Input Section */}
-              <div className="border border-green-700/50 rounded-md p-4 space-y-4 bg-green-900/5">
+              <div className="border border-green-700/50 rounded-md p-6 space-y-6 bg-green-900/5">
                 <h3 className="text-lg font-bold text-green-400 text-center">Stake MFG Tokens</h3>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                   <input 
                     type="number" 
                     value={stakeAmount} 
@@ -415,7 +415,7 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleStake} 
                     disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 disabled:opacity-50"
+                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
                   >
                     {isLoading ? "Processing..." : "Stake MFG"}
                   </Button>
@@ -423,10 +423,10 @@ export default function StakingSection() {
               </div>
 
               {/* Staked & Rewards Section */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-green-700/50 rounded-md p-4 bg-blue-900/10">
-                  <h3 className="text-lg font-bold text-blue-400 text-center mb-4">Staked MFG</h3>
-                  <div className="text-center mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="border border-green-700/50 rounded-md p-6 bg-blue-900/10">
+                  <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
+                  <div className="text-center mb-6">
                     <div className="text-3xl font-bold text-white">
                       {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
                     </div>
@@ -435,15 +435,15 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleUnstake} 
                     disabled={isLoading || userStakedAmount === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 disabled:opacity-50"
+                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
                   >
                     {isLoading ? "Processing..." : "Unstake All"}
                   </Button>
                 </div>
 
-                <div className="border border-green-700/50 rounded-md p-4 bg-purple-900/10">
-                  <h3 className="text-lg font-bold text-purple-400 text-center mb-4">PTX Rewards</h3>
-                  <div className="text-center mb-4">
+                <div className="border border-green-700/50 rounded-md p-6 bg-purple-900/10">
+                  <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
+                  <div className="text-center mb-6">
                     <div className="text-3xl font-bold text-white">
                       {formatDisplayNumber(formatUnits(pendingRewards, 18))}
                     </div>
@@ -452,7 +452,7 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleClaim} 
                     disabled={isLoading || pendingRewards === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-purple-500 bg-purple-900/50 text-purple-300 hover:enabled:bg-purple-800/60 disabled:opacity-50"
+                    className="w-full px-4 py-3 font-bold rounded-md bg-green-600 text-black hover:enabled:bg-green-500 disabled:opacity-50 shadow-lg shadow-green-600/30"
                   >
                     {isLoading ? "Processing..." : "Claim PTX"}
                   </Button>
@@ -461,7 +461,7 @@ export default function StakingSection() {
 
               {/* Notification */}
               {notification && (
-                <div className={`p-4 rounded-md border-2 ${
+                <div className={`p-6 rounded-md border-2 ${
                   notification.type === "error" 
                     ? "bg-red-900/50 border-red-500 text-red-300" 
                     : "bg-green-900/50 border-green-500 text-green-300"
