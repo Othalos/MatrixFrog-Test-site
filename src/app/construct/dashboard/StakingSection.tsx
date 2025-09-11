@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { useAccount, useConnect, useReadContract, useWriteContract, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { parseUnits, formatUnits, maxUint256, type Hash } from "viem";
+import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256, type Hash } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 
@@ -17,6 +15,22 @@ const PEPU_TESTNET_ID = 97740;
 const STAKING_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827" as `0x${string}`;
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889" as `0x${string}`;
 const POOL_ID = 0n;
+
+// Define chain for viem
+const pepuTestnet = {
+  id: PEPU_TESTNET_ID,
+  name: 'Pepu Testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'PEPU',
+    symbol: 'PEPU',
+  },
+  rpcUrls: {
+    default: {
+      http: ['/api/rpc'],
+    },
+  },
+} as const;
 
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number, decimals = 4) => {
@@ -31,154 +45,201 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
 
 // --- Main Component ---
 export default function StakingSection() {
-  const { address, isConnected, chain } = useAccount();
-  const { connect } = useConnect();
-  const { switchChain } = useSwitchChain();
-
+  const [account, setAccount] = useState<`0x${string}` | undefined>();
+  const [isConnected, setIsConnected] = useState(false);
+  const [chainId, setChainId] = useState<number | undefined>();
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [txHash, setTxHash] = useState<Hash | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
   
-  const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
-  const sharedReadConfig = { 
-    query: { 
-      enabled: isConnected && isCorrectNetwork && !!address,
-      refetchInterval: 5000 // Refetch every 5 seconds
-    } 
-  };
+  // Contract data states
+  const [balance, setBalance] = useState<bigint>(0n);
+  const [allowance, setAllowance] = useState<bigint>(0n);
+  const [userStakedAmount, setUserStakedAmount] = useState<bigint>(0n);
+  const [pendingRewards, setPendingRewards] = useState<bigint>(0n);
 
-  // --- Read Contract Data ---
-  const { data: allowanceData, refetch: refetchAllowance } = useReadContract({
-    address: MFG_ADDRESS, 
-    abi: ERC20_ABI, 
-    functionName: "allowance",
-    args: address ? [address, STAKING_ADDRESS] : undefined, 
-    ...sharedReadConfig,
+  const isCorrectNetwork = chainId === PEPU_TESTNET_ID;
+
+  // Create clients
+  const publicClient = createPublicClient({
+    chain: pepuTestnet,
+    transport: http('/api/rpc'),
   });
 
-  const { data: balanceData, refetch: refetchBalance } = useReadContract({
-    address: MFG_ADDRESS, 
-    abi: ERC20_ABI, 
-    functionName: "balanceOf",
-    args: address ? [address] : undefined, 
-    ...sharedReadConfig,
-  });
+  const getWalletClient = useCallback(async () => {
+    if (!window.ethereum) return null;
+    return createWalletClient({
+      chain: pepuTestnet,
+      transport: custom(window.ethereum),
+    });
+  }, []);
 
-  const { data: userStakeData, refetch: refetchUserStake } = useReadContract({
-    address: STAKING_ADDRESS, 
-    abi: STAKING_ABI, 
-    functionName: "stakes",
-    args: address ? [POOL_ID, address] : undefined, 
-    ...sharedReadConfig,
-  });
-
-  const { data: pendingRewardsData, refetch: refetchPendingRewards } = useReadContract({
-    address: STAKING_ADDRESS, 
-    abi: STAKING_ABI, 
-    functionName: "pendingRewards",
-    args: address ? [POOL_ID, address] : undefined, 
-    ...sharedReadConfig,
-  });
-
-  const { writeContract, isPending, error: writeError, data: writeData } = useWriteContract();
-  const { isSuccess: txConfirmed, isLoading: isConfirming } = useWaitForTransactionReceipt({ 
-    hash: txHash,
-    confirmations: 1
-  });
-
-  // --- Refetch data when a transaction is confirmed ---
-  const refetchAllData = useCallback(() => {
-    refetchAllowance();
-    refetchBalance();
-    refetchUserStake();
-    refetchPendingRewards();
-  }, [refetchAllowance, refetchBalance, refetchUserStake, refetchPendingRewards]);
-
-  // Monitor transaction confirmations
-  useEffect(() => {
-    if (txConfirmed && txHash) {
-      setNotification({ message: "Transaction confirmed! Data refreshing...", type: "success" });
-      
-      // Small delay to ensure blockchain state is updated
-      setTimeout(() => {
-        refetchAllData();
-        setTxHash(undefined);
-        
-        // Clear notification after data refresh
-        setTimeout(() => {
-          setNotification(null);
-        }, 2000);
-      }, 1000);
+  // Connect to MetaMask
+  const connectWallet = useCallback(async () => {
+    if (!window.ethereum) {
+      setNotification({ message: "MetaMask not found!", type: "error" });
+      return;
     }
-  }, [txConfirmed, txHash, refetchAllData]);
 
-  // Handle write contract errors
-  useEffect(() => {
-    if (writeError) {
-      setNotification({ 
-        message: `Error: ${writeError.message || 'Transaction failed'}`, 
-        type: "error" 
+    try {
+      const accounts = await window.ethereum.request({ 
+        method: 'eth_requestAccounts' 
       });
-      setTxHash(undefined);
-    }
-  }, [writeError]);
+      
+      const chainId = await window.ethereum.request({ 
+        method: 'eth_chainId' 
+      });
 
-  // Set transaction hash when write is successful
-  useEffect(() => {
-    if (writeData && !txHash) {
-      setTxHash(writeData);
+      setAccount(accounts[0]);
+      setIsConnected(true);
+      setChainId(parseInt(chainId, 16));
+    } catch (error) {
+      console.error('Failed to connect:', error);
+      setNotification({ message: "Failed to connect wallet", type: "error" });
+    }
+  }, []);
+
+  // Switch to correct network
+  const switchNetwork = useCallback(async () => {
+    if (!window.ethereum) return;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${PEPU_TESTNET_ID.toString(16)}` }],
+      });
+    } catch (error: any) {
+      if (error.code === 4902) {
+        // Chain not added, try to add it
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
+              chainName: 'Pepu Testnet',
+              nativeCurrency: {
+                name: 'PEPU',
+                symbol: 'PEPU',
+                decimals: 18,
+              },
+              rpcUrls: ['https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+              blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+            }],
+          });
+        } catch (addError) {
+          console.error('Failed to add network:', addError);
+        }
+      }
+    }
+  }, []);
+
+  // Read contract data
+  const readContractData = useCallback(async () => {
+    if (!account || !isCorrectNetwork) return;
+
+    try {
+      const [balanceResult, allowanceResult, stakeResult, rewardsResult] = await Promise.all([
+        publicClient.readContract({
+          address: MFG_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [account],
+        }),
+        publicClient.readContract({
+          address: MFG_ADDRESS,
+          abi: ERC20_ABI,
+          functionName: 'allowance',
+          args: [account, STAKING_ADDRESS],
+        }),
+        publicClient.readContract({
+          address: STAKING_ADDRESS,
+          abi: STAKING_ABI,
+          functionName: 'stakes',
+          args: [POOL_ID, account],
+        }),
+        publicClient.readContract({
+          address: STAKING_ADDRESS,
+          abi: STAKING_ABI,
+          functionName: 'pendingRewards',
+          args: [POOL_ID, account],
+        }),
+      ]);
+
+      setBalance(balanceResult as bigint);
+      setAllowance(allowanceResult as bigint);
+      setUserStakedAmount((stakeResult as [bigint])[0]);
+      setPendingRewards(rewardsResult as bigint);
+    } catch (error) {
+      console.error('Failed to read contract data:', error);
+    }
+  }, [account, isCorrectNetwork, publicClient]);
+
+  // Submit transaction
+  const submitTransaction = useCallback(async (args: {
+    address: `0x${string}`;
+    abi: any;
+    functionName: string;
+    args: any[];
+  }) => {
+    if (!account) return;
+
+    setIsLoading(true);
+    setNotification(null);
+
+    try {
+      const walletClient = await getWalletClient();
+      if (!walletClient) throw new Error('No wallet client');
+
+      const hash = await walletClient.writeContract({
+        ...args,
+        account,
+      });
+
+      setTxHash(hash);
       setNotification({ 
         message: "Transaction submitted! Waiting for confirmation...", 
         type: "success" 
       });
+
+      // Wait for transaction
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      
+      if (receipt.status === 'success') {
+        setNotification({ 
+          message: "Transaction confirmed! Refreshing data...", 
+          type: "success" 
+        });
+        
+        // Refresh data after successful transaction
+        setTimeout(() => {
+          readContractData();
+          setNotification(null);
+        }, 2000);
+      } else {
+        throw new Error('Transaction failed');
+      }
+    } catch (error: any) {
+      console.error('Transaction error:', error);
+      setNotification({ 
+        message: `Error: ${error.message || 'Transaction failed'}`, 
+        type: "error" 
+      });
+    } finally {
+      setIsLoading(false);
+      setTxHash(undefined);
     }
-  }, [writeData, txHash]);
+  }, [account, getWalletClient, publicClient, readContractData]);
 
-  // --- Derived Values ---
-  const allowance: bigint = (allowanceData as bigint) ?? 0n;
-  const balance: bigint = (balanceData as bigint) ?? 0n;
-  const stakeAmountBN: bigint = stakeAmount && !isNaN(parseFloat(stakeAmount)) 
-    ? parseUnits(stakeAmount, 18) 
-    : 0n;
-  const needsApproval = stakeAmountBN > 0n && allowance < stakeAmountBN;
-  const userStakedAmount = (userStakeData as [bigint])?.[0] ?? 0n;
-  const pendingRewards = (pendingRewardsData as bigint) ?? 0n;
-  const isLoading = isPending || isConfirming;
-
-  // Debug current state
-  console.log("Current state:", {
-    stakeAmount,
-    stakeAmountBN: stakeAmountBN.toString(),
-    allowance: allowance.toString(),
-    needsApproval,
-    balance: balance.toString(),
-    isLoading
-  });
-
-  // --- Actions ---
-  const submitTransaction = useCallback((args: {
-    address: `0x${string}`;
-    abi: readonly unknown[];
-    functionName: string;
-    args: readonly unknown[];
-  }) => {
-    setNotification(null);
-    writeContract(args);
-  }, [writeContract]);
-
+  // Transaction handlers
   const handleApprove = useCallback(() => {
-    if (!stakeAmountBN || stakeAmountBN === 0n) {
-      setNotification({ message: "Please enter a stake amount first", type: "error" });
-      return;
-    }
-    
-    submitTransaction({ 
-      address: MFG_ADDRESS, 
-      abi: ERC20_ABI, 
-      functionName: "approve", 
-      args: [STAKING_ADDRESS, maxUint256] 
+    submitTransaction({
+      address: MFG_ADDRESS,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [STAKING_ADDRESS, maxUint256],
     });
-  }, [submitTransaction, stakeAmountBN]);
+  }, [submitTransaction]);
 
   const handleStake = useCallback(() => {
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
@@ -186,58 +247,70 @@ export default function StakingSection() {
       return;
     }
 
+    const stakeAmountBN = parseUnits(stakeAmount, 18);
+    
     if (stakeAmountBN > balance) {
       setNotification({ message: "Insufficient MFG balance", type: "error" });
       return;
     }
 
-    if (needsApproval) {
-      setNotification({ message: "Please approve the transaction first", type: "error" });
-      return;
-    }
-
-    submitTransaction({ 
-      address: STAKING_ADDRESS, 
-      abi: STAKING_ABI, 
-      functionName: "stake", 
-      args: [POOL_ID, stakeAmountBN] 
+    submitTransaction({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: 'stake',
+      args: [POOL_ID, stakeAmountBN],
     });
-  }, [submitTransaction, stakeAmount, stakeAmountBN, balance, needsApproval]);
+  }, [submitTransaction, stakeAmount, balance]);
 
   const handleUnstake = useCallback(() => {
-    if (userStakedAmount === 0n) {
-      setNotification({ message: "No MFG staked to unstake", type: "error" });
-      return;
-    }
-    
-    submitTransaction({ 
-      address: STAKING_ADDRESS, 
-      abi: STAKING_ABI, 
-      functionName: "unstake", 
-      args: [POOL_ID] 
+    submitTransaction({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: 'unstake',
+      args: [POOL_ID],
     });
-  }, [submitTransaction, userStakedAmount]);
+  }, [submitTransaction]);
 
   const handleClaim = useCallback(() => {
-    if (pendingRewards === 0n) {
-      setNotification({ message: "No PTX rewards to claim", type: "error" });
-      return;
-    }
-    
-    submitTransaction({ 
-      address: STAKING_ADDRESS, 
-      abi: STAKING_ABI, 
-      functionName: "claimRewards", 
-      args: [POOL_ID] 
+    submitTransaction({
+      address: STAKING_ADDRESS,
+      abi: STAKING_ABI,
+      functionName: 'claimRewards',
+      args: [POOL_ID],
     });
-  }, [submitTransaction, pendingRewards]);
+  }, [submitTransaction]);
 
   const handleMaxClick = useCallback(() => {
     if (balance > 0n) {
-      const maxAmount = formatUnits(balance, 18);
-      setStakeAmount(maxAmount);
+      setStakeAmount(formatUnits(balance, 18));
     }
   }, [balance]);
+
+  // Effects
+  useEffect(() => {
+    if (window.ethereum) {
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        setAccount(accounts[0] as `0x${string}` || undefined);
+        setIsConnected(accounts.length > 0);
+      });
+
+      window.ethereum.on('chainChanged', (chainId: string) => {
+        setChainId(parseInt(chainId, 16));
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isConnected && isCorrectNetwork) {
+      readContractData();
+      const interval = setInterval(readContractData, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [isConnected, isCorrectNetwork, readContractData]);
+
+  // Derived values
+  const stakeAmountBN = stakeAmount ? parseUnits(stakeAmount, 18) : 0n;
+  const needsApproval = stakeAmountBN > 0n && allowance < stakeAmountBN;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -252,36 +325,12 @@ export default function StakingSection() {
           {!isConnected ? (
             <div className="p-6 rounded-md bg-black border border-green-700 flex flex-col items-center space-y-4">
               <h3 className="text-lg font-bold text-green-400">Connect Wallet to Continue</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-                <Button 
-                  onClick={() => connect({ connector: injected() })} 
-                  className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]"
-                >
-                  MetaMask
-                </Button>
-                <Button 
-                  onClick={() => connect({ 
-                    connector: walletConnect({ 
-                      projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
-                      showQrModal: true
-                    }) 
-                  })} 
-                  className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]"
-                >
-                  WalletConnect
-                </Button>
-                <Button 
-                  onClick={() => connect({ 
-                    connector: coinbaseWallet({ 
-                      appName: "MatrixFrog",
-                      appLogoUrl: "https://matrixfrog.one/logo.png"
-                    }) 
-                  })} 
-                  className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60 hover:shadow-[0_0_15px_rgba(74,222,128,0.7)]"
-                >
-                  Coinbase
-                </Button>
-              </div>
+              <Button 
+                onClick={connectWallet}
+                className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:bg-green-800/60"
+              >
+                Connect MetaMask
+              </Button>
             </div>
           ) : !isCorrectNetwork ? (
             <div className="p-6 rounded-md bg-yellow-900/80 text-yellow-300 border border-yellow-700 flex flex-col items-center space-y-4">
@@ -289,9 +338,9 @@ export default function StakingSection() {
                 <AlertTriangle size={24} />
                 <span className="font-bold text-lg">Wrong Network</span>
               </div>
-              <p className="text-center">Please switch to Pepu Testnet to use staking</p>
+              <p className="text-center">Please switch to Pepu Testnet</p>
               <Button 
-                onClick={() => switchChain({ chainId: PEPU_TESTNET_ID })} 
+                onClick={switchNetwork}
                 className="px-6 py-2 bg-yellow-600 text-black font-bold rounded-md hover:bg-yellow-500"
               >
                 Switch to Pepu Testnet
@@ -338,15 +387,15 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleApprove} 
                     disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-yellow-500 bg-yellow-900/50 text-yellow-300 hover:enabled:bg-yellow-800/60 hover:enabled:shadow-[0_0_15px_rgba(251,191,36,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 font-bold rounded-md border border-yellow-500 bg-yellow-900/50 text-yellow-300 hover:enabled:bg-yellow-800/60 disabled:opacity-50"
                   >
                     {isLoading ? "Processing..." : "Approve MFG"}
                   </Button>
                 ) : (
                   <Button 
                     onClick={handleStake} 
-                    disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0 || needsApproval} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 hover:enabled:shadow-[0_0_15px_rgba(74,222,128,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0} 
+                    className="w-full px-4 py-3 font-bold rounded-md border border-green-500 bg-green-900/50 text-green-300 hover:enabled:bg-green-800/60 disabled:opacity-50"
                   >
                     {isLoading ? "Processing..." : "Stake MFG"}
                   </Button>
@@ -355,7 +404,6 @@ export default function StakingSection() {
 
               {/* Staked & Rewards Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Staked Tokens */}
                 <div className="border border-green-700/50 rounded-md p-4 bg-blue-900/10">
                   <h3 className="text-lg font-bold text-blue-400 text-center mb-4">Staked MFG</h3>
                   <div className="text-center mb-4">
@@ -367,13 +415,12 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleUnstake} 
                     disabled={isLoading || userStakedAmount === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 hover:enabled:shadow-[0_0_15px_rgba(239,68,68,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 font-bold rounded-md border border-red-500 bg-red-900/50 text-red-300 hover:enabled:bg-red-800/60 disabled:opacity-50"
                   >
                     {isLoading ? "Processing..." : "Unstake All"}
                   </Button>
                 </div>
 
-                {/* Pending Rewards */}
                 <div className="border border-green-700/50 rounded-md p-4 bg-purple-900/10">
                   <h3 className="text-lg font-bold text-purple-400 text-center mb-4">PTX Rewards</h3>
                   <div className="text-center mb-4">
@@ -385,7 +432,7 @@ export default function StakingSection() {
                   <Button 
                     onClick={handleClaim} 
                     disabled={isLoading || pendingRewards === 0n} 
-                    className="w-full px-4 py-3 font-bold rounded-md border border-purple-500 bg-purple-900/50 text-purple-300 hover:enabled:bg-purple-800/60 hover:enabled:shadow-[0_0_15px_rgba(168,85,247,0.7)] disabled:bg-black disabled:border-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 font-bold rounded-md border border-purple-500 bg-purple-900/50 text-purple-300 hover:enabled:bg-purple-800/60 disabled:opacity-50"
                   >
                     {isLoading ? "Processing..." : "Claim PTX"}
                   </Button>
