@@ -1,6 +1,8 @@
-// File: app/api/rpc/route.js
+// File: app/api/rpc/route.ts
 
-export async function POST(request) {
+import { NextRequest } from 'next/server';
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('RPC Request received:', body);
@@ -42,7 +44,7 @@ export async function POST(request) {
     return Response.json(
       { 
         error: 'RPC request failed', 
-        details: error.message,
+        details: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
       },
       { status: 500 }
@@ -51,7 +53,7 @@ export async function POST(request) {
 }
 
 // Handle OPTIONS for CORS preflight
-export async function OPTIONS(request) {
+export async function OPTIONS() {
   return new Response(null, {
     status: 200,
     headers: {
