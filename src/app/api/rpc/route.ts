@@ -1,76 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server'
+// File: app/api/rpc/route.js
 
-const PEPU_RPC_URL = 'https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'
-
-export async function GET() {
-  return NextResponse.json({ message: 'RPC Proxy is running' }, { status: 200 })
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(request) {
   try {
-    const body = await request.json()
+    const body = await request.json();
+    console.log('RPC Request received:', body);
     
-    console.log('RPC Request:', JSON.stringify(body, null, 2))
+    // Use environment variable or fallback to public RPC
+    const rpcUrl = process.env.ETHEREUM_RPC_URL || 'https://eth.llamarpc.com';
+    console.log('Using RPC URL:', rpcUrl);
     
-    const response = await fetch(PEPU_RPC_URL, {
+    const response = await fetch(rpcUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
       body: JSON.stringify(body),
-    })
+    });
+
+    console.log('RPC Response status:', response.status);
 
     if (!response.ok) {
-      console.error('RPC Response not ok:', response.status, response.statusText)
-      const errorText = await response.text()
-      console.error('Error response:', errorText)
-      
-      return NextResponse.json(
-        { 
-          error: `RPC request failed: ${response.status} ${response.statusText}`,
-          details: errorText 
-        },
-        { status: response.status }
-      )
+      const errorText = await response.text();
+      console.error('RPC Error:', errorText);
+      throw new Error(`RPC request failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json()
-    console.log('RPC Response:', JSON.stringify(data, null, 2))
-
-    return NextResponse.json(data, {
+    const data = await response.json();
+    console.log('RPC Response data:', data);
+    
+    // Return with proper headers
+    return Response.json(data, {
+      status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'POST',
+        'Access-Control-Allow-Headers': 'Content-Type',
       },
-    })
+    });
   } catch (error) {
-    console.error('RPC Proxy Error:', error)
-    return NextResponse.json(
+    console.error('RPC proxy error:', error);
+    return Response.json(
       { 
         error: 'RPC request failed', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
+        details: error.message,
+        timestamp: new Date().toISOString()
       },
-      { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        },
-      }
-    )
+      { status: 500 }
+    );
   }
 }
 
-export async function OPTIONS() {
-  return new NextResponse(null, {
+// Handle OPTIONS for CORS preflight
+export async function OPTIONS(request) {
+  return new Response(null, {
     status: 200,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
     },
-  })
+  });
+}
+
+// Handle other methods
+export async function GET() {
+  return Response.json(
+    { 
+      error: 'Method not allowed. Use POST for RPC calls.',
+      status: 'RPC endpoint is running',
+      timestamp: new Date().toISOString()
+    }, 
+    { status: 405 }
+  );
 }
