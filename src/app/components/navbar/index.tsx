@@ -321,7 +321,7 @@ export default function Navbar() {
                   <div className="divider">|</div>
                   <NavLink href={getNavLink("buybot")} label="PepTrix" />
                   <div className="divider">|</div>
-                  <NavLink href="/migration-protocol" label="Treasury" />
+                  <NavLink href="/treasury" label="Treasury" />
                   <div className="divider">|</div>
                   {/* Construct Link - OHNE WALLET WALL */}
                   <NavLink
