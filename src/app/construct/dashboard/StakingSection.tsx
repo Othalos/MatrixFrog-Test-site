@@ -33,15 +33,6 @@ const pepuTestnet = {
   },
 } as const;
 
-// Type for window.ethereum to avoid TypeScript errors
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }
-}
-
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number, decimals = 4) => {
   const num = Number(value);
@@ -512,7 +503,7 @@ export default function StakingSection() {
         // Chain not added, try to add it
         try {
           if (window.ethereum) {
-            await (window.ethereum as any).request({
+            await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
