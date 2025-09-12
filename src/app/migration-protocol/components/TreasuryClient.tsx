@@ -1,20 +1,17 @@
-// app/migration-protocol/components/MigrationProtocolClient.tsx
 "use client";
-
 import { useRef, useEffect } from "react";
 import Navbar from "../../components/navbar";
-import WalletTracker from "./WalletTracker";
 import Footer from "../../components/footer";
 import MatrixInfoTabs from "./MatrixInfoTabs";
+import ChartDisplay from "./ChartDisplay";
 import "./styles.css";
 
-export default function MigrationProtocolClient() {
+export default function TreasuryClient() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
@@ -54,6 +51,7 @@ export default function MigrationProtocolClient() {
     };
 
     const interval = setInterval(draw, 40);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("resize", resizeCanvas);
@@ -82,7 +80,6 @@ export default function MigrationProtocolClient() {
           opacity: 0.5;
         }
       `}</style>
-
       <main className="flex min-h-screen flex-col items-center justify-between relative overflow-x-hidden bg-black">
         <canvas
           ref={canvasRef}
@@ -91,18 +88,20 @@ export default function MigrationProtocolClient() {
         <div className="fixed inset-0 bg-scanlines z-10 pointer-events-none"></div>
         <div className="fixed inset-0 bg-crt z-10 pointer-events-none"></div>
         <div className="fixed inset-0 vignette z-10 pointer-events-none"></div>
-
+        
         <Navbar />
+        
         <div className="w-full z-20">
           <div className="h-[80px]"></div>
-          <div className="max-w-3xl mx-auto px-4 py-6">
+          <div className="max-w-6xl mx-auto px-4 py-6">
             <div className="w-full text-center mb-6">
               <h1 className="text-matrix-green text-3xl md:text-4xl font-bold">
                 MatrixFrog Treasury
               </h1>
             </div>
+            
             <MatrixInfoTabs />
-            <WalletTracker />
+            <ChartDisplay />
           </div>
           <Footer />
         </div>
