@@ -107,7 +107,7 @@ export default function Navbar() {
                 decimals: 18,
               },
               blockExplorerUrls: [
-                "https://explorer-pepu-v2-mainnet-O.t.conduit.xyz",
+                "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
               ],
             },
           ],
