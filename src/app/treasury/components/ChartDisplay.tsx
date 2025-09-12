@@ -1,13 +1,9 @@
+// app/treasury/components/ChartDisplay.tsx
 "use client";
 import React, { useState } from "react";
 
 const ChartDisplay: React.FC = () => {
-  const [chartError, setChartError] = useState<string | null>(null);
   const [poolError, setPoolError] = useState<string | null>(null);
-
-  const handleChartError = () => {
-    setChartError("Failed to load MatrixFrog chart. Please try refreshing the page.");
-  };
 
   const handlePoolError = () => {
     setPoolError("Failed to load Community Pool data. Please try refreshing the page.");
@@ -26,44 +22,22 @@ const ChartDisplay: React.FC = () => {
           <div className="terminal-title">MatrixFrog Chart</div>
         </div>
         
-        <div className="terminal-content" style={{ padding: "0", minHeight: "500px" }}>
-          {chartError ? (
-            <div className="chart-error">
-              <p style={{ color: "#dc2626", fontSize: "0.875rem", padding: "2rem", textAlign: "center" }}>
-                {chartError}
-              </p>
-              <button 
-                onClick={() => setChartError(null)}
-                style={{
-                  backgroundColor: "transparent",
-                  border: "1px solid #4ade80",
-                  color: "#4ade80",
-                  padding: "8px 16px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontFamily: "monospace",
-                  margin: "0 auto",
-                  display: "block"
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          ) : (
+        <div className="terminal-content" style={{ padding: "0", minHeight: "400px" }}>
+          <div style={{ position: "relative", width: "100%", height: "400px" }}>
             <iframe
-              src="https://www.geckoterminal.com/pepe-unchained/pools/0xe234fd7f3e1e8ff162b88b0ec459218cc15a3aaf"
-              title="MatrixFrog Trading Chart"
-              width="100%"
-              height="500"
+              id="geckoterminal-embed"
+              title="GeckoTerminal Embed"
+              src="https://www.geckoterminal.com/pepe-unchained/pools/0x434dd2afe3baf277ffcfe9bef9787eda6b4c38d5?embed=1&info=0&swaps=0&light_chart=0&chart_type=market_cap&resolution=15m&bg_color=111827"
+              frameBorder="0"
+              allow="clipboard-write"
+              allowFullScreen
               style={{ 
-                border: "none",
+                width: "100%", 
+                height: "100%",
                 borderRadius: "0 0 8px 8px"
               }}
-              onError={handleChartError}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
             />
-          )}
+          </div>
         </div>
       </div>
 
