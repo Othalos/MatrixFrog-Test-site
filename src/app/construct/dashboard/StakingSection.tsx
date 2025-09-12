@@ -9,7 +9,7 @@ import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
 // **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
-import DYNAMIC_STAKING_ABI from "../../abis/DynamicStaking.json";
+import STAKING_ABI from "../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
@@ -253,25 +253,25 @@ export default function StakingSection() {
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'stakes',
           args: [POOL_ID, address],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'pendingRewards',
           args: [POOL_ID, address],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'getCurrentAPR',
           args: [POOL_ID],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          abi: STAKING_ABI as readonly unknown[],
           functionName: 'getPoolInfo',
           args: [POOL_ID],
         }),
@@ -375,7 +375,7 @@ export default function StakingSection() {
 
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'stakeTokens', // Changed from 'stake'
       args: [POOL_ID, stakeAmountBN],
     });
@@ -384,7 +384,7 @@ export default function StakingSection() {
   const handleUnstake = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'unstake',
       args: [POOL_ID],
     });
@@ -393,7 +393,7 @@ export default function StakingSection() {
   const handleClaim = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+      abi: STAKING_ABI as readonly unknown[],
       functionName: 'claimRewards',
       args: [POOL_ID],
     });
