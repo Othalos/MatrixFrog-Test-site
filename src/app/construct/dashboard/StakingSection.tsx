@@ -221,8 +221,8 @@ export default function StakingSection() {
                   symbol: 'PEPU',
                   decimals: 18,
                 },
-                rpcUrls: ['https://rpc-pepu-v2-mainnet-O.t.conduit.xyz'],
-                blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-O.t.conduit.xyz'],
+                rpcUrls: ['https://rpc-pepu-v2-mainnet-0.t.conduit.xyz'],
+                blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'],
               }],
             });
           }
