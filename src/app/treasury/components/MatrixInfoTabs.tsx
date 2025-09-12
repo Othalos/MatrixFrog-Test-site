@@ -1,3 +1,4 @@
+// app/treasury/components/MatrixInfoTabs.tsx
 'use client';
 import { useState, useRef, useEffect } from 'react';
 
@@ -34,10 +35,10 @@ export default function MatrixInfoTabs() {
       {/* Introduction */}
       <div className="matrix-intro">
         <p>
-          This MatrixFrog Treasury dashboard provides real-time insights into our community's financial ecosystem. Here you can monitor:
+          This MatrixFrog Treasury dashboard provides real-time insights into our community&apos;s financial ecosystem. Here you can monitor:
         </p>
         <p>
-          <strong>Live Trading Data:</strong> Track MatrixFrog's market performance and trading activity in real-time.
+          <strong>Live Trading Data:</strong> Track MatrixFrog&apos;s market performance and trading activity in real-time.
         </p>
         <p>
           <strong>Community Pool Status:</strong> Monitor our locked liquidity pool and community reserves.
@@ -46,10 +47,10 @@ export default function MatrixInfoTabs() {
           <strong>Treasury Health:</strong> Transparent view of project funds and resource allocation.
         </p>
         <p>
-          <strong>Growth Metrics:</strong> Analytics showing our ecosystem's expansion and development.
+          <strong>Growth Metrics:</strong> Analytics showing our ecosystem&apos;s expansion and development.
         </p>
         <p>
-          The data below updates automatically to ensure you always have access to the most current information about MatrixFrog's financial status and community resources.
+          The data below updates automatically to ensure you always have access to the most current information about MatrixFrog&apos;s financial status and community resources.
         </p>
       </div>
     </div>
