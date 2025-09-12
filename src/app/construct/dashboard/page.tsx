@@ -328,7 +328,7 @@ function MatrixConstructContent({
               chainName: "Pepe Unchained Mainnet",
               rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
               nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
-              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-O.t.conduit.xyz"],
+              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
             },
           ],
         });
