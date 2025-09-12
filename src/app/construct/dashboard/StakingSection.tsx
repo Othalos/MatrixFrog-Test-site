@@ -157,7 +157,7 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  const isCorrectNetwork = chain?.id === PEPU_MAINNET_ID;
+  const isCorrectNetwork = (chain?.id as number) === PEPU_MAINNET_ID;
 
   // Create clients
   const publicClient = createPublicClient({
