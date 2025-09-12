@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
-import { AlertTriangle, Wallet, Pause, Play } from "lucide-react";
+import { AlertTriangle, Wallet, Pause } from "lucide-react";
 import { useConnect, useAccount, useSwitchChain } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
@@ -13,7 +13,7 @@ import STAKING_ABI from "../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
-const STAKING_ADDRESS = "0x2F75D5c4a6347A0e9E22956d88341bbBA590454a" as `0x${string}`;
+const STAKING_ADDRESS = "0x3B91b60645ad174B8B2BC54Efb91F01E8ed42126" as `0x${string}`;
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889" as `0x${string}`;
 const POOL_ID = 0n;
 
@@ -33,6 +33,15 @@ const pepuTestnet = {
   },
 } as const;
 
+// Type for window.ethereum to avoid TypeScript errors
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+    };
+  }
+}
+
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number, decimals = 4) => {
   const num = Number(value);
@@ -43,15 +52,6 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
     maximumFractionDigits: decimals 
   });
 };
-
-// Type for window.ethereum to avoid TypeScript errors
-declare global {
-  interface Window {
-    ethereum?: {
-      request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
-    };
-  }
-}
 
 // Custom Button Component that overrides all styles
 const MatrixButton = ({ 
@@ -144,6 +144,44 @@ const MatrixButton = ({
   );
 };
 
+// Type definitions for contract events
+interface EmergencyWithdrawEvent {
+  args?: {
+    user?: string;
+    token?: string;
+    amount?: bigint;
+  };
+}
+
+interface StakeEvent {
+  args?: {
+    user?: string;
+    poolId?: bigint;
+    amount?: bigint;
+  };
+}
+
+interface RewardsClaimedEvent {
+  args?: {
+    user?: string;
+    poolId?: bigint;
+    reward?: bigint;
+  };
+}
+
+interface EmergencyPauseEvent {
+  args?: {
+    paused?: boolean;
+    rewardsEnabled?: boolean;
+  };
+}
+
+interface RewardsToggleEvent {
+  args?: {
+    enabled?: boolean;
+  };
+}
+
 // --- Main Component ---
 export default function StakingSection() {
   const { address, isConnected, chain } = useAccount();
@@ -200,218 +238,6 @@ export default function StakingSection() {
       transport: custom(window.ethereum),
     });
   }, []);
-
-  // NEW: Setup event listeners for real-time updates
-  const setupEventListeners = useCallback(async () => {
-    if (!address || !isCorrectNetwork) return;
-
-    try {
-      // Clean up existing listeners
-      if (eventCleanupRef.current) {
-        eventCleanupRef.current();
-      }
-
-      const walletClient = await getWalletClient();
-      if (!walletClient) return;
-
-      console.log("Setting up event listeners for address:", address);
-
-      // Listen for Emergency Token Withdraw events
-      const unsubEmergencyWithdraw = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'EmergencyTokenWithdraw',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            if (args?.user?.toLowerCase() === address.toLowerCase()) {
-              console.log("Emergency withdraw detected:", args);
-              setNotification({
-                message: `Emergency withdrawal of ${formatUnits(args.amount, 18)} tokens completed`,
-                type: "info"
-              });
-              // Force refresh data
-              setTimeout(() => readContractData(), 1000);
-            }
-          });
-        }
-      });
-
-      // Listen for Staked events
-      const unsubStaked = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'Staked',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            if (args?.user?.toLowerCase() === address.toLowerCase()) {
-              console.log("Stake event detected:", args);
-              setTimeout(() => readContractData(), 1000);
-            }
-          });
-        }
-      });
-
-      // Listen for Unstaked events
-      const unsubUnstaked = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'Unstaked',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            if (args?.user?.toLowerCase() === address.toLowerCase()) {
-              console.log("Unstake event detected:", args);
-              setTimeout(() => readContractData(), 1000);
-            }
-          });
-        }
-      });
-
-      // Listen for RewardsClaimed events
-      const unsubRewardsClaimed = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'RewardsClaimed',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            if (args?.user?.toLowerCase() === address.toLowerCase()) {
-              console.log("Rewards claimed event detected:", args);
-              setNotification({
-                message: `Successfully claimed ${formatUnits(args.reward, 18)} PTX rewards`,
-                type: "success"
-              });
-              setTimeout(() => readContractData(), 1000);
-            }
-          });
-        }
-      });
-
-      // Listen for Emergency Pause events
-      const unsubEmergencyPause = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'EmergencyPauseActivated',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            console.log("Emergency pause status changed:", args);
-            setEmergencyStatus({
-              isPaused: args.paused,
-              rewardsEnabled: args.rewardsEnabled
-            });
-            if (args.paused) {
-              setNotification({
-                message: "Emergency pause activated - Staking disabled, rewards stopped. You can still unstake.",
-                type: "error"
-              });
-            } else {
-              setNotification({
-                message: "Emergency pause lifted - Normal operations resumed",
-                type: "success"
-              });
-            }
-          });
-        }
-      });
-
-      // Listen for Rewards Toggle events
-      const unsubRewardsToggle = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'RewardsToggled',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const { args } = log as any;
-            console.log("Rewards toggled:", args);
-            setEmergencyStatus(prev => ({
-              ...prev,
-              rewardsEnabled: args.enabled
-            }));
-            setNotification({
-              message: args.enabled ? "Rewards re-enabled" : "Rewards stopped",
-              type: args.enabled ? "success" : "info"
-            });
-          });
-        }
-      });
-
-      // Store cleanup function
-      eventCleanupRef.current = () => {
-        unsubEmergencyWithdraw();
-        unsubStaked();
-        unsubUnstaked();
-        unsubRewardsClaimed();
-        unsubEmergencyPause();
-        unsubRewardsToggle();
-      };
-
-    } catch (error) {
-      console.error("Failed to setup event listeners:", error);
-    }
-  }, [address, isCorrectNetwork, publicClient, getWalletClient]);
-
-  // Wallet connection functions using wagmi
-  const connectMetaMask = useCallback(() => {
-    connect({ connector: injected() });
-    setShowWalletOptions(false);
-  }, [connect]);
-
-  const connectWalletConnect = useCallback(() => {
-    connect({ 
-      connector: walletConnect({ 
-        projectId: 'efce48a19d0c7b8b8da21be2c1c8c271',
-        showQrModal: true 
-      }) 
-    });
-    setShowWalletOptions(false);
-  }, [connect]);
-
-  const connectCoinbase = useCallback(() => {
-    connect({ 
-      connector: coinbaseWallet({ 
-        appName: 'MatrixFrog',
-        appLogoUrl: 'https://matrixfrog.one/logo.png'
-      }) 
-    });
-    setShowWalletOptions(false);
-  }, [connect]);
-
-  // Switch to correct network
-  const switchNetwork = useCallback(async () => {
-    if (!switchChain) return;
-
-    try {
-      await switchChain({ chainId: PEPU_TESTNET_ID });
-    } catch (error: unknown) {
-      const err = error as { code?: number };
-      if (err.code === 4902) {
-        // Chain not added, try to add it
-        try {
-          if (window.ethereum) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
-                chainName: 'Pepu Testnet',
-                nativeCurrency: {
-                  name: 'PEPU',
-                  symbol: 'PEPU',
-                  decimals: 18,
-                },
-                rpcUrls: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
-                blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
-              }],
-            });
-          }
-        } catch (addError) {
-          console.error('Failed to add network:', addError);
-        }
-      }
-    }
-  }, [switchChain]);
 
   // Read contract data
   const readContractData = useCallback(async () => {
@@ -489,6 +315,224 @@ export default function StakingSection() {
       console.error('Failed to read contract data:', error);
     }
   }, [address, isCorrectNetwork, publicClient]);
+
+  // NEW: Setup event listeners for real-time updates
+  const setupEventListeners = useCallback(async () => {
+    if (!address || !isCorrectNetwork) return;
+
+    try {
+      // Clean up existing listeners
+      if (eventCleanupRef.current) {
+        eventCleanupRef.current();
+      }
+
+      const walletClient = await getWalletClient();
+      if (!walletClient) return;
+
+      console.log("Setting up event listeners for address:", address);
+
+      // Listen for Emergency Token Withdraw events
+      const unsubEmergencyWithdraw = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'EmergencyTokenWithdraw',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as EmergencyWithdrawEvent;
+            const { args } = logData;
+            if (args?.user?.toLowerCase() === address.toLowerCase()) {
+              console.log("Emergency withdraw detected:", args);
+              setNotification({
+                message: `Emergency withdrawal of ${formatUnits(args.amount || 0n, 18)} tokens completed`,
+                type: "info"
+              });
+              // Force refresh data
+              setTimeout(() => readContractData(), 1000);
+            }
+          });
+        }
+      });
+
+      // Listen for Staked events
+      const unsubStaked = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'Staked',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as StakeEvent;
+            const { args } = logData;
+            if (args?.user?.toLowerCase() === address.toLowerCase()) {
+              console.log("Stake event detected:", args);
+              setTimeout(() => readContractData(), 1000);
+            }
+          });
+        }
+      });
+
+      // Listen for Unstaked events
+      const unsubUnstaked = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'Unstaked',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as StakeEvent;
+            const { args } = logData;
+            if (args?.user?.toLowerCase() === address.toLowerCase()) {
+              console.log("Unstake event detected:", args);
+              setTimeout(() => readContractData(), 1000);
+            }
+          });
+        }
+      });
+
+      // Listen for RewardsClaimed events
+      const unsubRewardsClaimed = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'RewardsClaimed',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as RewardsClaimedEvent;
+            const { args } = logData;
+            if (args?.user?.toLowerCase() === address.toLowerCase()) {
+              console.log("Rewards claimed event detected:", args);
+              setNotification({
+                message: `Successfully claimed ${formatUnits(args.reward || 0n, 18)} PTX rewards`,
+                type: "success"
+              });
+              setTimeout(() => readContractData(), 1000);
+            }
+          });
+        }
+      });
+
+      // Listen for Emergency Pause events
+      const unsubEmergencyPause = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'EmergencyPauseActivated',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as EmergencyPauseEvent;
+            const { args } = logData;
+            console.log("Emergency pause status changed:", args);
+            setEmergencyStatus({
+              isPaused: args?.paused || false,
+              rewardsEnabled: args?.rewardsEnabled || false
+            });
+            if (args?.paused) {
+              setNotification({
+                message: "Emergency pause activated - Staking disabled, rewards stopped. You can still unstake.",
+                type: "error"
+              });
+            } else {
+              setNotification({
+                message: "Emergency pause lifted - Normal operations resumed",
+                type: "success"
+              });
+            }
+          });
+        }
+      });
+
+      // Listen for Rewards Toggle events
+      const unsubRewardsToggle = publicClient.watchContractEvent({
+        address: STAKING_ADDRESS,
+        abi: STAKING_ABI as readonly unknown[],
+        eventName: 'RewardsToggled',
+        onLogs: (logs) => {
+          logs.forEach((log) => {
+            const logData = log as RewardsToggleEvent;
+            const { args } = logData;
+            console.log("Rewards toggled:", args);
+            setEmergencyStatus(prev => ({
+              ...prev,
+              rewardsEnabled: args?.enabled || false
+            }));
+            setNotification({
+              message: args?.enabled ? "Rewards re-enabled" : "Rewards stopped",
+              type: args?.enabled ? "success" : "info"
+            });
+          });
+        }
+      });
+
+      // Store cleanup function
+      eventCleanupRef.current = () => {
+        unsubEmergencyWithdraw();
+        unsubStaked();
+        unsubUnstaked();
+        unsubRewardsClaimed();
+        unsubEmergencyPause();
+        unsubRewardsToggle();
+      };
+
+    } catch (error) {
+      console.error("Failed to setup event listeners:", error);
+    }
+  }, [address, isCorrectNetwork, publicClient, getWalletClient, readContractData]);
+
+  // Wallet connection functions using wagmi
+  const connectMetaMask = useCallback(() => {
+    connect({ connector: injected() });
+    setShowWalletOptions(false);
+  }, [connect]);
+
+  const connectWalletConnect = useCallback(() => {
+    connect({ 
+      connector: walletConnect({ 
+        projectId: 'efce48a19d0c7b8b8da21be2c1c8c271',
+        showQrModal: true 
+      }) 
+    });
+    setShowWalletOptions(false);
+  }, [connect]);
+
+  const connectCoinbase = useCallback(() => {
+    connect({ 
+      connector: coinbaseWallet({ 
+        appName: 'MatrixFrog',
+        appLogoUrl: 'https://matrixfrog.one/logo.png'
+      }) 
+    });
+    setShowWalletOptions(false);
+  }, [connect]);
+
+  // Switch to correct network
+  const switchNetwork = useCallback(async () => {
+    if (!switchChain) return;
+
+    try {
+      await switchChain({ chainId: PEPU_TESTNET_ID });
+    } catch (error: unknown) {
+      const err = error as { code?: number };
+      if (err.code === 4902) {
+        // Chain not added, try to add it
+        try {
+          if (window.ethereum) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
+                chainName: 'Pepu Testnet',
+                nativeCurrency: {
+                  name: 'PEPU',
+                  symbol: 'PEPU',
+                  decimals: 18,
+                },
+                rpcUrls: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+                blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+              }],
+            });
+          }
+        } catch (addError) {
+          console.error('Failed to add network:', addError);
+        }
+      }
+    }
+  }, [switchChain]);
 
   // Submit transaction
   const submitTransaction = useCallback(async (args: {
