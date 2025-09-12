@@ -13,7 +13,7 @@ import STAKING_ABI from "../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
-const STAKING_ADDRESS = "0x7e70e8520558326D043bd03e4cc44D3afeB0d090" as `0x${string}`;
+const STAKING_ADDRESS = "0xA36f2406Ece51e2Af6eC594A8181A0ab44F2732e" as `0x${string}`;
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889" as `0x${string}`;
 const POOL_ID = 0n;
 
