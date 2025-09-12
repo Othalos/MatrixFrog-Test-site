@@ -160,19 +160,6 @@ interface RewardsClaimedEvent {
   };
 }
 
-interface EmergencyPauseEvent {
-  args?: {
-    paused?: boolean;
-    rewardsEnabled?: boolean;
-  };
-}
-
-interface RewardsToggleEvent {
-  args?: {
-    enabled?: boolean;
-  };
-}
-
 // --- Main Component ---
 export default function StakingSection() {
   const { address, isConnected, chain } = useAccount();
@@ -202,16 +189,10 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  // NEW: Emergency status tracking
-  const [emergencyStatus, setEmergencyStatus] = useState<{
-    isPaused: boolean;
-    rewardsEnabled: boolean;
-  }>({
-    isPaused: false,
-    rewardsEnabled: true
-  });
+  // Check for pause status (using the original paused() function)
+  const [isPaused, setIsPaused] = useState<boolean>(false);
 
-  // NEW: Event listener cleanup
+  // Event listener cleanup
   const eventCleanupRef = useRef<(() => void) | null>(null);
 
   const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
@@ -226,7 +207,7 @@ export default function StakingSection() {
     if (!window.ethereum) return null;
     return createWalletClient({
       chain: pepuTestnet,
-      transport: custom(window.ethereum),
+      transport: custom(window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }),
     });
   }, []);
 
@@ -235,7 +216,7 @@ export default function StakingSection() {
     if (!address || !isCorrectNetwork) return;
 
     try {
-      const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult, emergencyStatusResult] = await Promise.all([
+      const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult, pausedResult] = await Promise.all([
         publicClient.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
@@ -272,11 +253,11 @@ export default function StakingSection() {
           functionName: 'getPoolInfo',
           args: [POOL_ID],
         }),
-        // NEW: Read emergency status
+        // Check if contract is paused using the original Pausable function
         publicClient.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
-          functionName: 'getEmergencyStatus',
+          functionName: 'paused',
           args: [],
         }),
       ]);
@@ -295,19 +276,15 @@ export default function StakingSection() {
         dailyRewardRate: poolInfoData[6]
       });
 
-      // NEW: Set emergency status
-      const emergencyData = emergencyStatusResult as [boolean, boolean];
-      setEmergencyStatus({
-        isPaused: emergencyData[0],
-        rewardsEnabled: emergencyData[1]
-      });
+      // Set pause status
+      setIsPaused(pausedResult as boolean);
 
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
   }, [address, isCorrectNetwork, publicClient]);
 
-  // NEW: Setup event listeners for real-time updates
+  // Setup event listeners for real-time updates
   const setupEventListeners = useCallback(async () => {
     if (!address || !isCorrectNetwork) return;
 
@@ -322,27 +299,31 @@ export default function StakingSection() {
 
       console.log("Setting up event listeners for address:", address);
 
-      // Listen for Emergency Token Withdraw events
-      const unsubEmergencyWithdraw = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'EmergencyTokenWithdraw',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const logData = log as EmergencyWithdrawEvent;
-            const { args } = logData;
-            if (args?.user?.toLowerCase() === address.toLowerCase()) {
-              console.log("Emergency withdraw detected:", args);
-              setNotification({
-                message: `Emergency withdrawal of ${formatUnits(args.amount || 0n, 18)} tokens completed`,
-                type: "info"
-              });
-              // Force refresh data
-              setTimeout(() => readContractData(), 1000);
-            }
-          });
-        }
-      });
+      // Listen for Emergency Token Withdraw events (if they exist)
+      let unsubEmergencyWithdraw: (() => void) | null = null;
+      try {
+        unsubEmergencyWithdraw = publicClient.watchContractEvent({
+          address: STAKING_ADDRESS,
+          abi: STAKING_ABI as readonly unknown[],
+          eventName: 'EmergencyTokenWithdraw',
+          onLogs: (logs) => {
+            logs.forEach((log) => {
+              const logData = log as EmergencyWithdrawEvent;
+              const { args } = logData;
+              if (args?.user?.toLowerCase() === address.toLowerCase()) {
+                console.log("Emergency withdraw detected:", args);
+                setNotification({
+                  message: `Emergency withdrawal of ${formatUnits(args.amount || 0n, 18)} tokens completed`,
+                  type: "info"
+                });
+                setTimeout(() => readContractData(), 1000);
+              }
+            });
+          }
+        });
+      } catch (e) {
+        console.log("EmergencyTokenWithdraw event not available on this contract");
+      }
 
       // Listen for Staked events
       const unsubStaked = publicClient.watchContractEvent({
@@ -399,65 +380,12 @@ export default function StakingSection() {
         }
       });
 
-      // Listen for Emergency Pause events
-      const unsubEmergencyPause = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'EmergencyPauseActivated',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const logData = log as EmergencyPauseEvent;
-            const { args } = logData;
-            console.log("Emergency pause status changed:", args);
-            setEmergencyStatus({
-              isPaused: args?.paused || false,
-              rewardsEnabled: args?.rewardsEnabled || false
-            });
-            if (args?.paused) {
-              setNotification({
-                message: "Emergency pause activated - Staking disabled, rewards stopped. You can still unstake.",
-                type: "error"
-              });
-            } else {
-              setNotification({
-                message: "Emergency pause lifted - Normal operations resumed",
-                type: "success"
-              });
-            }
-          });
-        }
-      });
-
-      // Listen for Rewards Toggle events
-      const unsubRewardsToggle = publicClient.watchContractEvent({
-        address: STAKING_ADDRESS,
-        abi: STAKING_ABI as readonly unknown[],
-        eventName: 'RewardsToggled',
-        onLogs: (logs) => {
-          logs.forEach((log) => {
-            const logData = log as RewardsToggleEvent;
-            const { args } = logData;
-            console.log("Rewards toggled:", args);
-            setEmergencyStatus(prev => ({
-              ...prev,
-              rewardsEnabled: args?.enabled || false
-            }));
-            setNotification({
-              message: args?.enabled ? "Rewards re-enabled" : "Rewards stopped",
-              type: args?.enabled ? "success" : "info"
-            });
-          });
-        }
-      });
-
       // Store cleanup function
       eventCleanupRef.current = () => {
-        unsubEmergencyWithdraw();
+        if (unsubEmergencyWithdraw) unsubEmergencyWithdraw();
         unsubStaked();
         unsubUnstaked();
         unsubRewardsClaimed();
-        unsubEmergencyPause();
-        unsubRewardsToggle();
       };
 
     } catch (error) {
@@ -676,8 +604,8 @@ export default function StakingSection() {
             Total Staked: {formatDisplayNumber(formatUnits(poolInfo.totalStaked, 18))} MFG
           </div>
           
-          {/* NEW: Emergency Status Display */}
-          {(emergencyStatus.isPaused || !emergencyStatus.rewardsEnabled) && (
+          {/* Emergency Status Display */}
+          {isPaused && (
             <div style={{
               marginTop: '12px',
               padding: '12px',
@@ -689,12 +617,9 @@ export default function StakingSection() {
               justifyContent: 'center',
               gap: '8px'
             }}>
-              {emergencyStatus.isPaused ? <Pause size={20} /> : <AlertTriangle size={20} />}
+              <Pause size={20} />
               <span className="text-red-400 font-bold">
-                {emergencyStatus.isPaused 
-                  ? "EMERGENCY PAUSED - Staking disabled, you can still unstake"
-                  : "REWARDS STOPPED - New rewards not being generated"
-                }
+                EMERGENCY PAUSED - Contract operations disabled
               </span>
             </div>
           )}
@@ -801,11 +726,11 @@ export default function StakingSection() {
                         color: '#ffffff',
                         fontFamily: 'monospace'
                       }}
-                      disabled={isLoading || emergencyStatus.isPaused}
+                      disabled={isLoading || isPaused}
                     />
                     <MatrixButton 
                       onClick={handleMaxClick} 
-                      disabled={isLoading || balance === 0n || emergencyStatus.isPaused}
+                      disabled={isLoading || balance === 0n || isPaused}
                       variant="secondary"
                       className="!w-auto px-6"
                     >
@@ -813,7 +738,7 @@ export default function StakingSection() {
                     </MatrixButton>
                   </div>
                   
-                  {emergencyStatus.isPaused ? (
+                  {isPaused ? (
                     <div style={{
                       padding: '16px',
                       border: '1px solid #dc2626',
@@ -847,42 +772,15 @@ export default function StakingSection() {
                 <div style={{ 
                   border: '1px solid rgba(21, 128, 61, 0.5)', 
                   borderRadius: '8px', 
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)'
-                }}>
-                  <div style={{ padding: '24px' }}>
-                    <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
-                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                      <div className="text-3xl font-bold text-white">
-                        {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
-                      </div>
-                      <div className="text-sm text-gray-400">MFG Tokens</div>
-                    </div>
-                    <MatrixButton 
-                      onClick={handleUnstake} 
-                      disabled={isLoading || userStakedAmount === 0n}
-                    >
-                      {isLoading ? "Processing..." : "Unstake All"}
-                    </MatrixButton>
-                  </div>
-                </div>
-
-                <div style={{ 
-                  border: '1px solid rgba(21, 128, 61, 0.5)', 
-                  borderRadius: '8px', 
                   backgroundColor: 'rgba(147, 51, 234, 0.1)'
                 }}>
                   <div style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-                      <h3 className="text-lg font-bold text-purple-400">PTX Rewards</h3>
-                      {!emergencyStatus.rewardsEnabled && <AlertTriangle size={16} className="text-yellow-400" />}
-                    </div>
+                    <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                       <div className="text-3xl font-bold text-white">
                         {formatDisplayNumber(formatUnits(pendingRewards, 18))}
                       </div>
-                      <div className="text-sm text-gray-400">
-                        PTX Earned {!emergencyStatus.rewardsEnabled && "(rewards stopped)"}
-                      </div>
+                      <div className="text-sm text-gray-400">PTX Earned</div>
                     </div>
                     <MatrixButton 
                       onClick={handleClaim} 
@@ -921,4 +819,26 @@ export default function StakingSection() {
       </Card>
     </div>
   );
-}
+}: 'rgba(59, 130, 246, 0.1)'
+                }}>
+                  <div style={{ padding: '24px' }}>
+                    <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                      <div className="text-3xl font-bold text-white">
+                        {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
+                      </div>
+                      <div className="text-sm text-gray-400">MFG Tokens</div>
+                    </div>
+                    <MatrixButton 
+                      onClick={handleUnstake} 
+                      disabled={isLoading || userStakedAmount === 0n}
+                    >
+                      {isLoading ? "Processing..." : "Unstake All"}
+                    </MatrixButton>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  border: '1px solid rgba(21, 128, 61, 0.5)', 
+                  borderRadius: '8px', 
+                  backgroundColor
