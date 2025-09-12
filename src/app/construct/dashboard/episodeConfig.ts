@@ -42,9 +42,13 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
     {
         id: "episode-2",
         title: "Episode 2: Calling Card",
-        status: "active",
+        status: "completed",
         votingStartDate: new Date("2025-09-01"),
         votingEndDate: new Date("2025-09-12"),
+        winner: "red",
+        redVotes: 22,
+        greenVotes: 18,
+        totalVotes: 40,
         redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
         greenWalletAddress: "0x81D1851281d12733DCF175A3476FD1f1B245aE53",
         description: "Pax's strange visions of frogs won't go away. As he goes about his normal day, a series of bizarre coincidences and amphibious events leave him questioning what's real. When a familiar face and a mysterious note from Lily force a choice, Pax must decide: embrace his human reality, or leap into the unknown. The time has come to choose... red or green?",
@@ -54,15 +58,15 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
     },
      {
          id: "episode-3",
-         title: "Episode 3: Life's Lessons",
+         title: "Episode 3: Blood for Blood",
          status: "upcoming",
-         votingStartDate: new Date("2024-02-01"),
-         votingEndDate: new Date("2024-02-08"),
+         votingStartDate: new Date("2025-10-24"),
+         votingEndDate: new Date("2024-11-07"),
          redWalletAddress: "0x811e9Bceeab4D26Af545E1039dc37a32100570d3",
          greenWalletAddress: "0x81D1851281d12733DCF175A3476FD1f1B245aE53",
-         description: "The battle for reality reaches its climax as forces beyond comprehension clash in the ultimate showdown. The fate of consciousness itself hangs in the balance as our protagonist must make the final choice that will determine not just their own destiny, but the destiny of all who have been touched by this extraordinary journey.",
-         redPathDescription: "The Red Path: Stand against the system and fight for human consciousness.",
-         greenPathDescription: "The Green Path: Evolve beyond the conflict and find harmony in the new reality.",
+         description: "...",
+         redPathDescription: "The Red Path: ...",
+         greenPathDescription: "The Green Path: ...",
          videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs"
      } 
     // {

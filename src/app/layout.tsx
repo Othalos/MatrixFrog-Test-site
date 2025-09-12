@@ -1,28 +1,23 @@
-// src/app/layout.tsx
-import "./globals.css";
 import type { Metadata } from "next";
-import WalletProvider from "../app/providers/WalletProvider";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import "./globals.css";
+import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "MatrixFrog",
-  description:
-    "A choice between two worlds. Human or Frog? Reality or Simulation?",
+  title: "MatrixFrog - DeFi Staking Platform",
+  description: "Stake MFG tokens for PTX rewards on the MatrixFrog platform",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body cz-shortcut-listen="true">
-        <WalletProvider>
+      <body>
+        <Providers>
           {children}
-          <ToastContainer />
-        </WalletProvider>
+        </Providers>
       </body>
     </html>
   );

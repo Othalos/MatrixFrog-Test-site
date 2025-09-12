@@ -653,48 +653,44 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     <CardTitle style={{ color: "#4ade80", marginBottom: "12px" }}>
                         {isCompleted ? "FINAL VOTING RESULTS" : "CURRENT VOTING STATS"}
                     </CardTitle>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "8px",
-                            color: "#22c55e",
-                        }}
-                    >
-                        <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
+                    
+                    {/* Show vote counts only for active episodes */}
+                    {!isCompleted && (
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "8px",
+                                color: "#22c55e",
+                            }}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
+                                <p>Red Votes: {votingStatsLoading ? "Loading..." : redPillVotes}</p>
+                                <p>Total Votes: {votingStatsLoading ? "Loading..." : totalVotes}</p>
+                                <p>Green Votes: {votingStatsLoading ? "Loading..." : greenPillVotes}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Winner display for completed episodes */}
+                    {isCompleted && (
+                        <div style={{
+                            marginTop: "8px",
+                            padding: "8px",
+                            backgroundColor: "rgba(34,197,94,0.1)",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                            animation: 'winnerGlow 2s ease-in-out infinite'
+                        }}>
                             <p style={{
-                                color: isCompleted && episode.winner === 'red' ? '#ff4444' : "#22c55e",
-                                fontWeight: isCompleted && episode.winner === 'red' ? 'bold' : 'normal',
+                                color: "#4ade80",
+                                fontSize: "0.9rem",
+                                animation: 'textGlow 2s ease-in-out infinite'
                             }}>
-                                Red Votes: {votingStatsLoading ? "Loading..." : (isCompleted ? 0 : redPillVotes)}
-                            </p>
-                            <p>Total Votes: {votingStatsLoading ? "Loading..." : (isCompleted ? 0 : totalVotes)}</p>
-                            <p style={{
-                                color: isCompleted && episode.winner === 'green' ? '#4ade80' : "#22c55e",
-                                fontWeight: isCompleted && episode.winner === 'green' ? 'bold' : 'normal',
-                            }}>
-                                Green Votes: {votingStatsLoading ? "Loading..." : (isCompleted ? 0 : greenPillVotes)}
+                                <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
                             </p>
                         </div>
-                        {isCompleted && (
-                            <div style={{
-                                marginTop: "8px",
-                                padding: "8px",
-                                backgroundColor: "rgba(34,197,94,0.1)",
-                                borderRadius: "4px",
-                                textAlign: "center",
-                                animation: 'winnerGlow 2s ease-in-out infinite'
-                            }}>
-                                <p style={{
-                                    color: "#4ade80",
-                                    fontSize: "0.9rem",
-                                    animation: 'textGlow 2s ease-in-out infinite'
-                                }}>
-                                    <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </Card>
             )}
         </>

@@ -1,14 +1,10 @@
 "use client";
+import { ClientOnly } from "../../../components/ClientOnly";
 import { Progress } from "@/app/components/ui/progress";
 import {
     BarChart3,
-    // Gamepad2,
-    // MessageSquare,
     Shield,
-    // Terminal,
-    // Trophy,
     User,
-    // Vault,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -19,21 +15,34 @@ import {
     CardHeader,
     CardTitle,
 } from "../../components/ui/card";
-// import {
-//     Select,
-//     SelectContent,
-//     SelectItem,
-//     SelectTrigger,
-//     SelectValue,
-// } from "../../components/ui/select";
 import { useRouter } from "next/navigation";
 
 export default function MatrixConstruct() {
-    // const [selectedEpisode, setSelectedEpisode] = useState("episode-1");
+    return (
+        <ClientOnly fallback={
+            <div style={{
+                minHeight: "100vh",
+                backgroundColor: "black",
+                color: "#4ade80",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "monospace"
+            }}>
+                Loading governance...
+            </div>
+        }>
+            <GovernanceContent />
+        </ClientOnly>
+    );
+}
+
+function GovernanceContent() {
     const [selected, setSelected] = useState<string | null>();
     const [matrixBalance, setMatrixBalance] = useState<number | null>();
     const { isConnected } = useAccount();
     const router = useRouter();
+
     useEffect(() => {
         if (!isConnected) {
             window.location.href = "/";
@@ -72,49 +81,17 @@ export default function MatrixConstruct() {
             href: "/construct/governance",
             active: true,
         },
-        // {
-        //   icon: Trophy,
-        //   label: "Rewards Center",
-        //   subtitle: "Claim rewards",
-        //   active: false,
-        // },
-        // {
-        //   icon: Gamepad2,
-        //   label: "MatrixFrog Games",
-        //   subtitle: "Play to earn",
-        //   active: false,
-        // },
-        // {
-        //   icon: MessageSquare,
-        //   label: "Encrypted Chat",
-        //   subtitle: "Community chat",
-        //   badge: "NEW",
-        //   active: false,
-        // },
-        // {
-        //   icon: Vault,
-        //   label: "NFT Vault",
-        //   subtitle: "Digital collectibles",
-        //   badge: "NEW",
-        //   active: false,
-        // },
-        // {
-        //   icon: Terminal,
-        //   label: "MatrixFrog Terminal",
-        //   subtitle: "Command interface",
-        //   badge: "NEW",
-        //   active: false,
-        // },
     ];
+
     useEffect(() => {
         const bal = window.localStorage.getItem("Mat_bal");
         setMatrixBalance(bal ? parseFloat(bal) : 0);
     }, []);
+
     return (
         <div
             style={{
                 paddingBottom: "20px",
-                // paddingTop: "10px",
                 minHeight: "100vh",
                 backgroundColor: "black",
                 color: "#4ade80",
@@ -140,7 +117,6 @@ export default function MatrixConstruct() {
                         paddingRight: "10px",
                     }}
                 >
-
                     <div>
                         <div
                             style={{
@@ -164,7 +140,7 @@ export default function MatrixConstruct() {
                 </div>
                 <div style={{ textAlign: "right" }}>
                     <div
-                        style={{ fontSize: "0.75rem", color: "#16a34a" /* green-600 */ }}
+                        style={{ fontSize: "0.75rem", color: "#16a34a" }}
                     >
                         MatrixFrog HOLDINGS
                     </div>
@@ -202,7 +178,6 @@ export default function MatrixConstruct() {
                         }}
                     >
                         {sidebarItems.map((item, index) => (
-                            // <Link key={index} href={item.href}>
                             <div
                                 key={index}
                                 onClick={() => router.push(item.href)}
@@ -231,21 +206,7 @@ export default function MatrixConstruct() {
                                         {item.subtitle}
                                     </div>
                                 </div>
-                                {/* {item?.badge && (
-                                    <span
-                                        style={{
-                                        padding: "2px 4px",
-                                        fontSize: "0.75rem",
-                                        backgroundColor: "red",
-                                        color: "white",
-                                        borderRadius: "4px",
-                                        }}
-                                    >
-                                        {item?.badge}
-                                    </span>
-                                    )} */}
                             </div>
-                            // </Link>
                         ))}
                     </nav>
                 </div>
