@@ -684,7 +684,9 @@ function MatrixConstructContent({
               <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", marginBottom: "24px" }}>
                 <CardHeader>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: "16px", paddingRight: "16px" }}>
-                    <CardTitle style={{ color: "#4ade80" }}>The Peptrix Saga (Active) - Episode 2 - Calling Card</CardTitle>
+                    <CardTitle style={{ color: "#4ade80" }}>
+                      The Peptrix Saga ({currentSagaEpisode?.status === 'active' ? 'Active' : currentSagaEpisode?.status === 'completed' ? 'Completed' : 'Upcoming'}) - {currentSagaEpisode?.title}
+                    </CardTitle>
                     <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>20%</span>
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#16a34a", marginBottom: "8px", paddingLeft: "16px", paddingRight: "16px" }}>
