@@ -9,11 +9,11 @@ import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
 // **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
-import STAKING_ABI from "../../abis/Staking.json";
+import DYNAMIC_STAKING_ABI from "../../abis/DynamicStaking.json";
 
 // --- Chain & Contract Configuration ---
 const PEPU_TESTNET_ID = 97740;
-const STAKING_ADDRESS = "0x33272A9aad7E7f89CeEE14659b04c183f382b827" as `0x${string}`;
+const STAKING_ADDRESS = "0x7e70e8520558326D043bd03e4cc44D3afeB0d090" as `0x${string}`;
 const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889" as `0x${string}`;
 const POOL_ID = 0n;
 
@@ -144,6 +144,18 @@ export default function StakingSection() {
   const [allowance, setAllowance] = useState<bigint>(0n);
   const [userStakedAmount, setUserStakedAmount] = useState<bigint>(0n);
   const [pendingRewards, setPendingRewards] = useState<bigint>(0n);
+  const [currentAPR, setCurrentAPR] = useState<number>(0);
+  const [poolInfo, setPoolInfo] = useState<{
+    totalStaked: bigint;
+    rewardBudget: bigint;
+    distributionDays: number;
+    dailyRewardRate: bigint;
+  }>({
+    totalStaked: 0n,
+    rewardBudget: 0n,
+    distributionDays: 0,
+    dailyRewardRate: 0n
+  });
 
   const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
 
@@ -209,7 +221,7 @@ export default function StakingSection() {
                   symbol: 'PEPU',
                   decimals: 18,
                 },
-                rpcUrls: ['https://pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+                rpcUrls: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
                 blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
               }],
             });
@@ -226,7 +238,7 @@ export default function StakingSection() {
     if (!address || !isCorrectNetwork) return;
 
     try {
-      const [balanceResult, allowanceResult, stakeResult, rewardsResult] = await Promise.all([
+      const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult] = await Promise.all([
         publicClient.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
@@ -241,22 +253,43 @@ export default function StakingSection() {
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: STAKING_ABI as readonly unknown[],
+          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
           functionName: 'stakes',
           args: [POOL_ID, address],
         }),
         publicClient.readContract({
           address: STAKING_ADDRESS,
-          abi: STAKING_ABI as readonly unknown[],
+          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
           functionName: 'pendingRewards',
           args: [POOL_ID, address],
+        }),
+        publicClient.readContract({
+          address: STAKING_ADDRESS,
+          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          functionName: 'getCurrentAPR',
+          args: [POOL_ID],
+        }),
+        publicClient.readContract({
+          address: STAKING_ADDRESS,
+          abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+          functionName: 'getPoolInfo',
+          args: [POOL_ID],
         }),
       ]);
 
       setBalance(balanceResult as bigint);
       setAllowance(allowanceResult as bigint);
-      setUserStakedAmount((stakeResult as [bigint])[0]);
-      setPendingRewards(rewardsResult as bigint);
+      setUserStakedAmount((stakesResult as [bigint, bigint, bigint, bigint])[0]);
+      setPendingRewards(pendingResult as bigint);
+      setCurrentAPR(Number(aprResult as bigint) / 100); // Convert basis points to percentage
+      
+      const poolInfoData = poolInfoResult as [string, string, bigint, bigint, bigint, bigint, bigint, boolean];
+      setPoolInfo({
+        totalStaked: poolInfoData[2],
+        rewardBudget: poolInfoData[3],
+        distributionDays: Number(poolInfoData[4]),
+        dailyRewardRate: poolInfoData[6]
+      });
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
@@ -342,8 +375,8 @@ export default function StakingSection() {
 
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI as readonly unknown[],
-      functionName: 'stake',
+      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
+      functionName: 'stakeTokens', // Changed from 'stake'
       args: [POOL_ID, stakeAmountBN],
     });
   }, [submitTransaction, stakeAmount, balance]);
@@ -351,7 +384,7 @@ export default function StakingSection() {
   const handleUnstake = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI as readonly unknown[],
+      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
       functionName: 'unstake',
       args: [POOL_ID],
     });
@@ -360,7 +393,7 @@ export default function StakingSection() {
   const handleClaim = useCallback(() => {
     submitTransaction({
       address: STAKING_ADDRESS,
-      abi: STAKING_ABI as readonly unknown[],
+      abi: DYNAMIC_STAKING_ABI as readonly unknown[],
       functionName: 'claimRewards',
       args: [POOL_ID],
     });
@@ -376,7 +409,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
-      const interval = setInterval(readContractData, 5000);
+      const interval = setInterval(readContractData, 10000); // Update every 10 seconds for dynamic data
       return () => clearInterval(interval);
     }
   }, [isConnected, isCorrectNetwork, readContractData]);
@@ -390,8 +423,13 @@ export default function StakingSection() {
       <Card className="bg-black border border-green-700/50 text-green-300 font-mono">
         <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl text-green-400">
-            Stake MFG for PTX at 25% APR
+            Dynamic Staking: MFG → PTX at {formatDisplayNumber(currentAPR, 2)}% APR
           </CardTitle>
+          <div className="text-sm text-green-300 mt-2">
+            Rewards Budget: {formatDisplayNumber(formatUnits(poolInfo.rewardBudget, 18))} PTX | 
+            Days Remaining: {poolInfo.distributionDays} | 
+            Total Staked: {formatDisplayNumber(formatUnits(poolInfo.totalStaked, 18))} MFG
+          </div>
         </CardHeader>
         
         <div style={{ padding: '16px', margin: '0 24px 24px 24px' }}>
