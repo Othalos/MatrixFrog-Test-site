@@ -41,7 +41,7 @@ const ChartDisplay: React.FC = () => {
         </div>
       </div>
 
-      {/* Locked Community Pool Section */}
+      {/* Locked Community Pool Section - Cropped and Extended */}
       <div className="terminal-frame pool-terminal mb-6">
         <div className="terminal-header">
           <div className="terminal-dots-container">
@@ -52,7 +52,7 @@ const ChartDisplay: React.FC = () => {
           <div className="terminal-title">Locked Community Pool</div>
         </div>
         
-        <div className="terminal-content" style={{ padding: "0", minHeight: "500px" }}>
+        <div className="terminal-content" style={{ padding: "0", minHeight: "700px", position: "relative", overflow: "hidden" }}>
           {poolError ? (
             <div className="pool-error">
               <p style={{ color: "#dc2626", fontSize: "0.875rem", padding: "2rem", textAlign: "center" }}>
@@ -76,19 +76,29 @@ const ChartDisplay: React.FC = () => {
               </button>
             </div>
           ) : (
-            <iframe
-              src="https://pepuswap.com/#/pools/103"
-              title="Locked Community Pool"
-              width="100%"
-              height="500"
-              style={{ 
-                border: "none",
-                borderRadius: "0 0 8px 8px"
-              }}
-              onError={handlePoolError}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            <div style={{ 
+              position: "relative", 
+              width: "100%", 
+              height: "700px",
+              overflow: "hidden"
+            }}>
+              <iframe
+                src="https://pepuswap.com/#/pools/103"
+                title="Locked Community Pool"
+                style={{ 
+                  width: "100%",
+                  height: "800px", // Taller than container to show more content
+                  border: "none",
+                  borderRadius: "0 0 8px 8px",
+                  position: "absolute",
+                  top: "-80px", // Negative margin to crop navbar
+                  left: "0"
+                }}
+                onError={handlePoolError}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
           )}
         </div>
       </div>
