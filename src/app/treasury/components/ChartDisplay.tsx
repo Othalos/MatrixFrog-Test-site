@@ -52,7 +52,13 @@ const ChartDisplay: React.FC = () => {
           <div className="terminal-title">Locked Community Pool</div>
         </div>
         
-        <div className="terminal-content" style={{ padding: "0", minHeight: "700px", position: "relative", overflow: "hidden" }}>
+        <div className="terminal-content" style={{ 
+          padding: "0", 
+          minHeight: "850px", 
+          position: "relative", 
+          overflow: "hidden",
+          background: "rgba(0, 9, 4, 0.3)" // Semi-transparent background
+        }}>
           {poolError ? (
             <div className="pool-error">
               <p style={{ color: "#dc2626", fontSize: "0.875rem", padding: "2rem", textAlign: "center" }}>
@@ -79,20 +85,21 @@ const ChartDisplay: React.FC = () => {
             <div style={{ 
               position: "relative", 
               width: "100%", 
-              height: "700px",
+              height: "850px",
               overflow: "hidden"
             }}>
               <iframe
                 src="https://pepuswap.com/#/pools/103"
                 title="Locked Community Pool"
                 style={{ 
-                  width: "100%",
-                  height: "800px", // Taller than container to show more content
+                  width: "140%", // Wider than container to crop sides
+                  height: "950px", // Much taller to show more content
                   border: "none",
                   borderRadius: "0 0 8px 8px",
                   position: "absolute",
-                  top: "-80px", // Negative margin to crop navbar
-                  left: "0"
+                  top: "-80px", // Crop navbar from top
+                  left: "-20%", // Center the content and crop sides
+                  opacity: "0.95" // Slight transparency to show matrix background
                 }}
                 onError={handlePoolError}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
