@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
-import { AlertTriangle, Wallet, Pause } from "lucide-react";
+import { AlertTriangle, Wallet } from "lucide-react";
 import { useConnect, useAccount, useSwitchChain } from "wagmi";
 import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 
@@ -157,9 +157,6 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  // NEW: Pause status tracking
-  const [isPaused, setIsPaused] = useState<boolean>(false);
-
   const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
 
   // Create clients
@@ -172,7 +169,7 @@ export default function StakingSection() {
     if (!window.ethereum) return null;
     return createWalletClient({
       chain: pepuTestnet,
-      transport: custom(window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }),
+      transport: custom(window.ethereum),
     });
   }, []);
 
@@ -214,7 +211,7 @@ export default function StakingSection() {
         // Chain not added, try to add it
         try {
           if (window.ethereum) {
-            await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
+            await window.ethereum.request({
               method: 'wallet_addEthereumChain',
               params: [{
                 chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
@@ -236,12 +233,12 @@ export default function StakingSection() {
     }
   }, [switchChain]);
 
-  // Read contract data - UPDATED with pause detection
+  // Read contract data
   const readContractData = useCallback(async () => {
     if (!address || !isCorrectNetwork) return;
 
     try {
-      const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult, pausedResult] = await Promise.all([
+      const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult] = await Promise.all([
         publicClient.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
@@ -278,13 +275,6 @@ export default function StakingSection() {
           functionName: 'getPoolInfo',
           args: [POOL_ID],
         }),
-        // NEW: Add pause check
-        publicClient.readContract({
-          address: STAKING_ADDRESS,
-          abi: STAKING_ABI as readonly unknown[],
-          functionName: 'paused',
-          args: [],
-        }),
       ]);
 
       setBalance(balanceResult as bigint);
@@ -300,9 +290,6 @@ export default function StakingSection() {
         distributionDays: Number(poolInfoData[4]),
         dailyRewardRate: poolInfoData[6]
       });
-
-      // NEW: Set pause status
-      setIsPaused(pausedResult as boolean);
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
@@ -443,26 +430,6 @@ export default function StakingSection() {
             Days Remaining: {poolInfo.distributionDays} | 
             Total Staked: {formatDisplayNumber(formatUnits(poolInfo.totalStaked, 18))} MFG
           </div>
-          
-          {/* NEW: Emergency Pause Warning */}
-          {isPaused && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              border: '2px solid #dc2626',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(220, 38, 38, 0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}>
-              <Pause size={20} />
-              <span className="text-red-400 font-bold">
-                EMERGENCY PAUSED - New staking disabled. You can still unstake and claim rewards.
-              </span>
-            </div>
-          )}
         </CardHeader>
         
         <div style={{ padding: '16px', margin: '0 24px 24px 24px' }}>
@@ -542,7 +509,7 @@ export default function StakingSection() {
                 </span>
               </div>
 
-              {/* Staking Input Section - UPDATED with pause detection */}
+              {/* Staking Input Section */}
               <div style={{ 
                 border: '1px solid rgba(21, 128, 61, 0.5)', 
                 borderRadius: '8px', 
@@ -556,21 +523,21 @@ export default function StakingSection() {
                       type="number" 
                       value={stakeAmount} 
                       onChange={(e) => setStakeAmount(e.target.value)} 
-                      placeholder={isPaused ? "Staking disabled (paused)" : "Enter amount to stake"}
+                      placeholder="Enter amount to stake" 
                       style={{
                         flex: 1,
-                        backgroundColor: isPaused ? '#2d1b17' : '#000000',
-                        border: isPaused ? '1px solid rgba(220, 38, 38, 0.5)' : '1px solid rgba(21, 128, 61, 0.5)',
+                        backgroundColor: '#000000',
+                        border: '1px solid rgba(21, 128, 61, 0.5)',
                         padding: '12px',
                         borderRadius: '6px',
-                        color: isPaused ? '#fca5a5' : '#ffffff',
+                        color: '#ffffff',
                         fontFamily: 'monospace'
                       }}
-                      disabled={isLoading || isPaused}
+                      disabled={isLoading}
                     />
                     <MatrixButton 
                       onClick={handleMaxClick} 
-                      disabled={isLoading || balance === 0n || isPaused}
+                      disabled={isLoading || balance === 0n}
                       variant="secondary"
                       className="!w-auto px-6"
                     >
@@ -578,18 +545,7 @@ export default function StakingSection() {
                     </MatrixButton>
                   </div>
                   
-                  {/* UPDATED: Show pause message or normal approve/stake buttons */}
-                  {isPaused ? (
-                    <div style={{
-                      padding: '16px',
-                      border: '1px solid #dc2626',
-                      borderRadius: '6px',
-                      backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                      textAlign: 'center'
-                    }}>
-                      <span className="text-red-400">Staking is currently disabled due to emergency pause</span>
-                    </div>
-                  ) : needsApproval ? (
+                  {needsApproval ? (
                     <MatrixButton 
                       onClick={handleApprove} 
                       disabled={isLoading || !stakeAmount || parseFloat(stakeAmount) <= 0}
@@ -638,17 +594,12 @@ export default function StakingSection() {
                   backgroundColor: 'rgba(147, 51, 234, 0.1)'
                 }}>
                   <div style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-                      <h3 className="text-lg font-bold text-purple-400">PTX Rewards</h3>
-                      {isPaused && <AlertTriangle size={16} className="text-yellow-400" />}
-                    </div>
+                    <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                       <div className="text-3xl font-bold text-white">
                         {formatDisplayNumber(formatUnits(pendingRewards, 18))}
                       </div>
-                      <div className="text-sm text-gray-400">
-                        PTX Earned {isPaused && "(generation may be affected)"}
-                      </div>
+                      <div className="text-sm text-gray-400">PTX Earned</div>
                     </div>
                     <MatrixButton 
                       onClick={handleClaim} 
