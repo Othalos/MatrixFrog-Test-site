@@ -44,7 +44,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         </Link>
 
         {/* Treasury */}
-        <Link href="/migration-protocol" onClick={() => setMenuOpen(false)}>
+        <Link href="/treasury" onClick={() => setMenuOpen(false)}>
           <span className="mobile-menu-link hover-white">Treasury</span>
         </Link>
 
