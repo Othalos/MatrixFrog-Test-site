@@ -22,7 +22,7 @@ const pepuMainnet = defineChain({
   blockExplorers: {
     default: {
       name: 'Pepu Explorer',
-      url: 'https://explorer-pepu-v2-mainnet-O.t.conduit.xyz',  // Updated to mainnet explorer
+      url: 'https://explorer-pepu-v2-mainnet-0.t.conduit.xyz',  // Updated to mainnet explorer
     },
   },
   testnet: false,  // Changed from true
