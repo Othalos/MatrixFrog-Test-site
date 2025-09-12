@@ -90,7 +90,7 @@ const ChartDisplay: React.FC = () => {
             }}>
               <iframe
                 src="https://pepuswap.com/#/pools/103"
-                title="Locked Community Pool"
+                title="Locked Community Pool (https://pepuswap.com/#/pools/103)"
                 style={{ 
                   width: "140%", // Wider than container to crop sides
                   height: "950px", // Much taller to show more content
