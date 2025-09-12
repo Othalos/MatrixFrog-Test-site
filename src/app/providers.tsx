@@ -20,7 +20,7 @@ const pepuMainnet = {
   blockExplorers: { 
     default: { 
       name: 'Pepu Explorer', 
-      url: 'https://explorer-pepu-v2-mainnet-O.t.conduit.xyz'  // Updated explorer URL
+      url: 'https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'  // Updated explorer URL
     } 
   },
   testnet: false,  // Changed from true to false
