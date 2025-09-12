@@ -1,8 +1,6 @@
 "use client";
-
-// app/migration-protocol/page.tsx
-import MigrationProtocolWrapper from "./components/MigrationProtocolWrapper";
+import TreasuryWrapper from "./components/TreasuryWrapper";
 
 export default function Page() {
-  return <MigrationProtocolWrapper />;
+  return <TreasuryWrapper />;
 }
