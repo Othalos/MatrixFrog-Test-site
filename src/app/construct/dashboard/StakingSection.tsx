@@ -312,7 +312,7 @@ export default function StakingSection() {
       if (chain?.id !== PEPU_MAINNET_ID) {
         setNotification({ 
           message: "Switching to Pepu Mainnet...", 
-          type: "info" 
+          type: "success" 
         });
 
         // Try to switch network first
@@ -355,7 +355,7 @@ export default function StakingSection() {
 
       setNotification({ 
         message: "Transaction submitted! Waiting for confirmation...", 
-        type: "info" 
+        type: "success" 
       });
 
       // Wait for transaction
