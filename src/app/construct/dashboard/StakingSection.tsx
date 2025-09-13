@@ -653,12 +653,9 @@ export default function StakingSection() {
                 <div style={{
                   padding: '24px',
                   borderRadius: '8px',
-                  border: notification.type === "error" ? '2px solid #ef4444' : 
-                         notification.type === "info" ? '2px solid #3b82f6' : '2px solid #22c55e',
-                  backgroundColor: notification.type === "error" ? 'rgba(239, 68, 68, 0.1)' : 
-                                 notification.type === "info" ? 'rgba(59, 130, 246, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                  color: notification.type === "error" ? '#fca5a5' : 
-                        notification.type === "info" ? '#93c5fd' : '#bbf7d0'
+                  border: notification.type === "error" ? '2px solid #ef4444' : '2px solid #22c55e',
+                  backgroundColor: notification.type === "error" ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                  color: notification.type === "error" ? '#fca5a5' : '#bbf7d0'
                 }}>
                   <p style={{ textAlign: 'center', fontWeight: 'bold' }}>{notification.message}</p>
                 </div>
