@@ -144,12 +144,27 @@ export const useWalletConnect = (): WalletConnectHook => {
   const switchToPepeUnchained = useCallback(async () => {
     try {
       if (switchChain) {
+        // First try to switch using wagmi
         await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
       } else {
-        await addPepeUnchainedNetwork();
+        // Fallback: try switch first, then add if it fails with 4902
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
+          });
+        } catch (switchError: any) {
+          // Error code 4902 means the chain is not added to the wallet
+          if (switchError.code === 4902) {
+            await addPepeUnchainedNetwork();
+          } else {
+            throw switchError;
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to switch network:", error);
+      // Final fallback
       await addPepeUnchainedNetwork();
     }
   }, [switchChain]);
