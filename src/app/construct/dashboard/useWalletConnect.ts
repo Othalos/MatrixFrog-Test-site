@@ -63,6 +63,12 @@ interface WalletConnectHook {
   refetchBalance: () => void;
 }
 
+// Interface für Ethereum Fehler
+interface EthereumSwitchError {
+  code?: number;
+  message?: string;
+}
+
 export const useWalletConnect = (): WalletConnectHook => {
   const { isConnected, address, chain } = useAccount();
   const { connect } = useConnect();
@@ -112,84 +118,125 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   const formattedBalance = balance ? formatTokenBalance(balance as bigint) : "0";
 
+  // Coinbase Wallet Erkennung
+  const isCoinbaseWallet = useCallback((): boolean => {
+    return typeof window !== "undefined" && 
+      (window.ethereum?.isCoinbaseWallet || 
+       window.ethereum?.providers?.some((provider: any) => provider.isCoinbaseWallet) ||
+       false);
+  }, []);
+
   // Network Management
   const addPepeUnchainedNetwork = async (): Promise<boolean> => {
-  try {
-    if (typeof window !== "undefined" && window.ethereum) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
-            chainName: "Pepe Unchained Mainnet",
-            rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-            nativeCurrency: { 
-              name: "PEPE", 
-              symbol: "PEPU", 
-              decimals: 18 
-            },
-            blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
-          },
-        ],
-      });
-      
-      // Warte kurz, damit das Netzwerk hinzugefügt werden kann
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error("Failed to add network:", error);
-    return false;
-  }
-};
-
-const switchToPepeUnchained = useCallback(async () => {
-  try {
-    // Zuerst versuchen, mit wagmi zu wechseln
-    if (switchChain) {
-      try {
-        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-        return;
-      } catch (wagmiError) {
-        console.log('wagmi switch failed, trying direct method', wagmiError);
-      }
-    }
-
-    // Fallback: Direkte Methode mit Ethereum Provider
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
+    try {
+      if (typeof window !== "undefined" && window.ethereum) {
         await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
+              chainName: "Pepe Unchained Mainnet",
+              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
+              nativeCurrency: { 
+                name: "PEPE", 
+                symbol: "PEPU", 
+                decimals: 18 
+              },
+              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
+            },
+          ],
         });
-      } catch (switchError: unknown) {
-        // Prüfen ob es sich um einen Netzwerk-Fehler handelt
-        const error = switchError as { code?: number };
         
-        if (error.code === 4902) {
-          // Netzwerk ist nicht hinzugefügt
-          const added = await addPepeUnchainedNetwork();
-          if (added) {
-            // Nochmal versuchen zu wechseln nach dem Hinzufügen
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
-            });
-          }
-        } else {
-          console.error('Network switch error:', switchError);
-          throw switchError;
+        // Warte kurz, damit das Netzwerk hinzugefügt werden kann
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to add network:", error);
+      return false;
+    }
+  };
+
+  const switchToPepeUnchained = useCallback(async () => {
+    // Spezielle Behandlung für Coinbase Wallet
+    if (isCoinbaseWallet()) {
+      console.log("Coinbase Wallet detected - using special handling");
+      const added = await addPepeUnchainedNetwork();
+      if (added) {
+        // Bei Coinbase manuell nach dem Hinzufügen wechseln
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+      return;
+    }
+
+    // Normale Logik für andere Wallets
+    try {
+      if (switchChain) {
+        // First try to switch using wagmi
+        try {
+          await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
+          return;
+        } catch (wagmiError) {
+          console.log('wagmi switch failed, trying direct method', wagmiError);
         }
       }
+
+      // Fallback: Direkte Methode mit Ethereum Provider
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
+          });
+        } catch (switchError: unknown) {
+          // Prüfen ob es sich um einen Netzwerk-Fehler handelt
+          const error = switchError as EthereumSwitchError;
+          
+          if (error.code === 4902) {
+            // Netzwerk ist nicht hinzugefügt
+            const added = await addPepeUnchainedNetwork();
+            if (added) {
+              // Nochmal versuchen zu wechseln nach dem Hinzufügen
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
+              });
+            }
+          } else {
+            console.error('Network switch error:', switchError);
+            throw switchError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+      // Letzter Versuch: Nur hinzufügen ohne zu wechseln
+      await addPepeUnchainedNetwork();
     }
-  } catch (error) {
-    console.error("Failed to switch network:", error);
-    // Letzter Versuch: Nur hinzufügen ohne zu wechseln
-    await addPepeUnchainedNetwork();
-  }
-}, [switchChain]);
+  }, [switchChain, isCoinbaseWallet]);
+
+  // Network Change Listener
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ethereum) {
+      const handleChainChanged = (chainId: string) => {
+        console.log('Chain changed:', chainId);
+        if (parseInt(chainId, 16) === PEPE_UNCHAINED_CHAIN_ID) {
+          // Netzwerk gewechselt, Seite neu laden
+          window.location.reload();
+        }
+      };
+
+      window.ethereum.on('chainChanged', handleChainChanged);
+      
+      return () => {
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      };
+    }
+  }, []);
 
   // Connection Methods
   const connectMetaMask = useCallback(async () => {
