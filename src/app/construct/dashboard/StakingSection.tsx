@@ -317,7 +317,7 @@ export default function StakingSection() {
           await switchChain({ chainId: PEPU_MAINNET_ID });
           // Wait a moment for network switch to complete
           await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch (switchError) {
+        } catch {
           throw new Error('Please switch to Pepu Mainnet first');
         }
       }
