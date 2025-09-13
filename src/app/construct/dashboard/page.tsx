@@ -762,7 +762,16 @@ function MatrixConstructContent({
               </div>
             </>
           ) : (
-            <StakingSection/>
+            <StakingSection
+              isConnected={isConnected}
+              isCorrectNetwork={isCorrectNetwork}
+              connectMetaMask={connectMetaMask}
+              connectWalletConnect={connectWalletConnect}
+              connectCoinbase={connectCoinbase}
+              handleDisconnect={handleDisconnect}
+              switchToPepeUnchained={switchToPepeUnchained}
+              mfgBalance={mfgBalance}
+           />
           )}
         </main>
       </div>
