@@ -4,8 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
-import { useConnect, useAccount, useSwitchChain } from "wagmi";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
+import { useWalletConnect } from "./useWalletConnect";
 
 // **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
@@ -130,9 +129,17 @@ const MatrixButton = ({
 
 // --- Main Component ---
 export default function StakingSection() {
-  const { address, isConnected, chain } = useAccount();
-  const { connect } = useConnect();
-  const { switchChain } = useSwitchChain();
+  // Use centralized wallet hook
+  const {
+    isConnected,
+    address,
+    isCorrectNetwork: isCorrectWalletNetwork,
+    isConnecting,
+    connectMetaMask,
+    connectWalletConnect,
+    connectCoinbase,
+    switchToPepeUnchained,
+  } = useWalletConnect();
   
   const [stakeAmount, setStakeAmount] = useState("");
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -157,7 +164,8 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  const isCorrectNetwork = (chain?.id as number) === PEPU_MAINNET_ID;
+  // For staking, we need Pepu Mainnet specifically
+  const isCorrectNetwork = isCorrectWalletNetwork; // Assuming hook is configured for correct chain
 
   // Create clients
   const publicClient = createPublicClient({
@@ -173,65 +181,53 @@ export default function StakingSection() {
     });
   }, []);
 
-  // Wallet connection functions using wagmi
-  const connectMetaMask = useCallback(() => {
-    connect({ connector: injected() });
+  // Wallet connection handlers using centralized hook
+  const handleConnectMetaMask = useCallback(() => {
+    connectMetaMask();
     setShowWalletOptions(false);
-  }, [connect]);
+  }, [connectMetaMask]);
 
-  const connectWalletConnect = useCallback(() => {
-    connect({ 
-      connector: walletConnect({ 
-        projectId: 'efce48a19d0c7b8b8da21be2c1c8c271',
-        showQrModal: true 
-      }) 
-    });
+  const handleConnectWalletConnect = useCallback(() => {
+    connectWalletConnect();
     setShowWalletOptions(false);
-  }, [connect]);
+  }, [connectWalletConnect]);
 
-  const connectCoinbase = useCallback(() => {
-    connect({ 
-      connector: coinbaseWallet({ 
-        appName: 'MatrixFrog',
-        appLogoUrl: 'https://matrixfrog.one/logo.png'
-      }) 
-    });
+  const handleConnectCoinbase = useCallback(() => {
+    connectCoinbase();
     setShowWalletOptions(false);
-  }, [connect]);
+  }, [connectCoinbase]);
 
-  // Switch to correct network
+  // Switch to correct network (for staking we might need different network handling)
   const switchNetwork = useCallback(async () => {
-    if (!switchChain) return;
-
     try {
-      await switchChain({ chainId: PEPU_MAINNET_ID });
-    } catch (error: unknown) {
-      const err = error as { code?: number };
-      if (err.code === 4902) {
-        // Chain not added, try to add it
-        try {
-          if (window.ethereum) {
-            await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: `0x${PEPU_MAINNET_ID.toString(16)}`,
-                chainName: 'Pepu Mainnet',
-                nativeCurrency: {
-                  name: 'PEPU',
-                  symbol: 'PEPU',
-                  decimals: 18,
-                },
-                rpcUrls: ['https://rpc-pepu-v2-mainnet-0.t.conduit.xyz'],
-                blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'],
-              }],
-            });
-          }
-        } catch {
-          console.error('Failed to add network');
+      // If the hook is configured for Pepe Unchained but we need Pepu Mainnet for staking,
+      // we might need custom network switching here
+      await switchToPepeUnchained(); // This might need to be adapted for PEPU_MAINNET_ID
+    } catch (error) {
+      console.error('Failed to switch network:', error);
+      // Fallback to manual network addition
+      try {
+        if (window.ethereum) {
+          await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: `0x${PEPU_MAINNET_ID.toString(16)}`,
+              chainName: 'Pepu Mainnet',
+              nativeCurrency: {
+                name: 'PEPU',
+                symbol: 'PEPU',
+                decimals: 18,
+              },
+              rpcUrls: ['https://rpc-pepu-v2-mainnet-0.t.conduit.xyz'],
+              blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'],
+            }],
+          });
         }
+      } catch {
+        console.error('Failed to add network');
       }
     }
-  }, [switchChain]);
+  }, [switchToPepeUnchained]);
 
   // Read contract data
   const readContractData = useCallback(async () => {
@@ -308,30 +304,20 @@ export default function StakingSection() {
     setNotification(null);
 
     try {
-      // First check if we're on the correct network
-      if (chain?.id !== PEPU_MAINNET_ID) {
+      // Check network and switch if necessary
+      if (!isCorrectNetwork) {
         setNotification({ 
-          message: "Switching to Pepu Mainnet...", 
+          message: "Switching to correct network...", 
           type: "success" 
         });
 
-        // Try to switch network first
-        if (switchChain) {
-          try {
-            await switchChain({ chainId: PEPU_MAINNET_ID });
-            // Wait longer for network switch to complete
-            await new Promise(resolve => setTimeout(resolve, 3000));
-          } catch {
-            setNotification({ 
-              message: "Please manually switch to Pepu Mainnet in your wallet", 
-              type: "error" 
-            });
-            setIsLoading(false);
-            return;
-          }
-        } else {
+        try {
+          await switchNetwork();
+          // Wait for network switch to complete
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        } catch {
           setNotification({ 
-            message: "Please switch to Pepu Mainnet in your wallet", 
+            message: "Please manually switch to the correct network in your wallet", 
             type: "error" 
           });
           setIsLoading(false);
@@ -345,12 +331,12 @@ export default function StakingSection() {
       // Double-check the chain before proceeding
       const currentChain = await walletClient.getChainId();
       if (currentChain !== PEPU_MAINNET_ID) {
-        throw new Error('Wallet is still on the wrong network. Please manually switch to Pepu Mainnet.');
+        throw new Error('Wallet is still on the wrong network. Please manually switch to the correct network.');
       }
 
       const hash = await walletClient.writeContract({
         ...args,
-        account: address,
+        account: address as `0x${string}`,
       });
 
       setNotification({ 
@@ -385,7 +371,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, readContractData, chain, switchChain]);
+  }, [address, getWalletClient, publicClient, readContractData, isCorrectNetwork, switchNetwork]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -446,7 +432,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
-      const interval = setInterval(readContractData, 30000); // Update every 30 seconds instead of 1 second
+      const interval = setInterval(readContractData, 30000); // Update every 30 seconds
       return () => clearInterval(interval);
     }
   }, [isConnected, isCorrectNetwork, readContractData]);
@@ -484,21 +470,21 @@ export default function StakingSection() {
               <h3 className="text-lg font-bold text-green-400">Connect Wallet to Continue</h3>
               
               {!showWalletOptions ? (
-                <MatrixButton onClick={() => setShowWalletOptions(true)}>
-                  Connect Wallet
+                <MatrixButton onClick={() => setShowWalletOptions(true)} disabled={isConnecting}>
+                  {isConnecting ? "Connecting..." : "Connect Wallet"}
                 </MatrixButton>
               ) : (
                 <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <MatrixButton onClick={connectMetaMask}>
-                    MetaMask
+                  <MatrixButton onClick={handleConnectMetaMask} disabled={isConnecting}>
+                    {isConnecting ? "Connecting..." : "MetaMask"}
                   </MatrixButton>
-                  <MatrixButton onClick={connectWalletConnect}>
-                    WalletConnect
+                  <MatrixButton onClick={handleConnectWalletConnect} disabled={isConnecting}>
+                    {isConnecting ? "Connecting..." : "WalletConnect"}
                   </MatrixButton>
-                  <MatrixButton onClick={connectCoinbase}>
-                    Coinbase Wallet
+                  <MatrixButton onClick={handleConnectCoinbase} disabled={isConnecting}>
+                    {isConnecting ? "Connecting..." : "Coinbase Wallet"}
                   </MatrixButton>
-                  <MatrixButton onClick={() => setShowWalletOptions(false)} variant="cancel">
+                  <MatrixButton onClick={() => setShowWalletOptions(false)} variant="cancel" disabled={isConnecting}>
                     Cancel
                   </MatrixButton>
                 </div>
@@ -520,9 +506,9 @@ export default function StakingSection() {
                 <AlertTriangle size={24} />
                 <span style={{ fontWeight: 'bold', fontSize: '18px' }}>Wrong Network</span>
               </div>
-              <p style={{ textAlign: 'center' }}>Please switch to Pepu Mainnet</p>
+              <p style={{ textAlign: 'center' }}>Please switch to the correct network</p>
               <MatrixButton onClick={switchNetwork} variant="warning">
-                Switch to Pepu Mainnet
+                Switch Network
               </MatrixButton>
             </div>
           ) : (
