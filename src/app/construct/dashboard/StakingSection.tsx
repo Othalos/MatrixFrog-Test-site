@@ -328,12 +328,6 @@ export default function StakingSection() {
       const walletClient = await getWalletClient();
       if (!walletClient) throw new Error('No wallet client');
 
-      // Double-check the chain before proceeding
-      const currentChain = await walletClient.getChainId();
-      if (currentChain !== PEPU_MAINNET_ID) {
-        throw new Error('Wallet is still on the wrong network. Please manually switch to the correct network.');
-      }
-
       const hash = await walletClient.writeContract({
         ...args,
         account: address as `0x${string}`,
