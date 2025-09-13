@@ -229,10 +229,11 @@ export default function Navbar() {
       await connect({ connector: coinbaseWallet() });
       setWalletConnected(false);
 
+      // Increase delay for Coinbase Wallet network switching
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
-      }, 1000);
+      }, 2000); // Increased from 1000ms to 2000ms
     } catch (error) {
       console.error("Coinbase connection failed:", error);
       setIsConnecting(false);
