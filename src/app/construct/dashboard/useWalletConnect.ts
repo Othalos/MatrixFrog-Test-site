@@ -119,12 +119,23 @@ export const useWalletConnect = (): WalletConnectHook => {
   const formattedBalance = balance ? formatTokenBalance(balance as bigint) : "0";
 
   // Coinbase Wallet Erkennung
-  const isCoinbaseWallet = useCallback((): boolean => {
-    return typeof window !== "undefined" && 
-      (window.ethereum?.isCoinbaseWallet || 
-       window.ethereum?.providers?.some((provider: any) => provider.isCoinbaseWallet) ||
-       false);
-  }, []);
+const isCoinbaseWallet = useCallback((): boolean => {
+  if (typeof window === "undefined") return false;
+  
+  if (window.ethereum?.isCoinbaseWallet) {
+    return true;
+  }
+  
+  if (window.ethereum?.providers) {
+    for (const provider of window.ethereum.providers) {
+      if (provider.isCoinbaseWallet) {
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}, []);
 
   // Network Management
   const addPepeUnchainedNetwork = async (): Promise<boolean> => {
