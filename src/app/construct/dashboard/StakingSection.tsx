@@ -308,18 +308,44 @@ export default function StakingSection() {
     setNotification(null);
 
     try {
+      // First check if we're on the correct network
+      if (chain?.id !== PEPU_MAINNET_ID) {
+        setNotification({ 
+          message: "Switching to Pepu Mainnet...", 
+          type: "info" 
+        });
+
+        // Try to switch network first
+        if (switchChain) {
+          try {
+            await switchChain({ chainId: PEPU_MAINNET_ID });
+            // Wait longer for network switch to complete
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          } catch (switchError) {
+            setNotification({ 
+              message: "Please manually switch to Pepu Mainnet in your wallet", 
+              type: "error" 
+            });
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          setNotification({ 
+            message: "Please switch to Pepu Mainnet in your wallet", 
+            type: "error" 
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const walletClient = await getWalletClient();
       if (!walletClient) throw new Error('No wallet client');
 
-      // Check if we're on the correct network before transaction
-      if (chain?.id !== PEPU_MAINNET_ID) {
-        try {
-          await switchChain({ chainId: PEPU_MAINNET_ID });
-          // Wait a moment for network switch to complete
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } catch {
-          throw new Error('Please switch to Pepu Mainnet first');
-        }
+      // Double-check the chain before proceeding
+      const currentChain = await walletClient.getChainId();
+      if (currentChain !== PEPU_MAINNET_ID) {
+        throw new Error('Wallet is still on the wrong network. Please manually switch to Pepu Mainnet.');
       }
 
       const hash = await walletClient.writeContract({
@@ -329,18 +355,18 @@ export default function StakingSection() {
 
       setNotification({ 
         message: "Transaction submitted! Waiting for confirmation...", 
-        type: "success" 
+        type: "info" 
       });
 
       // Wait for transaction
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+    
       if (receipt.status === 'success') {
         setNotification({ 
           message: "Transaction confirmed! Refreshing data...", 
           type: "success" 
         });
-        
+      
         // Refresh data after successful transaction
         setTimeout(() => {
           readContractData();
