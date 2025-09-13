@@ -763,7 +763,6 @@ function MatrixConstructContent({
             </>
           ) : (
             <StakingSection/>
-           />
           )}
         </main>
       </div>
