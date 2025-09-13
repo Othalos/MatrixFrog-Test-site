@@ -151,8 +151,8 @@ const switchToPepeUnchained = useCallback(async () => {
       try {
         await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
         return;
-      } catch (switchError) {
-        console.log('wagmi switch failed, trying direct method');
+      } catch (wagmiError) {
+        console.log('wagmi switch failed, trying direct method', wagmiError);
       }
     }
 
@@ -179,6 +179,7 @@ const switchToPepeUnchained = useCallback(async () => {
             });
           }
         } else {
+          console.error('Network switch error:', switchError);
           throw switchError;
         }
       }
