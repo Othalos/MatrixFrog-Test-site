@@ -226,8 +226,8 @@ export default function StakingSection() {
               }],
             });
           }
-        } catch (addError) {
-          console.error('Failed to add network:', addError);
+        } catch {
+          console.error('Failed to add network');
         }
       }
     }
@@ -321,7 +321,7 @@ export default function StakingSection() {
             await switchChain({ chainId: PEPU_MAINNET_ID });
             // Wait longer for network switch to complete
             await new Promise(resolve => setTimeout(resolve, 3000));
-          } catch (switchError) {
+          } catch {
             setNotification({ 
               message: "Please manually switch to Pepu Mainnet in your wallet", 
               type: "error" 
