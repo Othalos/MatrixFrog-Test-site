@@ -246,7 +246,6 @@ function MatrixConstructContent({
   const {
     isConnected,
     address,
-    isCorrectNetwork,
     rawMfgBalance,
     refetchBalance,
   } = useWalletConnect();
