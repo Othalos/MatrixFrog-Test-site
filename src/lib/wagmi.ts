@@ -2,10 +2,10 @@ import { http, createConfig } from 'wagmi'
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors'
 import { defineChain } from 'viem'
 
-// Define the Pepu testnet chain
-const pepuTestnet = defineChain({
-  id: 97740,
-  name: 'Pepu Testnet',
+// Define the Pepu mainnet chain
+const pepuMainnet = defineChain({
+  id: 97741,  // Changed from 97740
+  name: 'Pepu Mainnet',  // Changed from 'Pepu Testnet'
   nativeCurrency: {
     decimals: 18,
     name: 'Pepu',
@@ -22,14 +22,14 @@ const pepuTestnet = defineChain({
   blockExplorers: {
     default: {
       name: 'Pepu Explorer',
-      url: 'https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz',
+      url: 'https://explorer-pepu-v2-mainnet-0.t.conduit.xyz',  // Updated to mainnet explorer
     },
   },
-  testnet: true,
+  testnet: false,  // Changed from true
 })
 
 export const config = createConfig({
-  chains: [pepuTestnet],
+  chains: [pepuMainnet],  // Updated variable name
   connectors: [
     injected(),
     walletConnect({ 
@@ -42,7 +42,7 @@ export const config = createConfig({
     }),
   ],
   transports: {
-    [pepuTestnet.id]: http('/api/rpc', {
+    [pepuMainnet.id]: http('/api/rpc', {  // Updated to use mainnet chain ID
       batch: true,
       retryCount: 3,
       retryDelay: 1000,

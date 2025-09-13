@@ -20,7 +20,7 @@ import { formatUnits } from "viem";
 const MATRIX_FROG_CONTRACT = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
 // Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
-const PEPE_UNCHAINED_CHAIN_ID = 97740;
+const PEPE_UNCHAINED_CHAIN_ID = 97741;
 
 const ABI = [
   {
@@ -107,7 +107,7 @@ export default function Navbar() {
                 decimals: 18,
               },
               blockExplorerUrls: [
-                "https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz",
+                "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
               ],
             },
           ],
@@ -202,8 +202,8 @@ export default function Navbar() {
           metadata: {
             name: 'MatrixFrog',
             description: 'MatrixFrog Voting Platform',
-            url: 'https://matrixfrog.com',
-            icons: ['https://matrixfrog.com/favicon.ico']
+            url: 'https://matrixfrog.one',
+            icons: ['https://matrixfrog.one/favicon.ico']
           }
         }),
       });
@@ -229,10 +229,11 @@ export default function Navbar() {
       await connect({ connector: coinbaseWallet() });
       setWalletConnected(false);
 
+      // Increase delay for Coinbase Wallet network switching
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
-      }, 1000);
+      }, 2000); // Increased from 1000ms to 2000ms
     } catch (error) {
       console.error("Coinbase connection failed:", error);
       setIsConnecting(false);
@@ -321,7 +322,7 @@ export default function Navbar() {
                   <div className="divider">|</div>
                   <NavLink href={getNavLink("buybot")} label="PepTrix" />
                   <div className="divider">|</div>
-                  <NavLink href="/migration-protocol" label="Treasury" />
+                  <NavLink href="/treasury" label="Treasury" />
                   <div className="divider">|</div>
                   {/* Construct Link - OHNE WALLET WALL */}
                   <NavLink

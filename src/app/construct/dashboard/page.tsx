@@ -34,7 +34,7 @@ import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
 
 // Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
-const PEPE_UNCHAINED_CHAIN_ID = 97740;
+const PEPE_UNCHAINED_CHAIN_ID = 97741;
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
@@ -328,7 +328,7 @@ function MatrixConstructContent({
               chainName: "Pepe Unchained Mainnet",
               rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
               nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
-              blockExplorerUrls: ["https://explorer-pepe-unchained-gupg0lo9wf.t.conduit.xyz"],
+              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
             },
           ],
         });

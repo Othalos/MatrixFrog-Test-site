@@ -1,15 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
-
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider, createConfig, http } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 import { useState } from 'react'
 
-// Simple chain definition to avoid type conflicts
-const pepuTestnet = {
-  id: 97740,
-  name: 'Pepu Testnet',
+// Updated chain definition for Pepu Mainnet
+const pepuMainnet = {
+  id: 97741,  // Changed from 97740 to 97741
+  name: 'Pepu Mainnet',  // Changed from 'Pepu Testnet'
   nativeCurrency: { 
     name: 'Pepu',
     symbol: 'PEPU', 
@@ -21,17 +20,17 @@ const pepuTestnet = {
   blockExplorers: { 
     default: { 
       name: 'Pepu Explorer', 
-      url: 'https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz' 
+      url: 'https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'  // Updated explorer URL
     } 
   },
-  testnet: true,
+  testnet: false,  // Changed from true to false
 } as any
 
 const config = createConfig({
-  chains: [pepuTestnet],
+  chains: [pepuMainnet],  // Changed variable name
   connectors: [injected()],
   transports: { 
-    [pepuTestnet.id]: http('/api/rpc', {
+    [pepuMainnet.id]: http('/api/rpc', {  // Updated to use new chain ID
       batch: true,
       retryCount: 2,
     })

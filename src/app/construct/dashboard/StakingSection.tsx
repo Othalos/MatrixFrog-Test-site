@@ -12,15 +12,15 @@ import ERC20_ABI from "../../abis/ERC20.json";
 import STAKING_ABI from "../../abis/Staking.json";
 
 // --- Chain & Contract Configuration ---
-const PEPU_TESTNET_ID = 97740;
-const STAKING_ADDRESS = "0x7e70e8520558326D043bd03e4cc44D3afeB0d090" as `0x${string}`;
-const MFG_ADDRESS = "0xa4Cb0c35CaD40e7ae12d0a01D4f489D6574Cc889" as `0x${string}`;
+const PEPU_MAINNET_ID = 97741;
+const STAKING_ADDRESS = "0x0B71b6CCB73F60bED2612B1A7Cbe271b7bAf3D0E" as `0x${string}`;
+const MFG_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5" as `0x${string}`;
 const POOL_ID = 0n;
 
 // Define chain for viem
-const pepuTestnet = {
-  id: PEPU_TESTNET_ID,
-  name: 'Pepu Testnet',
+const pepuMainnet = {
+  id: PEPU_MAINNET_ID,
+  name: 'Pepu Mainnet',
   nativeCurrency: {
     decimals: 18,
     name: 'PEPU',
@@ -157,19 +157,19 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  const isCorrectNetwork = chain?.id === PEPU_TESTNET_ID;
+  const isCorrectNetwork = (chain?.id as number) === PEPU_MAINNET_ID;
 
   // Create clients
   const publicClient = createPublicClient({
-    chain: pepuTestnet,
+    chain: pepuMainnet,
     transport: http('/api/rpc'),
   });
 
   const getWalletClient = useCallback(async () => {
     if (!window.ethereum) return null;
     return createWalletClient({
-      chain: pepuTestnet,
-      transport: custom(window.ethereum),
+      chain: pepuMainnet,
+      transport: custom(window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }),
     });
   }, []);
 
@@ -204,30 +204,30 @@ export default function StakingSection() {
     if (!switchChain) return;
 
     try {
-      await switchChain({ chainId: PEPU_TESTNET_ID });
+      await switchChain({ chainId: PEPU_MAINNET_ID });
     } catch (error: unknown) {
       const err = error as { code?: number };
       if (err.code === 4902) {
         // Chain not added, try to add it
         try {
           if (window.ethereum) {
-            await window.ethereum.request({
+            await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
               method: 'wallet_addEthereumChain',
               params: [{
-                chainId: `0x${PEPU_TESTNET_ID.toString(16)}`,
-                chainName: 'Pepu Testnet',
+                chainId: `0x${PEPU_MAINNET_ID.toString(16)}`,
+                chainName: 'Pepu Mainnet',
                 nativeCurrency: {
                   name: 'PEPU',
                   symbol: 'PEPU',
                   decimals: 18,
                 },
-                rpcUrls: ['https://rpc-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
-                blockExplorerUrls: ['https://explorer-pepu-v2-testnet-vn4qxxp9og.t.conduit.xyz'],
+                rpcUrls: ['https://rpc-pepu-v2-mainnet-0.t.conduit.xyz'],
+                blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'],
               }],
             });
           }
-        } catch (addError) {
-          console.error('Failed to add network:', addError);
+        } catch {
+          console.error('Failed to add network');
         }
       }
     }
@@ -308,8 +308,45 @@ export default function StakingSection() {
     setNotification(null);
 
     try {
+      // First check if we're on the correct network
+      if (chain?.id !== PEPU_MAINNET_ID) {
+        setNotification({ 
+          message: "Switching to Pepu Mainnet...", 
+          type: "success" 
+        });
+
+        // Try to switch network first
+        if (switchChain) {
+          try {
+            await switchChain({ chainId: PEPU_MAINNET_ID });
+            // Wait longer for network switch to complete
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          } catch {
+            setNotification({ 
+              message: "Please manually switch to Pepu Mainnet in your wallet", 
+              type: "error" 
+            });
+            setIsLoading(false);
+            return;
+          }
+        } else {
+          setNotification({ 
+            message: "Please switch to Pepu Mainnet in your wallet", 
+            type: "error" 
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const walletClient = await getWalletClient();
       if (!walletClient) throw new Error('No wallet client');
+
+      // Double-check the chain before proceeding
+      const currentChain = await walletClient.getChainId();
+      if (currentChain !== PEPU_MAINNET_ID) {
+        throw new Error('Wallet is still on the wrong network. Please manually switch to Pepu Mainnet.');
+      }
 
       const hash = await walletClient.writeContract({
         ...args,
@@ -323,13 +360,13 @@ export default function StakingSection() {
 
       // Wait for transaction
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
+    
       if (receipt.status === 'success') {
         setNotification({ 
           message: "Transaction confirmed! Refreshing data...", 
           type: "success" 
         });
-        
+      
         // Refresh data after successful transaction
         setTimeout(() => {
           readContractData();
@@ -348,7 +385,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, readContractData]);
+  }, [address, getWalletClient, publicClient, readContractData, chain, switchChain]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -376,7 +413,7 @@ export default function StakingSection() {
     submitTransaction({
       address: STAKING_ADDRESS,
       abi: STAKING_ABI as readonly unknown[],
-      functionName: 'stakeTokens', // Changed from 'stake'
+      functionName: 'stakeTokens',
       args: [POOL_ID, stakeAmountBN],
     });
   }, [submitTransaction, stakeAmount, balance]);
@@ -409,7 +446,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
-      const interval = setInterval(readContractData, 10000); // Update every 10 seconds for dynamic data
+      const interval = setInterval(readContractData, 30000); // Update every 30 seconds instead of 1 second
       return () => clearInterval(interval);
     }
   }, [isConnected, isCorrectNetwork, readContractData]);
@@ -483,9 +520,9 @@ export default function StakingSection() {
                 <AlertTriangle size={24} />
                 <span style={{ fontWeight: 'bold', fontSize: '18px' }}>Wrong Network</span>
               </div>
-              <p style={{ textAlign: 'center' }}>Please switch to Pepu Testnet</p>
+              <p style={{ textAlign: 'center' }}>Please switch to Pepu Mainnet</p>
               <MatrixButton onClick={switchNetwork} variant="warning">
-                Switch to Pepu Testnet
+                Switch to Pepu Mainnet
               </MatrixButton>
             </div>
           ) : (
