@@ -311,6 +311,17 @@ export default function StakingSection() {
       const walletClient = await getWalletClient();
       if (!walletClient) throw new Error('No wallet client');
 
+      // Check if we're on the correct network before transaction
+      if (chain?.id !== PEPU_MAINNET_ID) {
+        try {
+          await switchChain({ chainId: PEPU_MAINNET_ID });
+          // Wait a moment for network switch to complete
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (switchError) {
+          throw new Error('Please switch to Pepu Mainnet first');
+        }
+      }
+
       const hash = await walletClient.writeContract({
         ...args,
         account: address,
@@ -348,7 +359,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, readContractData]);
+  }, [address, getWalletClient, publicClient, readContractData, chain, switchChain]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -409,7 +420,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
-      const interval = setInterval(readContractData, 10000); // Update every 10 seconds for dynamic data
+      const interval = setInterval(readContractData, 1000); // Update every 10 seconds for dynamic data
       return () => clearInterval(interval);
     }
   }, [isConnected, isCorrectNetwork, readContractData]);
