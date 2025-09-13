@@ -446,7 +446,7 @@ export default function StakingSection() {
   useEffect(() => {
     if (isConnected && isCorrectNetwork) {
       readContractData();
-      const interval = setInterval(readContractData, 1000); // Update every 10 seconds for dynamic data
+      const interval = setInterval(readContractData, 30000); // Update every 30 seconds instead of 1 second
       return () => clearInterval(interval);
     }
   }, [isConnected, isCorrectNetwork, readContractData]);
