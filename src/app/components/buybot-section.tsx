@@ -43,7 +43,7 @@ export default function BuyBotSection() {
           To participate in choosing the path of the next episode, you&apos;ll need to hold at least <b>1,000 Peptrix</b>.
         </p>
         <p className="text-white leading-relaxed mb-4">
-          You can acquire Peptrix by swapping MatrixFrog on the Pepu Swap website. Just copy the MatrixFrog Contract Address below and paste it into the 'You pay' section and then copy the Peptrix Contract Address below that and paste it into the 'You receive' section below that. The swap function is at:
+          You can acquire Peptrix by swapping MatrixFrog on the Pepu Swap website. Just copy the MatrixFrog Contract Address below and paste it into the &apos;You pay&apos; section and then copy the Peptrix Contract Address below that and paste it into the &apos;You receive&apos; section below that. The swap function is at:
           <a href="https://pepuswap.com/#/swap" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">pepuswap.com</a>.
         </p>
         <div className="flex items-center gap-2 mb-4">
