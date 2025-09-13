@@ -114,53 +114,69 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   // Network Management
   const addPepeUnchainedNetwork = async (): Promise<boolean> => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
-              chainName: "Pepe Unchained Mainnet",
-              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-              nativeCurrency: { 
-                name: "PEPE", 
-                symbol: "PEPU", 
-                decimals: 18 
-              },
-              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
-            },
-          ],
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to add network:", error);
-      return false;
-    }
-  };
-
-  const switchToPepeUnchained = useCallback(async () => {
   try {
+    if (typeof window !== "undefined" && window.ethereum) {
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
+            chainName: "Pepe Unchained Mainnet",
+            rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
+            nativeCurrency: { 
+              name: "PEPE", 
+              symbol: "PEPU", 
+              decimals: 18 
+            },
+            blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
+          },
+        ],
+      });
+      
+      // Warte kurz, damit das Netzwerk hinzugefügt werden kann
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error("Failed to add network:", error);
+    return false;
+  }
+};
+
+const switchToPepeUnchained = useCallback(async () => {
+  try {
+    // Zuerst versuchen, mit wagmi zu wechseln
     if (switchChain) {
-      // First try to switch using wagmi
-      await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-    } else {
-      // Fallback: try switch first, then add if it fails with 4902
+      try {
+        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
+        return;
+      } catch (switchError) {
+        console.log('wagmi switch failed, trying direct method');
+      }
+    }
+
+    // Fallback: Direkte Methode mit Ethereum Provider
+    if (typeof window !== "undefined" && window.ethereum) {
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
         });
       } catch (switchError: unknown) {
-        // Error code 4902 means the chain is not added to the wallet
-        if (typeof switchError === 'object' && switchError !== null && 'code' in switchError) {
-          const errorWithCode = switchError as { code?: number };
-          if (errorWithCode.code === 4902) {
-            await addPepeUnchainedNetwork();
-          } else {
-            throw switchError;
+        // Prüfen ob es sich um einen Netzwerk-Fehler handelt
+        const error = switchError as { code?: number };
+        
+        if (error.code === 4902) {
+          // Netzwerk ist nicht hinzugefügt
+          const added = await addPepeUnchainedNetwork();
+          if (added) {
+            // Nochmal versuchen zu wechseln nach dem Hinzufügen
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
+            });
           }
         } else {
           throw switchError;
@@ -169,7 +185,7 @@ export const useWalletConnect = (): WalletConnectHook => {
     }
   } catch (error) {
     console.error("Failed to switch network:", error);
-    // Final fallback
+    // Letzter Versuch: Nur hinzufügen ohne zu wechseln
     await addPepeUnchainedNetwork();
   }
 }, [switchChain]);
