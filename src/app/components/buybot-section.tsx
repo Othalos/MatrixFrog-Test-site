@@ -8,6 +8,7 @@ export default function BuyBotSection() {
 
   // Contract Info
   const contractAddress = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
+  const peptrixContractAddress = "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2";
   const [copied, setCopied] = useState(false);
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -39,10 +40,10 @@ export default function BuyBotSection() {
       <div className="terminal-text-container">
         <h3 className="text-matrix-green font-bold text-xl mb-4">How to Participate</h3>
         <p className="text-white leading-relaxed mb-4">
-          To participate in choosing the path of the next episode, you&apos;ll need to hold at least <b>25,000 MatrixFrog</b>.
+          To participate in choosing the path of the next episode, you&apos;ll need to hold at least <b>1,000 Peptrix</b>.
         </p>
         <p className="text-white leading-relaxed mb-4">
-          You can acquire MatrixFrog by swapping Pepe Unchained on their website. Just copy the MatrixFrog Contract Address below and paste it into the swap function at:
+          You can acquire Peptrix by swapping MatrixFrog on the Pepu Swap website. Just copy the MatrixFrog Contract Address below and paste it into the 'You pay' section and then copy the Peptrix Contract Address below that and paste it into the 'You receive' section below that. The swap function is at:
           <a href="https://pepuswap.com/#/swap" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">pepuswap.com</a>.
         </p>
         <div className="flex items-center gap-2 mb-4">
@@ -50,6 +51,20 @@ export default function BuyBotSection() {
           <code className="text-white text-sm break-all">{contractAddress}</code>
           <button
             onClick={() => copyToClipboard(contractAddress)}
+            className="text-matrix-green hover:text-white transition-colors"
+            title="Copy to clipboard"
+          >
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+            </svg>
+          </button>
+          {copied && <span className="ml-2 text-xs text-matrix-green">Copied!</span>}
+        </div>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-matrix-green font-extrabold text-[18px]">Peptrix Contract Address:</span>
+          <code className="text-white text-sm break-all">{peptrixContractAddress}</code>
+          <button
+            onClick={() => copyToClipboard(peptrixContractAddress)}
             className="text-matrix-green hover:text-white transition-colors"
             title="Copy to clipboard"
           >
