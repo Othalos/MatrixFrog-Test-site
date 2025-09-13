@@ -466,7 +466,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 minWidth: "300px",
                                 fontFamily: "monospace",
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                         >
                             <h3 style={{ color: "#4ade80", marginBottom: "16px", textAlign: "center" }}>
                                 SELECT WALLET

@@ -111,12 +111,12 @@ const MatrixButton = ({
         cursor: disabled ? 'not-allowed' : 'pointer',
         fontFamily: 'monospace'
       }}
-      onMouseEnter={(e) => {
+      onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
         if (!disabled) {
           e.currentTarget.style.backgroundColor = styles.hoverBg;
         }
       }}
-      onMouseLeave={(e) => {
+      onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
         if (!disabled) {
           e.currentTarget.style.backgroundColor = styles.backgroundColor;
         }
@@ -545,7 +545,7 @@ export default function StakingSection() {
                     <input 
                       type="number" 
                       value={stakeAmount} 
-                      onChange={(e) => setStakeAmount(e.target.value)} 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStakeAmount(e.target.value)} 
                       placeholder="Enter amount to stake" 
                       style={{
                         flex: 1,
