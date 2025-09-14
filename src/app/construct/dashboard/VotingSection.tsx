@@ -58,7 +58,7 @@ interface VotingSectionProps {
     greenPillVotes: number;
     totalVotes: number;
     votingStatsLoading: boolean;
-    // Wallet Connect Props
+    // Neue Wallet Connect Props
     isConnecting?: boolean;
     isCorrectNetwork?: boolean;
     connectMetaMask?: () => void;
@@ -66,17 +66,8 @@ interface VotingSectionProps {
     connectCoinbase?: () => void;
     handleDisconnect?: () => void;
     switchToPepeUnchained?: () => void;
-    // Token Balances for display
-    ptxBalance?: string;
+    // MFG Token Balance für Token-Balance-Anzeige
     mfgBalance?: string;
-    // Voting configuration
-    votingConfig?: {
-        useToken: string;
-        tokenAddress: string;
-        requiredAmount: string;
-        tokenName: string;
-        tokenDisplayName: string;
-    };
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
@@ -103,15 +94,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     connectCoinbase,
     handleDisconnect,
     switchToPepeUnchained,
-    ptxBalance = "0",
     mfgBalance = "0",
-    votingConfig = {
-        useToken: 'PTX',
-        tokenAddress: '0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2',
-        requiredAmount: '1000',
-        tokenName: 'PTX',
-        tokenDisplayName: 'Peptrix'
-    },
 }) => {
     const [showWalletOptions, setShowWalletOptions] = useState(false);
     
@@ -146,7 +129,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
 
     return (
         <>
-            {/* CSS Animations */}
+            {/* CSS Animationen */}
             <style dangerouslySetInnerHTML={{ __html: winnerAnimationStyles }} />
 
             {/* Decision Section */}
@@ -169,116 +152,48 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     </CardTitle>
                 </CardHeader>
 
-                {/* Token Balance Display - Both MFG and PTX */}
-                {isConnected && isCorrectNetwork && (
-                    <div
-                        style={{
-                            margin: "16px",
-                            display: "flex",
-                            gap: "12px",
-                            flexWrap: "wrap",
-                        }}
-                    >
-                        {/* PTX Balance */}
-                        <div
-                            style={{
-                                flex: "1",
-                                minWidth: "200px",
-                                padding: "12px",
-                                backgroundColor: votingConfig.useToken === 'PTX' 
-                                    ? "rgba(74, 222, 128, 0.1)" 
-                                    : "rgba(74, 222, 128, 0.05)",
-                                border: votingConfig.useToken === 'PTX' 
-                                    ? "2px solid rgba(74, 222, 128, 0.5)" 
-                                    : "1px solid rgba(74, 222, 128, 0.3)",
-                                borderRadius: "6px",
-                                textAlign: "center",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    color: "#4ade80",
-                                    fontFamily: "monospace",
-                                    fontSize: "0.8rem",
-                                    fontWeight: "bold",
-                                    marginBottom: "4px",
-                                }}
-                            >
-                                PTX Balance {votingConfig.useToken === 'PTX' && "⭐ VOTING"}
-                            </div>
-                            <div
-                                style={{
-                                    color: "#22c55e",
-                                    fontFamily: "monospace",
-                                    fontSize: "1rem",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                {ptxBalance} PTX
-                            </div>
-                        </div>
-
-                        {/* MFG Balance */}
-                        <div
-                            style={{
-                                flex: "1",
-                                minWidth: "200px",
-                                padding: "12px",
-                                backgroundColor: votingConfig.useToken === 'MFG' 
-                                    ? "rgba(74, 222, 128, 0.1)" 
-                                    : "rgba(74, 222, 128, 0.05)",
-                                border: votingConfig.useToken === 'MFG' 
-                                    ? "2px solid rgba(74, 222, 128, 0.5)" 
-                                    : "1px solid rgba(74, 222, 128, 0.3)",
-                                borderRadius: "6px",
-                                textAlign: "center",
-                            }}
-                        >
-                            <div
-                                style={{
-                                    color: "#4ade80",
-                                    fontFamily: "monospace",
-                                    fontSize: "0.8rem",
-                                    fontWeight: "bold",
-                                    marginBottom: "4px",
-                                }}
-                            >
-                                MFG Balance {votingConfig.useToken === 'MFG' && "⭐ VOTING"}
-                            </div>
-                            <div
-                                style={{
-                                    color: "#22c55e",
-                                    fontFamily: "monospace",
-                                    fontSize: "1rem",
-                                    fontWeight: "bold",
-                                }}
-                            >
-                                {mfgBalance} MFG
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Voting Requirements Info */}
+                {/* MFG Token Balance Display */}
                 {isConnected && isCorrectNetwork && (
                     <div
                         style={{
                             textAlign: "center",
-                            margin: "0 16px 16px 16px",
-                            padding: "8px",
-                            backgroundColor: "rgba(34, 197, 94, 0.05)",
-                            border: "1px solid rgba(34, 197, 94, 0.2)",
-                            borderRadius: "4px",
+                            margin: "16px",
+                            padding: "12px",
+                            backgroundColor: "rgba(74, 222, 128, 0.05)",
+                            border: "1px solid rgba(74, 222, 128, 0.3)",
+                            borderRadius: "6px",
                         }}
                     >
                         <div
                             style={{
-                                fontSize: "0.7rem",
+                                color: "#4ade80",
+                                fontFamily: "monospace",
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                marginBottom: "4px",
+                            }}
+                        >
+                            MFG Token Balance
+                        </div>
+                        <div
+                            style={{
+                                color: "#22c55e",
+                                fontFamily: "monospace",
+                                fontSize: "1.1rem",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            {mfgBalance} MFG
+                        </div>
+                        <div
+                            style={{
+                                fontSize: "0.65rem",
                                 color: "#9ca3af",
+                                marginTop: "4px",
                                 fontFamily: "monospace",
                             }}
                         >
-                            {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required per vote
+                            25000 MFG required per vote
                         </div>
                     </div>
                 )}
@@ -372,7 +287,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required to vote
+                                25000 MatrixFrog required to vote
                             </p>
                         )}
                     </div>
@@ -457,7 +372,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required to vote
+                                25000 MatrixFrog required to vote
                             </p>
                         )}
                     </div>
@@ -476,7 +391,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             fontFamily: "monospace",
                         }}
                     >
-                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! {votingConfig.requiredAmount} {votingConfig.tokenName} transferred.
+                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! 25000 MATRIX transferred.
                     </div>
                 )}
 
@@ -647,10 +562,10 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         style={{
                             backgroundColor:
                                 !isConnected 
-                                    ? "#16a34a"
+                                    ? "#16a34a"  // Wallet Connect Button - grün
                                     : (!selected || isVoting || isPending || isConfirming)
-                                        ? "#374151"
-                                        : "#16a34a",
+                                        ? "#374151"  // Disabled
+                                        : "#16a34a", // Vote Button - grün
                             color:
                                 !isConnected
                                     ? "black"
@@ -687,11 +602,11 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                                         ? "Confirming Transaction..."
                                                         : isConfirming
                                                             ? "Processing Vote..."
-                                                            : `Cast Vote (${votingConfig.requiredAmount} ${votingConfig.tokenName})`}
+                                                            : "Cast Vote (25000 MATRIX)"}
                     </button>
                 </div>
 
-                {/* Wallet Info for connected wallets */}
+                {/* Wallet Info für verbundene Wallets */}
                 {isConnected && (
                     <div
                         style={{
