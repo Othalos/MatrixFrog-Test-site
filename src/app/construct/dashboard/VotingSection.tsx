@@ -66,8 +66,17 @@ interface VotingSectionProps {
     connectCoinbase?: () => void;
     handleDisconnect?: () => void;
     switchToPepeUnchained?: () => void;
-    // PTX Token Balance for display
+    // Token Balances for display
     ptxBalance?: string;
+    mfgBalance?: string;
+    // Voting configuration
+    votingConfig?: {
+        useToken: string;
+        tokenAddress: string;
+        requiredAmount: string;
+        tokenName: string;
+        tokenDisplayName: string;
+    };
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
@@ -95,6 +104,14 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     handleDisconnect,
     switchToPepeUnchained,
     ptxBalance = "0",
+    mfgBalance = "0",
+    votingConfig = {
+        useToken: 'PTX',
+        tokenAddress: '0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2',
+        requiredAmount: '1000',
+        tokenName: 'PTX',
+        tokenDisplayName: 'Peptrix'
+    },
 }) => {
     const [showWalletOptions, setShowWalletOptions] = useState(false);
     
@@ -187,6 +204,71 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     marginBottom: "4px",
                                 }}
                             >
+                                Disconnect
+                            </button>
+                        )}
+                    </div>
+                )}
+            </Card>
+
+            {/* Voting Stats */}
+            {(episode.status === 'active' || isCompleted) && (
+                <Card
+                    style={{
+                        backgroundColor: "black",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        padding: "16px",
+                        fontFamily: "monospace",
+                    }}
+                >
+                    <CardTitle style={{ color: "#4ade80", marginBottom: "12px" }}>
+                        {isCompleted ? "FINAL VOTING RESULTS" : "CURRENT VOTING STATS"}
+                    </CardTitle>
+                    
+                    {/* Show vote counts only for active episodes */}
+                    {!isCompleted && (
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "8px",
+                                color: "#22c55e",
+                            }}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
+                                <p>Red Votes: {votingStatsLoading ? "Loading..." : redPillVotes}</p>
+                                <p>Total Votes: {votingStatsLoading ? "Loading..." : totalVotes}</p>
+                                <p>Green Votes: {votingStatsLoading ? "Loading..." : greenPillVotes}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Winner display for completed episodes */}
+                    {isCompleted && (
+                        <div style={{
+                            marginTop: "8px",
+                            padding: "8px",
+                            backgroundColor: "rgba(34,197,94,0.1)",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                            animation: 'winnerGlow 2s ease-in-out infinite'
+                        }}>
+                            <p style={{
+                                color: "#4ade80",
+                                fontSize: "0.9rem",
+                                animation: 'textGlow 2s ease-in-out infinite'
+                            }}>
+                                <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
+                            </p>
+                        </div>
+                    )}
+                </Card>
+            )}
+        </>
+    );
+};
+
+export default VotingSection;
                                 PTX Balance {votingConfig.useToken === 'PTX' && "⭐ VOTING"}
                             </div>
                             <div
@@ -262,48 +344,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             }}
                         >
                             {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required per vote
-                        </div>
-                    </div>
-                )}
-                        style={{
-                            textAlign: "center",
-                            margin: "16px",
-                            padding: "12px",
-                            backgroundColor: "rgba(74, 222, 128, 0.05)",
-                            border: "1px solid rgba(74, 222, 128, 0.3)",
-                            borderRadius: "6px",
-                        }}
-                    >
-                        <div
-                            style={{
-                                color: "#4ade80",
-                                fontFamily: "monospace",
-                                fontSize: "0.9rem",
-                                fontWeight: "bold",
-                                marginBottom: "4px",
-                            }}
-                        >
-                            PTX Token Balance
-                        </div>
-                        <div
-                            style={{
-                                color: "#22c55e",
-                                fontFamily: "monospace",
-                                fontSize: "1.1rem",
-                                fontWeight: "bold",
-                            }}
-                        >
-                            {ptxBalance} PTX
-                        </div>
-                        <div
-                            style={{
-                                fontSize: "0.65rem",
-                                color: "#9ca3af",
-                                marginTop: "4px",
-                                fontFamily: "monospace",
-                            }}
-                        >
-                            1000 PTX required per vote
                         </div>
                     </div>
                 )}
@@ -397,7 +437,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                1000 Peptrix required to vote
+                                {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required to vote
                             </p>
                         )}
                     </div>
@@ -482,7 +522,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                1000 Peptrix required to vote
+                                {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required to vote
                             </p>
                         )}
                     </div>
@@ -501,7 +541,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             fontFamily: "monospace",
                         }}
                     >
-                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! 1000 PTX transferred.
+                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! {votingConfig.requiredAmount} {votingConfig.tokenName} transferred.
                     </div>
                 )}
 
@@ -712,7 +752,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                                         ? "Confirming Transaction..."
                                                         : isConfirming
                                                             ? "Processing Vote..."
-                                                            : "Cast Vote (1000 PTX)"}
+                                                            : `Cast Vote (${votingConfig.requiredAmount} ${votingConfig.tokenName})`}
                     </button>
                 </div>
 
@@ -742,68 +782,3 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontSize: "0.6rem",
                                     fontFamily: "monospace",
                                 }}
-                            >
-                                Disconnect
-                            </button>
-                        )}
-                    </div>
-                )}
-            </Card>
-
-            {/* Voting Stats */}
-            {(episode.status === 'active' || isCompleted) && (
-                <Card
-                    style={{
-                        backgroundColor: "black",
-                        border: "1px solid rgba(34,197,94,0.3)",
-                        padding: "16px",
-                        fontFamily: "monospace",
-                    }}
-                >
-                    <CardTitle style={{ color: "#4ade80", marginBottom: "12px" }}>
-                        {isCompleted ? "FINAL VOTING RESULTS" : "CURRENT VOTING STATS"}
-                    </CardTitle>
-                    
-                    {/* Show vote counts only for active episodes */}
-                    {!isCompleted && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "8px",
-                                color: "#22c55e",
-                            }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-                                <p>Red Votes: {votingStatsLoading ? "Loading..." : redPillVotes}</p>
-                                <p>Green Votes: {votingStatsLoading ? "Loading..." : greenPillVotes}</p>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Winner display for completed episodes */}
-                    {isCompleted && (
-                        <div style={{
-                            marginTop: "8px",
-                            padding: "8px",
-                            backgroundColor: "rgba(34,197,94,0.1)",
-                            borderRadius: "4px",
-                            textAlign: "center",
-                            animation: 'winnerGlow 2s ease-in-out infinite'
-                        }}>
-                            <p style={{
-                                color: "#4ade80",
-                                fontSize: "0.9rem",
-                                animation: 'textGlow 2s ease-in-out infinite'
-                            }}>
-                                <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
-                            </p>
-                        </div>
-                    )}
-                </Card>
-            )}
-        </>
-    );
-};
-
-export default VotingSection;
