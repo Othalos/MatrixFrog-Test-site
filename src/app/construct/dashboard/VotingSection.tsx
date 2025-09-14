@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { type EpisodeConfig, getVotingCountdown } from "./episodeConfig";
-import { useWalletConnect } from "./useWalletConnect";
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 const winnerAnimationStyles = `
 @keyframes winnerGlow {

@@ -63,12 +63,6 @@ interface WalletConnectHook {
   refetchBalance: () => void;
 }
 
-// Interface für Ethereum Fehler
-interface EthereumSwitchError {
-  code?: number;
-  message?: string;
-}
-
 export const useWalletConnect = (): WalletConnectHook => {
   const { isConnected, address, chain } = useAccount();
   const { connect } = useConnect();
@@ -118,25 +112,6 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   const formattedBalance = balance ? formatTokenBalance(balance as bigint) : "0";
 
-  // Coinbase Wallet Erkennung
-const isCoinbaseWallet = useCallback((): boolean => {
-  if (typeof window === "undefined") return false;
-  
-  if (window.ethereum?.isCoinbaseWallet) {
-    return true;
-  }
-  
-  if (window.ethereum?.providers) {
-    for (const provider of window.ethereum.providers) {
-      if (provider.isCoinbaseWallet) {
-        return true;
-      }
-    }
-  }
-  
-  return false;
-}, []);
-
   // Network Management
   const addPepeUnchainedNetwork = async (): Promise<boolean> => {
     try {
@@ -157,9 +132,6 @@ const isCoinbaseWallet = useCallback((): boolean => {
             },
           ],
         });
-        
-        // Warte kurz, damit das Netzwerk hinzugefügt werden kann
-        await new Promise(resolve => setTimeout(resolve, 1000));
         return true;
       }
       return false;
@@ -170,84 +142,17 @@ const isCoinbaseWallet = useCallback((): boolean => {
   };
 
   const switchToPepeUnchained = useCallback(async () => {
-    // Spezielle Behandlung für Coinbase Wallet
-    if (isCoinbaseWallet()) {
-      console.log("Coinbase Wallet detected - using special handling");
-      const added = await addPepeUnchainedNetwork();
-      if (added) {
-        // Bei Coinbase manuell nach dem Hinzufügen wechseln
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      }
-      return;
-    }
-
-    // Normale Logik für andere Wallets
     try {
       if (switchChain) {
-        // First try to switch using wagmi
-        try {
-          await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-          return;
-        } catch (wagmiError) {
-          console.log('wagmi switch failed, trying direct method', wagmiError);
-        }
-      }
-
-      // Fallback: Direkte Methode mit Ethereum Provider
-      if (typeof window !== "undefined" && window.ethereum) {
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
-          });
-        } catch (switchError: unknown) {
-          // Prüfen ob es sich um einen Netzwerk-Fehler handelt
-          const error = switchError as EthereumSwitchError;
-          
-          if (error.code === 4902) {
-            // Netzwerk ist nicht hinzugefügt
-            const added = await addPepeUnchainedNetwork();
-            if (added) {
-              // Nochmal versuchen zu wechseln nach dem Hinzufügen
-              await new Promise(resolve => setTimeout(resolve, 500));
-              await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}` }]
-              });
-            }
-          } else {
-            console.error('Network switch error:', switchError);
-            throw switchError;
-          }
-        }
+        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
+      } else {
+        await addPepeUnchainedNetwork();
       }
     } catch (error) {
       console.error("Failed to switch network:", error);
-      // Letzter Versuch: Nur hinzufügen ohne zu wechseln
       await addPepeUnchainedNetwork();
     }
-  }, [switchChain, isCoinbaseWallet]);
-
-  // Network Change Listener
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      const handleChainChanged = (chainId: string) => {
-        console.log('Chain changed:', chainId);
-        if (parseInt(chainId, 16) === PEPE_UNCHAINED_CHAIN_ID) {
-          // Netzwerk gewechselt, Seite neu laden
-          window.location.reload();
-        }
-      };
-
-      window.ethereum.on('chainChanged', handleChainChanged);
-      
-      return () => {
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
-      };
-    }
-  }, []);
+  }, [switchChain]);
 
   // Connection Methods
   const connectMetaMask = useCallback(async () => {

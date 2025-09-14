@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet } from "lucide-react";
-import { useWalletConnect } from "./useWalletConnect";
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 // **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
@@ -133,7 +133,7 @@ export default function StakingSection() {
   const {
     isConnected,
     address,
-    isCorrectNetwork: isCorrectWalletNetwork,
+    isCorrectNetwork,
     isConnecting,
     connectMetaMask,
     connectWalletConnect,
@@ -164,9 +164,6 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
-  // For staking, we need Pepu Mainnet specifically
-  const isCorrectNetwork = isCorrectWalletNetwork; // Assuming hook is configured for correct chain
-
   // Create clients
   const publicClient = createPublicClient({
     chain: pepuMainnet,
@@ -196,38 +193,6 @@ export default function StakingSection() {
     connectCoinbase();
     setShowWalletOptions(false);
   }, [connectCoinbase]);
-
-  // Switch to correct network (for staking we might need different network handling)
-  const switchNetwork = useCallback(async () => {
-    try {
-      // If the hook is configured for Pepe Unchained but we need Pepu Mainnet for staking,
-      // we might need custom network switching here
-      await switchToPepeUnchained(); // This might need to be adapted for PEPU_MAINNET_ID
-    } catch (error) {
-      console.error('Failed to switch network:', error);
-      // Fallback to manual network addition
-      try {
-        if (window.ethereum) {
-          await (window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }).request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: `0x${PEPU_MAINNET_ID.toString(16)}`,
-              chainName: 'Pepu Mainnet',
-              nativeCurrency: {
-                name: 'PEPU',
-                symbol: 'PEPU',
-                decimals: 18,
-              },
-              rpcUrls: ['https://rpc-pepu-v2-mainnet-0.t.conduit.xyz'],
-              blockExplorerUrls: ['https://explorer-pepu-v2-mainnet-0.t.conduit.xyz'],
-            }],
-          });
-        }
-      } catch {
-        console.error('Failed to add network');
-      }
-    }
-  }, [switchToPepeUnchained]);
 
   // Read contract data
   const readContractData = useCallback(async () => {
@@ -312,7 +277,7 @@ export default function StakingSection() {
         });
 
         try {
-          await switchNetwork();
+          await switchToPepeUnchained();
           // Wait for network switch to complete
           await new Promise(resolve => setTimeout(resolve, 3000));
         } catch {
@@ -365,7 +330,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, readContractData, isCorrectNetwork, switchNetwork]);
+  }, [address, getWalletClient, publicClient, readContractData, isCorrectNetwork, switchToPepeUnchained]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -501,7 +466,7 @@ export default function StakingSection() {
                 <span style={{ fontWeight: 'bold', fontSize: '18px' }}>Wrong Network</span>
               </div>
               <p style={{ textAlign: 'center' }}>Please switch to the correct network</p>
-              <MatrixButton onClick={switchNetwork} variant="warning">
+              <MatrixButton onClick={switchToPepeUnchained} variant="warning">
                 Switch Network
               </MatrixButton>
             </div>

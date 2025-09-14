@@ -27,7 +27,7 @@ import {
 } from "wagmi";
 import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
-import { useWalletConnect } from "./useWalletConnect";
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
