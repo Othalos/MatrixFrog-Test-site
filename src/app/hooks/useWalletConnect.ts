@@ -427,6 +427,7 @@ export const useWalletConnect = (): WalletConnectHook => {
     
     // Network Management
     switchToPepeUnchained,
+    handleNetworkSwitch,
     
     // Utility
     formatTokenBalance,
