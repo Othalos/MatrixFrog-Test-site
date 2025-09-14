@@ -64,7 +64,7 @@ interface WalletConnectHook {
 }
 
 export const useWalletConnect = (): WalletConnectHook => {
-  const { isConnected, address, chain } = useAccount();
+  const { isConnected, address, chain, connector } = useAccount();
   const { connect } = useConnect();
   const { disconnect: wagmiDisconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
@@ -87,6 +87,12 @@ export const useWalletConnect = (): WalletConnectHook => {
       enabled: isConnected && !!address && isCorrectNetwork,
     },
   });
+
+  // Check if current connector is Coinbase Wallet
+  const isCoinbaseWallet = useCallback(() => {
+    return connector?.id === 'coinbaseWalletSDK' || 
+           (typeof window !== 'undefined' && window.ethereum?.isCoinbaseWallet);
+  }, [connector]);
 
   // Format token balance helper
   const formatTokenBalance = useCallback((balance: bigint, decimals = 18): string => {
@@ -112,7 +118,49 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   const formattedBalance = balance ? formatTokenBalance(balance as bigint) : "0";
 
-  // Network Management
+  // Enhanced network addition specifically for Coinbase Wallet
+  const addPepeUnchainedNetworkCoinbase = async (): Promise<boolean> => {
+    try {
+      if (typeof window !== "undefined" && window.ethereum) {
+        // For Coinbase Wallet, we need to be more explicit about the network parameters
+        const networkParams = {
+          chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
+          chainName: "Pepe Unchained Mainnet",
+          rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
+          nativeCurrency: { 
+            name: "PEPU", 
+            symbol: "PEPU", 
+            decimals: 18 
+          },
+          blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
+        };
+
+        console.log("Adding network with params:", networkParams);
+
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [networkParams],
+        });
+
+        // Wait a bit longer for Coinbase Wallet to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try to switch to the network after adding it
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: networkParams.chainId }],
+        });
+
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("Failed to add/switch network for Coinbase:", error);
+      return false;
+    }
+  };
+
+  // Standard network addition for other wallets
   const addPepeUnchainedNetwork = async (): Promise<boolean> => {
     try {
       if (typeof window !== "undefined" && window.ethereum) {
@@ -143,6 +191,17 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   const switchToPepeUnchained = useCallback(async () => {
     try {
+      // For Coinbase Wallet, use special handling
+      if (isCoinbaseWallet()) {
+        console.log("Detected Coinbase Wallet, using enhanced network handling");
+        const success = await addPepeUnchainedNetworkCoinbase();
+        if (!success) {
+          throw new Error("Failed to add network via Coinbase Wallet method");
+        }
+        return;
+      }
+
+      // For other wallets, try wagmi switchChain first
       if (switchChain) {
         await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
       } else {
@@ -150,15 +209,54 @@ export const useWalletConnect = (): WalletConnectHook => {
       }
     } catch (error) {
       console.error("Failed to switch network:", error);
-      await addPepeUnchainedNetwork();
+      
+      // Fallback: try manual network addition
+      if (isCoinbaseWallet()) {
+        await addPepeUnchainedNetworkCoinbase();
+      } else {
+        await addPepeUnchainedNetwork();
+      }
     }
-  }, [switchChain]);
+  }, [switchChain, isCoinbaseWallet]);
 
-  // Connection Methods
+  // Enhanced MetaMask connection with provider selection
   const connectMetaMask = useCallback(async () => {
     setIsConnecting(true);
     try {
-      await connect({ connector: injected() });
+      // Force MetaMask provider selection
+      let provider = window.ethereum;
+      
+      // If multiple providers exist, select MetaMask specifically
+      if (window.ethereum?.providers?.length > 0) {
+        // Find MetaMask provider specifically
+        provider = window.ethereum.providers.find((p: any) => p.isMetaMask && !p.isCoinbaseWallet);
+        if (!provider) {
+          // Fallback to first MetaMask-like provider
+          provider = window.ethereum.providers.find((p: any) => p.isMetaMask);
+        }
+      } else if (window.ethereum?.isMetaMask && !window.ethereum?.isCoinbaseWallet) {
+        provider = window.ethereum;
+      }
+
+      if (!provider) {
+        throw new Error("MetaMask not found");
+      }
+
+      console.log("Using provider:", provider?.isMetaMask ? "MetaMask" : "Unknown", provider);
+
+      // Create injected connector with specific provider
+      const connector = injected({
+        target() {
+          return {
+            id: 'metaMask',
+            name: 'MetaMask',
+            provider: provider
+          };
+        }
+      });
+
+      await connect({ connector });
+      
       setTimeout(async () => {
         await switchToPepeUnchained();
         setIsConnecting(false);
@@ -207,20 +305,95 @@ export const useWalletConnect = (): WalletConnectHook => {
         })
       });
       
+      // Longer delay for Coinbase Wallet to establish connection
       setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, 1000);
+        try {
+          await switchToPepeUnchained();
+        } catch (error) {
+          console.error("Network switch failed after Coinbase connection:", error);
+          // Show user-friendly message that manual network addition might be needed
+        } finally {
+          setIsConnecting(false);
+        }
+      }, 3000); // Increased delay for Coinbase
     } catch (error) {
       console.error("Coinbase connection failed:", error);
       setIsConnecting(false);
     }
   }, [connect, switchToPepeUnchained]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    // Enhanced disconnect for Coinbase Wallet
+    if (isCoinbaseWallet()) {
+      try {
+        console.log("Attempting Coinbase Wallet deep disconnect...");
+        
+        // Method 1: Clear permissions
+        if (typeof window !== 'undefined' && window.ethereum?.isCoinbaseWallet) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_revokePermissions',
+              params: [{ eth_accounts: {} }]
+            });
+          } catch {}
+
+          // Method 2: Request new permissions (this clears old ones)
+          try {
+            await window.ethereum.request({
+              method: 'wallet_requestPermissions',
+              params: [{ eth_accounts: {} }]
+            });
+          } catch {}
+        }
+
+        // Method 3: Clear local storage entries that Coinbase might use
+        try {
+          if (typeof window !== 'undefined') {
+            const keysToRemove = [
+              'coinbase-wallet-session',
+              'coinbase-wallet-addresses',
+              'coinbase-wallet-permission',
+              '-walletlink:https://www.walletlink.org:version',
+              '-walletlink:https://www.walletlink.org:session:id',
+              '-walletlink:https://www.walletlink.org:session:secret',
+              '-walletlink:https://www.walletlink.org:session:linked'
+            ];
+            
+            keysToRemove.forEach(key => {
+              localStorage.removeItem(key);
+              sessionStorage.removeItem(key);
+            });
+
+            // Clear any other coinbase-related keys
+            Object.keys(localStorage).forEach(key => {
+              if (key.includes('coinbase') || key.includes('walletlink')) {
+                localStorage.removeItem(key);
+              }
+            });
+          }
+        } catch (error) {
+          console.log("Storage cleanup attempted");
+        }
+
+        // Method 4: Reset the provider if possible
+        try {
+          if (window.ethereum?.isCoinbaseWallet && window.ethereum.close) {
+            window.ethereum.close();
+          }
+        } catch {}
+
+      } catch (error) {
+        console.log("Enhanced Coinbase disconnect attempted");
+      }
+    }
+    
+    // Always call wagmi disconnect
     wagmiDisconnect();
     setIsConnecting(false);
-  }, [wagmiDisconnect]);
+
+    // Force a small delay to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }, [wagmiDisconnect, isCoinbaseWallet]);
 
   // Auto-save balance to localStorage
   useEffect(() => {

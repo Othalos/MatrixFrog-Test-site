@@ -6,80 +6,32 @@ import NavLink from "./NavLink";
 import "./NavbarStyles.css";
 import Image from "next/image";
 import MatrixGate from "../MatrixGate";
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useReadContract,
-  useSwitchChain,
-} from "wagmi";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
-import { formatUnits } from "viem";
-
-// Fixed contract address (removed extra 's')
-const MATRIX_FROG_CONTRACT = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
-
-// Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
-const PEPE_UNCHAINED_CHAIN_ID = 97741;
-
-const ABI = [
-  {
-    constant: true,
-    inputs: [{ name: "owner", type: "address" }],
-    name: "balanceOf",
-    outputs: [{ name: "balance", type: "uint256" }],
-    type: "function",
-  },
-  {
-    constant: true,
-    inputs: [],
-    name: "decimals",
-    outputs: [{ name: "", type: "uint8" }],
-    type: "function",
-  },
-];
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 export default function Navbar() {
   const [isMobile, setIsMobile] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletConnected, setWalletConnected] = useState(false);
-  const [tokenBalance, setTokenBalance] = useState<string>("0");
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const { connect } = useConnect();
-  const { isConnected, address, chain } = useAccount();
-  const [connected] = useState(false);
-  const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
   const [isHoveringAddress, setIsHoveringAddress] = useState(false);
+  const [connected] = useState(false);
 
-  // Check if we're on the correct network
-  const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
-
-  // Read token balance
-  const { data: balanceData } = useReadContract({
-    address: MATRIX_FROG_CONTRACT,
-    abi: ABI,
-    functionName: "balanceOf",
-    args: [address],
-    query: {
-      enabled: !!address && isCorrectNetwork,
-    },
-  });
-
-  const { data: decimalsData } = useReadContract({
-    address: MATRIX_FROG_CONTRACT,
-    abi: ABI,
-    functionName: "decimals",
-    query: {
-      enabled: isCorrectNetwork,
-    },
-  });
+  // Use centralized wallet hook
+  const {
+    isConnected,
+    address,
+    isCorrectNetwork,
+    isConnecting,
+    mfgBalance: tokenBalance,
+    connectMetaMask,
+    connectWalletConnect,
+    connectCoinbase,
+    disconnect,
+    switchToPepeUnchained,
+  } = useWalletConnect();
 
   // Aktuelle Pfad-Information abrufen
   const pathname = usePathname();
   const isHomePage = pathname === "/";
-  window.localStorage.setItem("Mat_bal", tokenBalance);
 
   // Verbesserte Funktion zur Erstellung korrekter Links
   const getNavLink = (anchor: string) => {
@@ -87,53 +39,6 @@ export default function Navbar() {
       return `#${anchor}`;
     } else {
       return `/#${anchor}`;
-    }
-  };
-
-  // Function to add Pepe Unchained network to wallet
-  const addPepeUnchainedNetwork = async () => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`, // Convert to hex
-              chainName: "Pepe Unchained Mainnet",
-              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-              nativeCurrency: {
-                name: "PEPE",
-                symbol: "PEPU",
-                decimals: 18,
-              },
-              blockExplorerUrls: [
-                "https://explorer-pepu-v2-mainnet-0.t.conduit.xyz",
-              ],
-            },
-          ],
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to add network:", error);
-      return false;
-    }
-  };
-
-  // Function to switch to Pepe Unchained network
-  const switchToPepeUnchained = async () => {
-    try {
-      if (switchChain) {
-        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-      } else {
-        // Fallback for wallets that don't support useSwitchChain
-        await addPepeUnchainedNetwork();
-      }
-    } catch (error) {
-      console.error("Failed to switch network:", error);
-      // If switching fails, try to add the network
-      await addPepeUnchainedNetwork();
     }
   };
 
@@ -157,123 +62,16 @@ export default function Navbar() {
     ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}`
     : "";
 
-  // Enhanced wallet connection handlers
-  const connectMetaMask = async () => {
-    setIsConnecting(true);
-    try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      if (isMobileDevice && typeof window !== 'undefined' && window.ethereum) {
-        await connect({ connector: injected() });
-      } else {
-        await connect({ connector: injected() });
-      }
-
-      setWalletConnected(false);
-
-      // Wait a bit for connection to establish, then switch network
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, 1000);
-    } catch (error) {
-      console.error("MetaMask connection failed:", error);
-      setIsConnecting(false);
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        alert("Please install MetaMask");
-      }
-    }
-  };
-
-  const connectWalletConnect = async () => {
-    setIsConnecting(true);
-    try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      await connect({
-        connector: walletConnect({
-          qrModalOptions: {
-            themeMode: 'dark',
-            themeVariables: {
-              '--wcm-z-index': '9999',
-            }
-          },
-          projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
-          metadata: {
-            name: 'MatrixFrog',
-            description: 'MatrixFrog Voting Platform',
-            url: 'https://matrixfrog.one',
-            icons: ['https://matrixfrog.one/favicon.ico']
-          }
-        }),
-      });
-      setWalletConnected(false);
-
-      const networkSwitchDelay = isMobileDevice ? 2000 : 1000;
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, networkSwitchDelay);
-    } catch (error) {
-      console.error("WalletConnect connection failed:", error);
-      setIsConnecting(false);
-      if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-        alert("WalletConnect connection failed. Please try again.");
-      }
-    }
-  };
-
-  const connectCoinbase = async () => {
-    setIsConnecting(true);
-    try {
-      await connect({ connector: coinbaseWallet() });
-      setWalletConnected(false);
-
-      // Increase delay for Coinbase Wallet network switching
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, 2000); // Increased from 1000ms to 2000ms
-    } catch (error) {
-      console.error("Coinbase connection failed:", error);
-      setIsConnecting(false);
-    }
-  };
-
+  // Wallet disconnect handler
   const handleDisconnect = () => {
     disconnect();
     setWalletConnected(false);
-    setTokenBalance("0");
   };
 
   // Handle network switch button click
   const handleNetworkSwitch = async () => {
     await switchToPepeUnchained();
   };
-
-  // Update token balance when address or balance changes
-  useEffect(() => {
-    const updateBalance = async () => {
-      if (balanceData && decimalsData && isCorrectNetwork) {
-        const balance = formatUnits(
-          BigInt(balanceData as string),
-          Number(decimalsData)
-        );
-        // Parse as float and format with proper precision
-        const balanceNumber = parseFloat(balance);
-        setTokenBalance(
-          balanceNumber.toLocaleString("en-US", {
-            maximumFractionDigits: 0,
-            minimumFractionDigits: 0,
-          })
-        );
-      } else {
-        setTokenBalance("0");
-      }
-    };
-
-    updateBalance();
-  }, [balanceData, decimalsData, isCorrectNetwork]);
 
   // Handle Construct link click - WALLET WALL ENTFERNT
   const handleConstructClick = (e: React.MouseEvent) => {
