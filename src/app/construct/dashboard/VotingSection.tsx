@@ -264,9 +264,9 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             {votingConfig.requiredAmount} {votingConfig.tokenDisplayName} required per vote
                         </div>
                     </div>
-                )}/* PTX Token Balance Display */}
-                {isConnected && isCorrectNetwork && (
-                    <div
+                )}
+
+                <div
                         style={{
                             textAlign: "center",
                             margin: "16px",
