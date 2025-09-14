@@ -22,19 +22,12 @@ import { useRouter } from "next/navigation";
 import { formatUnits, parseEther } from "viem";
 import {
   useReadContract,
-  useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
-  useConnect,
-  useDisconnect,
-  useSwitchChain,
 } from "wagmi";
-import { injected, walletConnect, coinbaseWallet } from "wagmi/connectors";
 import VotingSection from "./VotingSection";
 import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
-
-// Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
-const PEPE_UNCHAINED_CHAIN_ID = 97741;
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 
@@ -69,31 +62,6 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   });
-};
-
-// Custom hook for MFG balance
-const useMFGBalance = () => {
-  const { address, isConnected } = useAccount();
-  const {
-    data: balance,
-    error,
-    isLoading,
-    refetch,
-  } = useReadContract({
-    address: MFG_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    account: isConnected && address ? address : undefined,
-  });
-  const formattedBalance = balance ? formatTokenBalance(balance as bigint, 18) : "0";
-  return {
-    balance: formattedBalance,
-    rawBalance: balance,
-    isLoading,
-    error,
-    refetch,
-  };
 };
 
 // Custom hook for voting wallet balances
@@ -196,7 +164,6 @@ export default function MatrixConstruct() {
   const [voteSuccess, setVoteSuccess] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
 
   return (
     <ClientOnly fallback={
@@ -231,8 +198,6 @@ export default function MatrixConstruct() {
         setVoteError={setVoteError}
         isHydrated={isHydrated}
         setIsHydrated={setIsHydrated}
-        isConnecting={isConnecting}
-        setIsConnecting={setIsConnecting}
       />
     </ClientOnly>
   );
@@ -257,8 +222,6 @@ function MatrixConstructContent({
   setVoteError,
   isHydrated,
   setIsHydrated,
-  isConnecting,
-  setIsConnecting,
 }: {
   selectedEpisode: string;
   setSelectedEpisode: (value: string) => void;
@@ -278,26 +241,20 @@ function MatrixConstructContent({
   setVoteError: (value: string | null) => void;
   isHydrated: boolean;
   setIsHydrated: (value: boolean) => void;
-  isConnecting: boolean;
-  setIsConnecting: (value: boolean) => void;
 }) {
-  const { isConnected, address, chain } = useAccount();
-  const router = useRouter();
-  const { connect } = useConnect();
-  const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  // Use centralized wallet hook
+  const {
+    isConnected,
+    address,
+    rawMfgBalance,
+    refetchBalance,
+  } = useWalletConnect();
 
-  const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
+  const router = useRouter();
 
   useEffect(() => {
     setIsHydrated(true);
   }, [setIsHydrated]);
-
-  const {
-    balance: mfgBalance,
-    rawBalance: rawMfgBalance,
-    refetch: refetchBalance,
-  } = useMFGBalance();
 
   const {
     redPillVotes,
@@ -316,104 +273,6 @@ function MatrixConstructContent({
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
-
-  const addPepeUnchainedNetwork = async () => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
-              chainName: "Pepe Unchained Mainnet",
-              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-              nativeCurrency: { name: "PEPE", symbol: "PEPU", decimals: 18 },
-              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
-            },
-          ],
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to add network:", error);
-      return false;
-    }
-  };
-
-  const switchToPepeUnchained = async () => {
-    try {
-      if (switchChain) {
-        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-      } else {
-        await addPepeUnchainedNetwork();
-      }
-    } catch (error) {
-      console.error("Failed to switch network:", error);
-      await addPepeUnchainedNetwork();
-    }
-  };
-
-  const connectMetaMask = async () => {
-    setIsConnecting(true);
-    try {
-      await connect({ connector: injected() });
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, 1000);
-    } catch (error) {
-      console.error("MetaMask connection failed:", error);
-      setIsConnecting(false);
-    }
-  };
-
-  const connectWalletConnect = async () => {
-    setIsConnecting(true);
-    try {
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      await connect({
-        connector: walletConnect({
-          projectId: "efce48a19d0c7b8b8da21be2c1c8c271",
-          metadata: { name: 'MatrixFrog', description: 'MatrixFrog Voting Platform', url: 'https://matrixfrog.one', icons: ['https://matrixfrog.one/favicon.ico'] }
-        }),
-      });
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, isMobileDevice ? 2000 : 1000);
-    } catch (error) {
-      console.error("WalletConnect connection failed:", error);
-      setIsConnecting(false);
-    }
-  };
-
-  const connectCoinbase = async () => {
-    setIsConnecting(true);
-    try {
-      await connect({ connector: coinbaseWallet() });
-      setTimeout(async () => {
-        await switchToPepeUnchained();
-        setIsConnecting(false);
-      }, 1000);
-    } catch (error) {
-      console.error("Coinbase connection failed:", error);
-      setIsConnecting(false);
-    }
-  };
-
-  const handleDisconnect = () => {
-    disconnect();
-    setVoteError(null);
-  };
-
-  useEffect(() => {
-     if (typeof window !== 'undefined') {
-      if (mfgBalance && isConnected) {
-        window.localStorage.setItem("Mat_bal", mfgBalance);
-      }
-    }
-  }, [mfgBalance, isConnected]);
 
   useEffect(() => {
     if (isConfirmed && hash) {
@@ -715,15 +574,20 @@ function MatrixConstructContent({
                 }
                 return (
                   <VotingSection
-                    episode={episode} selected={selected} setSelected={setSelected}
-                    isVoting={isVoting} voteSuccess={voteSuccess} voteError={voteError}
-                    isHydrated={isHydrated} isConnected={isConnected} isPending={isPending}
-                    isConfirming={isConfirming} onVote={handleVote} redPillVotes={redPillVotes}
-                    greenPillVotes={greenPillVotes} totalVotes={totalVotes} votingStatsLoading={votingStatsLoading}
-                    isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
-                    connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
-                    connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
-                    switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
+                    episode={episode}
+                    selected={selected}
+                    setSelected={setSelected}
+                    isVoting={isVoting}
+                    voteSuccess={voteSuccess}
+                    voteError={voteError}
+                    isHydrated={isHydrated}
+                    isPending={isPending}
+                    isConfirming={isConfirming}
+                    onVote={handleVote}
+                    redPillVotes={redPillVotes}
+                    greenPillVotes={greenPillVotes}
+                    totalVotes={totalVotes}
+                    votingStatsLoading={votingStatsLoading}
                   />
                 );
               })()}

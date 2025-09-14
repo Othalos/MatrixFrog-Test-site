@@ -14,7 +14,7 @@ interface MobileMenuProps {
   formattedAddress: string;
   tokenBalance: string;
   isCorrectNetwork: boolean;
-  handleNetworkSwitch: () => void;
+  handleNetworkSwitch: () => Promise<void>; // ✅ Geändert zu Promise<void>
 }
 
 const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -155,7 +155,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 </button>
                 {!isCorrectNetwork && (
                   <button
-                    onClick={handleNetworkSwitch}
+                    onClick={() => handleNetworkSwitch()} // ✅ Explicit function call
                     style={{
                       padding: "4px 8px",
                       fontSize: "0.7rem",

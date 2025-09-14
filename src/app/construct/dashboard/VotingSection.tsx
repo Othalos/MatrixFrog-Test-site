@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { type EpisodeConfig, getVotingCountdown } from "./episodeConfig";
+import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 const winnerAnimationStyles = `
 @keyframes winnerGlow {
@@ -50,7 +51,6 @@ interface VotingSectionProps {
     voteSuccess: boolean;
     voteError: string | null;
     isHydrated: boolean;
-    isConnected: boolean;
     isPending: boolean;
     isConfirming: boolean;
     onVote: () => void;
@@ -58,16 +58,6 @@ interface VotingSectionProps {
     greenPillVotes: number;
     totalVotes: number;
     votingStatsLoading: boolean;
-    // Neue Wallet Connect Props
-    isConnecting?: boolean;
-    isCorrectNetwork?: boolean;
-    connectMetaMask?: () => void;
-    connectWalletConnect?: () => void;
-    connectCoinbase?: () => void;
-    handleDisconnect?: () => void;
-    switchToPepeUnchained?: () => void;
-    // MFG Token Balance für Token-Balance-Anzeige
-    mfgBalance?: string;
 }
 
 const VotingSection: React.FC<VotingSectionProps> = ({
@@ -78,7 +68,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     voteSuccess,
     voteError,
     isHydrated,
-    isConnected,
     isPending,
     isConfirming,
     onVote,
@@ -86,16 +75,20 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     greenPillVotes,
     totalVotes,
     votingStatsLoading,
-    // Wallet Connect Props
-    isConnecting = false,
-    isCorrectNetwork = true,
-    connectMetaMask,
-    connectWalletConnect,
-    connectCoinbase,
-    handleDisconnect,
-    switchToPepeUnchained,
-    mfgBalance = "0",
 }) => {
+    // Use centralized wallet hook
+    const {
+        isConnected,
+        isCorrectNetwork,
+        isConnecting,
+        mfgBalance,
+        connectMetaMask,
+        connectWalletConnect,
+        connectCoinbase,
+        disconnect,
+        switchToPepeUnchained,
+    } = useWalletConnect();
+
     const [showWalletOptions, setShowWalletOptions] = useState(false);
     
     const isVotingEnabled = episode.status === 'active' && isHydrated && isConnected;
@@ -116,13 +109,13 @@ const VotingSection: React.FC<VotingSectionProps> = ({
         
         switch (walletType) {
             case 'metamask':
-                connectMetaMask?.();
+                connectMetaMask();
                 break;
             case 'walletconnect':
-                connectWalletConnect?.();
+                connectWalletConnect();
                 break;
             case 'coinbase':
-                connectCoinbase?.();
+                connectCoinbase();
                 break;
         }
     };
@@ -473,7 +466,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 minWidth: "300px",
                                 fontFamily: "monospace",
                             }}
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                         >
                             <h3 style={{ color: "#4ade80", marginBottom: "16px", textAlign: "center" }}>
                                 SELECT WALLET
@@ -618,24 +611,22 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         }}
                     >
                         Wallet Connected
-                        {handleDisconnect && (
-                            <button
-                                onClick={handleDisconnect}
-                                style={{
-                                    marginLeft: "10px",
-                                    backgroundColor: "transparent",
-                                    border: "1px solid #dc2626",
-                                    color: "#dc2626",
-                                    padding: "2px 8px",
-                                    borderRadius: "4px",
-                                    cursor: "pointer",
-                                    fontSize: "0.6rem",
-                                    fontFamily: "monospace",
-                                }}
-                            >
-                                Disconnect
-                            </button>
-                        )}
+                        <button
+                            onClick={disconnect}
+                            style={{
+                                marginLeft: "10px",
+                                backgroundColor: "transparent",
+                                border: "1px solid #dc2626",
+                                color: "#dc2626",
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontSize: "0.6rem",
+                                fontFamily: "monospace",
+                            }}
+                        >
+                            Disconnect
+                        </button>
                     </div>
                 )}
             </Card>
