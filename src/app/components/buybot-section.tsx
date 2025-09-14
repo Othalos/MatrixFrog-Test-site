@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 export default function BuyBotSection() {
   // State for the active tab
-  const [activeTab, setActiveTab] = useState<"what" | "how">("what");
+  const [activeTab, setActiveTab] = useState<"what" | "how" | "whitepaper">("what");
 
   // Contract Info
   const contractAddress = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
@@ -78,6 +78,75 @@ export default function BuyBotSection() {
           If you&apos;re new to Pepe Unchained and need to acquire and bridge it first, you can find detailed instructions on their website:
           <a href="https://pepeunchained.com" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">pepeunchained.com</a>.
         </p>
+      </div>
+    ),
+    whitepaper: (
+      <div className="terminal-text-container max-h-96 overflow-y-auto">
+        <h3 className="text-matrix-green font-bold text-xl mb-4">Peptrix (PTX) Whitepaper</h3>
+        
+        <div className="mb-6">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Abstract</h4>
+          <p className="text-white leading-relaxed mb-4">
+            Peptrix (PTX) is an ERC-20 utility token designed to empower the MatrixFrog community. Its primary function is to serve as the exclusive voting mechanism for determining the creative direction of future Peptrix video episodes. By introducing PTX, we are creating a dedicated, sustainable governance model that rewards long-term engagement and alleviates the need for community members to spend their core MatrixFrog (MFG) holdings to participate in the project&apos;s evolution.
+          </p>
+        </div>
+
+        <div className="mb-6">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Token Details</h4>
+          <div className="text-white space-y-2">
+            <p><span className="text-matrix-green font-semibold">Token Name:</span> Peptrix</p>
+            <p><span className="text-matrix-green font-semibold">Ticker:</span> $PTX</p>
+            <p><span className="text-matrix-green font-semibold">Contract Address:</span> <code className="text-sm">{peptrixContractAddress}</code></p>
+            <p><span className="text-matrix-green font-semibold">Total Supply:</span> 200,000,000 PTX</p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Core Utility: Decentralized Storytelling</h4>
+          <p className="text-white leading-relaxed mb-3">
+            The central purpose of the Peptrix token is to fuel a community-driven creative process. The MatrixFrog ecosystem is built around an unfolding saga, and PTX gives the community direct control over its narrative.
+          </p>
+          <div className="text-white space-y-2">
+            <p><span className="text-matrix-green">•</span> <b>Voting Power:</b> PTX is the sole token used in our voting competitions. Holders can cast votes to decide on key plot points, character arcs, and the overall direction of upcoming Peptrix video episodes.</p>
+            <p><span className="text-matrix-green">•</span> <b>Preserving MFG:</b> This model allows MFG holders to keep their primary tokens while still actively participating in governance. Instead of spending MFG, they can stake it to earn PTX, creating a symbiotic relationship between the two assets.</p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Token Acquisition</h4>
+          <p className="text-white leading-relaxed mb-3">Community members have two primary methods for acquiring PTX:</p>
+          <div className="text-white space-y-2">
+            <p><span className="text-matrix-green">1.</span> <b>Swapping:</b> Users can directly swap their MatrixFrog (MFG) tokens for Peptrix (PTX) through our designated liquidity pool.</p>
+            <p><span className="text-matrix-green">2.</span> <b>Staking:</b> Users can stake their MFG tokens in &quot;The Construct&quot; on the MatrixFrog.one website to earn PTX as a reward, incentivizing long-term holding and participation.</p>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Tokenomics Distribution</h4>
+          <div className="text-white space-y-3">
+            <div>
+              <p className="font-semibold"><span className="text-matrix-green">•</span> Staking Rewards (80%): 160,000,000 PTX</p>
+              <div className="ml-4 space-y-1 text-sm">
+                <p>- Initial Staking Pool (40%): 80,000,000 PTX for 1-year staking contract</p>
+                <p>- Future Pools & Extensions (40%): 80,000,000 PTX held in reserve</p>
+              </div>
+            </div>
+            <p><span className="text-matrix-green">•</span> <b>Initial Liquidity (10%):</b> 20,000,000 PTX paired with 80 million MFG, locked for 1 year</p>
+            <p><span className="text-matrix-green">•</span> <b>Team & Ecosystem Lock (5%):</b> 10,000,000 PTX locked for 1 year</p>
+            <p><span className="text-matrix-green">•</span> <b>Ecosystem Fund (5%):</b> 10,000,000 PTX for operations, giveaways, and growth</p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <h4 className="text-matrix-green font-semibold text-lg mb-2">Future Vision</h4>
+          <p className="text-white leading-relaxed">
+            Our journey is just beginning. We plan to host multiple voting competitions and community events along the way. These initiatives are designed to continuously engage the community, drive demand for both PTX and MFG, and ensure the healthy, long-term growth of the entire ecosystem.
+          </p>
+        </div>
+
+        <div className="text-xs text-gray-400 mt-6 p-3 border-t border-matrix-green/30">
+          <p><b>Disclaimer:</b> This whitepaper is for informational purposes only and does not constitute an offer to sell, a solicitation of an offer to buy, or a recommendation for any security. The project is provided as-is, and the team makes no guarantees regarding the future value or performance of the PTX token.</p>
+        </div>
       </div>
     ),
   };
