@@ -36,17 +36,7 @@ import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVoti
 // Pepe Unchained Chain ID 97741 Pepe Unchained Testnet ID 97740
 const PEPE_UNCHAINED_CHAIN_ID = 97741;
 
-const PTX_TOKEN_ADDRESS = "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2";
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
-
-// Configuration for voting token (can be switched between PTX and MFG)
-const VOTING_CONFIG = {
-  useToken: 'PTX', // 'PTX' or 'MFG'
-  tokenAddress: PTX_TOKEN_ADDRESS,
-  requiredAmount: "1000", // Amount required for voting
-  tokenName: "PTX",
-  tokenDisplayName: "Peptrix"
-};
 
 const ERC20_ABI = [
   {
@@ -79,31 +69,6 @@ const formatTokenBalance = (balance: bigint, decimals = 18) => {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   });
-};
-
-// Custom hook for PTX balance
-const usePTXBalance = () => {
-  const { address, isConnected } = useAccount();
-  const {
-    data: balance,
-    error,
-    isLoading,
-    refetch,
-  } = useReadContract({
-    address: PTX_TOKEN_ADDRESS,
-    abi: ERC20_ABI,
-    functionName: "balanceOf",
-    args: address ? [address] : undefined,
-    account: isConnected && address ? address : undefined,
-  });
-  const formattedBalance = balance ? formatTokenBalance(balance as bigint, 18) : "0";
-  return {
-    balance: formattedBalance,
-    rawBalance: balance,
-    isLoading,
-    error,
-    refetch,
-  };
 };
 
 // Custom hook for MFG balance
@@ -142,7 +107,7 @@ const useVotingWalletBalances = (episodeId: string) => {
     isLoading: redPillLoading,
     refetch: refetchRedPill,
   } = useReadContract({
-    address: VOTING_CONFIG.tokenAddress,
+    address: MFG_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [redWalletAddress],
@@ -153,7 +118,7 @@ const useVotingWalletBalances = (episodeId: string) => {
     isLoading: greenPillLoading,
     refetch: refetchGreenPill,
   } = useReadContract({
-    address: VOTING_CONFIG.tokenAddress,
+    address: MFG_TOKEN_ADDRESS,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [greenWalletAddress],
@@ -166,9 +131,8 @@ const useVotingWalletBalances = (episodeId: string) => {
     };
   }
 
-  const voteDivisor = parseInt(VOTING_CONFIG.requiredAmount);
-  const currentRedVotes = redPillBalance ? Number(formatUnits(redPillBalance as bigint, 18)) / voteDivisor : 0;
-  const currentGreenVotes = greenPillBalance ? Number(formatUnits(greenPillBalance as bigint, 18)) / voteDivisor : 0;
+  const currentRedVotes = redPillBalance ? Number(formatUnits(redPillBalance as bigint, 18)) / 25000 : 0;
+  const currentGreenVotes = greenPillBalance ? Number(formatUnits(greenPillBalance as bigint, 18)) / 25000 : 0;
   const currentTotalVotes = currentRedVotes + currentGreenVotes;
 
   if (episode.status === 'completed') {
@@ -330,21 +294,10 @@ function MatrixConstructContent({
   }, [setIsHydrated]);
 
   const {
-    balance: ptxBalance,
-    rawBalance: rawPtxBalance,
-    refetch: refetchPtxBalance,
-  } = usePTXBalance();
-
-  const {
     balance: mfgBalance,
     rawBalance: rawMfgBalance,
-    refetch: refetchMfgBalance,
+    refetch: refetchBalance,
   } = useMFGBalance();
-
-  // Use the configured voting token for balance checks
-  const votingBalance = VOTING_CONFIG.useToken === 'PTX' ? ptxBalance : mfgBalance;
-  const rawVotingBalance = VOTING_CONFIG.useToken === 'PTX' ? rawPtxBalance : rawMfgBalance;
-  const refetchVotingBalance = VOTING_CONFIG.useToken === 'PTX' ? refetchPtxBalance : refetchMfgBalance;
 
   const {
     redPillVotes,
@@ -456,25 +409,22 @@ function MatrixConstructContent({
 
   useEffect(() => {
      if (typeof window !== 'undefined') {
-      if (ptxBalance && isConnected) {
-        window.localStorage.setItem("Ptx_bal", ptxBalance);
-      }
       if (mfgBalance && isConnected) {
-        window.localStorage.setItem("Mfg_bal", mfgBalance);
+        window.localStorage.setItem("Mat_bal", mfgBalance);
       }
     }
-  }, [ptxBalance, mfgBalance, isConnected]);
+  }, [mfgBalance, isConnected]);
 
   useEffect(() => {
     if (isConfirmed && hash) {
       setVoteSuccess(true);
       setIsVoting(false);
       setVoteError(null);
-      refetchVotingBalance();
+      refetchBalance();
       refetchVotingStats();
       setTimeout(() => { setVoteSuccess(false); }, 5000);
     }
-  }, [isConfirmed, hash, refetchVotingBalance, refetchVotingStats, setVoteSuccess, setIsVoting, setVoteError]);
+  }, [isConfirmed, hash, refetchBalance, refetchVotingStats, setVoteSuccess, setIsVoting, setVoteError]);
 
   useEffect(() => {
     if (writeError) {
@@ -529,9 +479,9 @@ function MatrixConstructContent({
       setVoteError("Voting is not active for this episode");
       return;
     }
-    const requiredAmount = parseEther(VOTING_CONFIG.requiredAmount);
-    if (!rawVotingBalance || (rawVotingBalance as bigint) < requiredAmount) {
-      setVoteError(`Insufficient ${VOTING_CONFIG.tokenName} balance. You need at least ${VOTING_CONFIG.requiredAmount} ${VOTING_CONFIG.tokenName} to vote.`);
+    const requiredAmount = parseEther("25000");
+    if (!rawMfgBalance || (rawMfgBalance as bigint) < requiredAmount) {
+      setVoteError("Insufficient MFG balance. You need at least 25000 MFG to vote.");
       return;
     }
     try {
@@ -540,7 +490,7 @@ function MatrixConstructContent({
       setVoteSuccess(false);
       const receiverAddress = selected === "red" ? episode.redWalletAddress : episode.greenWalletAddress;
       await writeContract({
-        address: VOTING_CONFIG.tokenAddress,
+        address: MFG_TOKEN_ADDRESS,
         abi: ERC20_ABI,
         functionName: "transfer",
         args: [receiverAddress, requiredAmount],
@@ -773,8 +723,7 @@ function MatrixConstructContent({
                     isConnecting={isConnecting} isCorrectNetwork={isCorrectNetwork}
                     connectMetaMask={connectMetaMask} connectWalletConnect={connectWalletConnect}
                     connectCoinbase={connectCoinbase} handleDisconnect={handleDisconnect}
-                    switchToPepeUnchained={switchToPepeUnchained} ptxBalance={ptxBalance} mfgBalance={mfgBalance}
-                    votingConfig={VOTING_CONFIG}
+                    switchToPepeUnchained={switchToPepeUnchained} mfgBalance={mfgBalance}
                   />
                 );
               })()}
