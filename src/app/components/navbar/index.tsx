@@ -68,11 +68,6 @@ export default function Navbar() {
     setWalletConnected(false);
   };
 
-  // Handle network switch button click
-  const handleNetworkSwitch = async () => {
-    await switchToPepeUnchained();
-  };
-
   // Handle Construct link click - WALLET WALL ENTFERNT
   const handleConstructClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -252,7 +247,7 @@ export default function Navbar() {
                               }`}
                             onClick={
                               !isCorrectNetwork
-                                ? handleNetworkSwitch
+                                ? switchToPepeUnchained
                                 : undefined
                             }
                             title={
@@ -336,7 +331,7 @@ export default function Navbar() {
                           </span>
                         </button>
                         <button
-                          onClick={connectCoinbase}
+                          onClick={connectWalletConnect}
                           disabled={isConnecting}
                           style={{ gap: "10px", padding: "10px" }}
                           className="text-[var(--matrix-green)] hover:bg-[var(--matrix-green)]/20 items-center flex cursor-pointer disabled:opacity-50"
@@ -422,7 +417,7 @@ export default function Navbar() {
               formattedAddress={formattedAddress}
               tokenBalance={tokenBalance}
               isCorrectNetwork={isCorrectNetwork}
-              handleNetworkSwitch={handleNetworkSwitch}
+              handleNetworkSwitch={switchToPepeUnchained}
             />
           )}
         </div>
