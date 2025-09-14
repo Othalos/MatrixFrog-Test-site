@@ -3,7 +3,7 @@
 import { ClientOnly } from "../../../components/ClientOnly";
 import StakingSection from "./StakingSection";
 import { Progress } from "@/app/components/ui/progress";
-import { BarChart3, FileVideo, User, Database } from "lucide-react";
+import { BarChart3, FileVideo, User, Database, Gamepad2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -152,6 +152,67 @@ const getVotingBalances = async (episodeId: string) => {
     console.error('Failed to get voting balances:', error);
     return { redVotes: 0, greenVotes: 0 };
   }
+};
+
+// Games Section Component
+const GamesSection = () => {
+  return (
+    <div style={{ opacity: 0.6 }}>
+      <Card style={{ backgroundColor: "black", border: "1px solid rgba(100,100,100,0.3)", marginBottom: "24px" }}>
+        <CardHeader>
+          <CardTitle style={{ color: "#6b7280", fontFamily: "monospace" }}>
+            MATRIX GAMES
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+            <Gamepad2 style={{ width: "48px", height: "48px", color: "#6b7280", margin: "0 auto 16px" }} />
+            <h3 style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "1.2rem", marginBottom: "12px" }}>
+              COMING SOON
+            </h3>
+            <p style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "0.9rem", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto" }}>
+              Enter the Matrix through immersive gaming experiences. Compete with other community members, earn rewards, and shape the narrative through gameplay.
+            </p>
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🎮 Story-driven Adventures
+              </div>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🏆 Token-based Rewards
+              </div>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🎯 Community Competitions
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default function MatrixConstruct() {
@@ -368,6 +429,15 @@ function MatrixConstructContent({
     { icon: User, label: "The Peptrix Saga", subtitle: "Interactive story", href: "#", active: activeSection === "saga", onClick: () => setActiveSection("saga") },
     { icon: FileVideo, label: "Bloopers", subtitle: "Explore scene", href: "#", active: activeSection === "bloopers", onClick: () => setActiveSection("bloopers") },
     { icon: Database, label: "Staking", subtitle: "Stake MFG, earn PTX", href: "#", active: activeSection === "staking", onClick: () => setActiveSection("staking") },
+    { 
+      icon: Gamepad2, 
+      label: "Games", 
+      subtitle: "Coming soon", 
+      href: "#", 
+      active: activeSection === "games", 
+      onClick: () => setActiveSection("games"),
+      disabled: true
+    },
   ];
 
   const blooperVideos = [
@@ -472,8 +542,10 @@ function MatrixConstructContent({
               <div
                 key={index}
                 onClick={() => {
-                  if (item.onClick) item.onClick();
-                  if (item.href !== "#") router.push(item.href);
+                  if (!item.disabled) {
+                    if (item.onClick) item.onClick();
+                    if (item.href !== "#") router.push(item.href);
+                  }
                 }}
                 style={{
                   display: "flex",
@@ -483,20 +555,40 @@ function MatrixConstructContent({
                   borderRadius: "8px",
                   border: item.active
                     ? "1px solid #22c55e"
-                    : "1px solid rgba(34,197,94,0.3)",
+                    : item.disabled
+                      ? "1px solid rgba(100,100,100,0.3)"
+                      : "1px solid rgba(34,197,94,0.3)",
                   backgroundColor: item.active
                     ? "rgba(34,197,94,0.1)"
                     : "transparent",
-                  cursor: "pointer",
+                  cursor: item.disabled ? "not-allowed" : "pointer",
                   transition: "all 0.3s ease",
+                  opacity: item.disabled ? 0.5 : 1,
                 }}
               >
-                <item.icon style={{ width: "16px", height: "16px" }} />
+                <item.icon 
+                  style={{ 
+                    width: "16px", 
+                    height: "16px",
+                    color: item.disabled ? "#6b7280" : undefined
+                  }} 
+                />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "0.875rem", fontWeight: "500" }}>
+                  <div 
+                    style={{ 
+                      fontSize: "0.875rem", 
+                      fontWeight: "500",
+                      color: item.disabled ? "#6b7280" : undefined
+                    }}
+                  >
                     {item.label}
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#16a34a" }}>
+                  <div 
+                    style={{ 
+                      fontSize: "0.75rem", 
+                      color: item.disabled ? "#6b7280" : "#16a34a" 
+                    }}
+                  >
                     {item.subtitle}
                   </div>
                 </div>
@@ -513,10 +605,16 @@ function MatrixConstructContent({
                   <CardContent style={{ padding: "32px", textAlign: "center" }}>
                     <div className="video-container" style={{ width: "100%", margin: "0 auto", border: "2px solid #22c55e", borderRadius: "8px", overflow: "hidden" }}>
                       <iframe
-                        key={currentSagaEpisode?.id} width="100%" height="315" src={currentSagaEpisode?.videoUrl}
-                        title="YouTube video player" frameBorder="0"
+                        key={currentSagaEpisode?.id} 
+                        width="100%" 
+                        height="315" 
+                        src={currentSagaEpisode?.videoUrl}
+                        title="YouTube video player" 
+                        frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen style={{ display: "block" }} onError={handleVideoError}
+                        allowFullScreen 
+                        style={{ display: "block" }} 
+                        onError={handleVideoError}
                       ></iframe>
                       {videoError && <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "8px" }}>{videoError}</p>}
                     </div>
@@ -599,11 +697,16 @@ function MatrixConstructContent({
                   <CardContent style={{ padding: "32px", textAlign: "center" }}>
                     <div className="video-container" style={{ width: "100%", margin: "0 auto", border: "2px solid #22c55e", borderRadius: "8px", overflow: "hidden" }}>
                       <iframe
-                        key={selectedBlooper} width="100%" height="315"
+                        key={selectedBlooper}
+                        width="100%" 
+                        height="315"
                         src={blooperVideos.find((b) => b.value === selectedBlooper)?.src}
-                        title="YouTube video player" frameBorder="0"
+                        title="YouTube video player" 
+                        frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        allowFullScreen style={{ display: "block" }} onError={handleVideoError}
+                        allowFullScreen 
+                        style={{ display: "block" }} 
+                        onError={handleVideoError}
                       ></iframe>
                       {videoError && <p style={{ color: "#dc2626", fontSize: "0.875rem", marginTop: "8px" }}>{videoError}</p>}
                     </div>
@@ -625,6 +728,8 @@ function MatrixConstructContent({
                 </Select>
               </div>
             </>
+          ) : activeSection === "games" ? (
+            <GamesSection />
           ) : (
             <StakingSection/>
           )}
