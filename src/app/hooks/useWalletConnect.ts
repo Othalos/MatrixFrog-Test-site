@@ -312,22 +312,13 @@ export const useWalletConnect = (): WalletConnectHook => {
         })
       });
       
-      // Longer delay for Coinbase Wallet to establish connection
-      setTimeout(async () => {
-        try {
-          await switchToPepeUnchained();
-        } catch (networkError) {
-          console.error("Network switch failed after Coinbase connection:", networkError);
-          // Show user-friendly message that manual network addition might be needed
-        } finally {
-          setIsConnecting(false);
-        }
-      }, 3000); // Increased delay for Coinbase
+      // No automatic network switch - user can switch manually via button
+      setIsConnecting(false);
     } catch (error) {
       console.error("Coinbase connection failed:", error);
       setIsConnecting(false);
     }
-  }, [connect, switchToPepeUnchained]);
+  }, [connect]);
 
   const disconnect = useCallback(async () => {
     // Enhanced disconnect for Coinbase Wallet
