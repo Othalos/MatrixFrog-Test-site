@@ -28,7 +28,7 @@ export default function BuyBotSection() {
           At the end of each Peptrix episode, you&apos;ll enter the Construct and send MatrixFrog to one of two wallets. The wallet that receives the most MatrixFrog by the end of the voting period will determine the next episode&apos;s storyline.
         </p>
         <p className="text-white leading-relaxed mb-4">
-          Watch the second episode of the Peptrix series, <b>Calling Card</b>, and maybe next time you can help shape your reality!
+          Dive into the first episode of the Peptrix series, <b>Flying Dreams</b>, and begin shaping your reality!
         </p>
         <p className="text-white leading-relaxed mb-4">
           If you want to view past episodes and bloopers then head over to our YouTube channel:
@@ -121,6 +121,16 @@ export default function BuyBotSection() {
               >
                 HOW
               </button>
+              <button
+                onClick={() => setActiveTab("whitepaper")}
+                className={`px-6 py-2 font-semibold text-base md:text-lg focus:outline-none border border-matrix-green bg-transparent transition-all duration-200 h-[40px] ${activeTab === "whitepaper"
+                  ? "bg-matrix-green text-black shadow-[0_0_8px_2px_#00ff41,0_0_16px_4px_#00ff41]"
+                  : "text-matrix-green hover:bg-matrix-green/10"
+                  }`}
+                style={{ minWidth: 90, borderRadius: 0, color: '#00ff41', border: '1px solid #00ff41' }}
+              >
+                WHITEPAPER
+              </button>
             </div>
           </div>
           <div className="terminal-content">
@@ -130,8 +140,8 @@ export default function BuyBotSection() {
               <div className="w-full max-w-sm aspect-video overflow-hidden border border-matrix-green" style={{ borderRadius: 0 }}>
                 <div className="w-full h-full" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
                   <iframe
-                    src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
-                    title="Peptrix Episode 2: Calling Card"
+                    src="https://www.youtube.com/embed/0roDfig5Ycs"
+                    title="Peptrix Episode 1: Flying Dreams"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
