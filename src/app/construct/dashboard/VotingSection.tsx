@@ -265,8 +265,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                         </div>
                     </div>
                 )}
-
-                <div
                         style={{
                             textAlign: "center",
                             margin: "16px",
