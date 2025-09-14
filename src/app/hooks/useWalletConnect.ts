@@ -229,10 +229,16 @@ export const useWalletConnect = (): WalletConnectHook => {
       // If multiple providers exist, select MetaMask specifically
       if (window.ethereum?.providers?.length > 0) {
         // Find MetaMask provider specifically
-        provider = window.ethereum.providers.find((p: any) => p.isMetaMask && !p.isCoinbaseWallet);
+        provider = window.ethereum.providers.find((p: unknown) => {
+          const typedProvider = p as { isMetaMask?: boolean; isCoinbaseWallet?: boolean };
+          return typedProvider.isMetaMask && !typedProvider.isCoinbaseWallet;
+        });
         if (!provider) {
           // Fallback to first MetaMask-like provider
-          provider = window.ethereum.providers.find((p: any) => p.isMetaMask);
+          provider = window.ethereum.providers.find((p: unknown) => {
+            const typedProvider = p as { isMetaMask?: boolean };
+            return typedProvider.isMetaMask;
+          });
         }
       } else if (window.ethereum?.isMetaMask && !window.ethereum?.isCoinbaseWallet) {
         provider = window.ethereum;
@@ -242,7 +248,8 @@ export const useWalletConnect = (): WalletConnectHook => {
         throw new Error("MetaMask not found");
       }
 
-      console.log("Using provider:", provider?.isMetaMask ? "MetaMask" : "Unknown", provider);
+      const typedProvider = provider as { isMetaMask?: boolean };
+      console.log("Using provider:", typedProvider?.isMetaMask ? "MetaMask" : "Unknown", provider);
 
       // Create injected connector with specific provider
       const connector = injected({
@@ -309,8 +316,8 @@ export const useWalletConnect = (): WalletConnectHook => {
       setTimeout(async () => {
         try {
           await switchToPepeUnchained();
-        } catch (error) {
-          console.error("Network switch failed after Coinbase connection:", error);
+        } catch (networkError) {
+          console.error("Network switch failed after Coinbase connection:", networkError);
           // Show user-friendly message that manual network addition might be needed
         } finally {
           setIsConnecting(false);
@@ -335,7 +342,9 @@ export const useWalletConnect = (): WalletConnectHook => {
               method: 'wallet_revokePermissions',
               params: [{ eth_accounts: {} }]
             });
-          } catch {}
+          } catch (revokeError) {
+            console.log("Permission revoke attempted:", revokeError);
+          }
 
           // Method 2: Request new permissions (this clears old ones)
           try {
@@ -343,7 +352,9 @@ export const useWalletConnect = (): WalletConnectHook => {
               method: 'wallet_requestPermissions',
               params: [{ eth_accounts: {} }]
             });
-          } catch {}
+          } catch (requestError) {
+            console.log("Permission request attempted:", requestError);
+          }
         }
 
         // Method 3: Clear local storage entries that Coinbase might use
@@ -371,19 +382,22 @@ export const useWalletConnect = (): WalletConnectHook => {
               }
             });
           }
-        } catch (error) {
-          console.log("Storage cleanup attempted");
+        } catch (storageError) {
+          console.log("Storage cleanup attempted:", storageError);
         }
 
         // Method 4: Reset the provider if possible
         try {
-          if (window.ethereum?.isCoinbaseWallet && window.ethereum.close) {
-            window.ethereum.close();
+          const ethereum = window.ethereum as { close?: () => void; isCoinbaseWallet?: boolean };
+          if (ethereum?.isCoinbaseWallet && ethereum.close) {
+            ethereum.close();
           }
-        } catch {}
+        } catch (closeError) {
+          console.log("Provider close attempted:", closeError);
+        }
 
-      } catch (error) {
-        console.log("Enhanced Coinbase disconnect attempted");
+      } catch (disconnectError) {
+        console.log("Enhanced Coinbase disconnect attempted:", disconnectError);
       }
     }
     
