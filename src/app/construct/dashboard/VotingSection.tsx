@@ -146,7 +146,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
 
     return (
         <>
-            {/* CSS Animationen */}
+            {/* CSS Animations */}
             <style dangerouslySetInnerHTML={{ __html: winnerAnimationStyles }} />
 
             {/* Decision Section */}
@@ -204,71 +204,6 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     marginBottom: "4px",
                                 }}
                             >
-                                Disconnect
-                            </button>
-                        )}
-                    </div>
-                )}
-            </Card>
-
-            {/* Voting Stats */}
-            {(episode.status === 'active' || isCompleted) && (
-                <Card
-                    style={{
-                        backgroundColor: "black",
-                        border: "1px solid rgba(34,197,94,0.3)",
-                        padding: "16px",
-                        fontFamily: "monospace",
-                    }}
-                >
-                    <CardTitle style={{ color: "#4ade80", marginBottom: "12px" }}>
-                        {isCompleted ? "FINAL VOTING RESULTS" : "CURRENT VOTING STATS"}
-                    </CardTitle>
-                    
-                    {/* Show vote counts only for active episodes */}
-                    {!isCompleted && (
-                        <div
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                gap: "8px",
-                                color: "#22c55e",
-                            }}
-                        >
-                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
-                                <p>Red Votes: {votingStatsLoading ? "Loading..." : redPillVotes}</p>
-                                <p>Total Votes: {votingStatsLoading ? "Loading..." : totalVotes}</p>
-                                <p>Green Votes: {votingStatsLoading ? "Loading..." : greenPillVotes}</p>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Winner display for completed episodes */}
-                    {isCompleted && (
-                        <div style={{
-                            marginTop: "8px",
-                            padding: "8px",
-                            backgroundColor: "rgba(34,197,94,0.1)",
-                            borderRadius: "4px",
-                            textAlign: "center",
-                            animation: 'winnerGlow 2s ease-in-out infinite'
-                        }}>
-                            <p style={{
-                                color: "#4ade80",
-                                fontSize: "0.9rem",
-                                animation: 'textGlow 2s ease-in-out infinite'
-                            }}>
-                                <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
-                            </p>
-                        </div>
-                    )}
-                </Card>
-            )}
-        </>
-    );
-};
-
-export default VotingSection;
                                 PTX Balance {votingConfig.useToken === 'PTX' && "⭐ VOTING"}
                             </div>
                             <div
@@ -712,10 +647,10 @@ export default VotingSection;
                         style={{
                             backgroundColor:
                                 !isConnected 
-                                    ? "#16a34a"  // Wallet Connect Button - green
+                                    ? "#16a34a"
                                     : (!selected || isVoting || isPending || isConfirming)
-                                        ? "#374151"  // Disabled
-                                        : "#16a34a", // Vote Button - green
+                                        ? "#374151"
+                                        : "#16a34a",
                             color:
                                 !isConnected
                                     ? "black"
@@ -782,3 +717,69 @@ export default VotingSection;
                                     fontSize: "0.6rem",
                                     fontFamily: "monospace",
                                 }}
+                            >
+                                Disconnect
+                            </button>
+                        )}
+                    </div>
+                )}
+            </Card>
+
+            {/* Voting Stats */}
+            {(episode.status === 'active' || isCompleted) && (
+                <Card
+                    style={{
+                        backgroundColor: "black",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        padding: "16px",
+                        fontFamily: "monospace",
+                    }}
+                >
+                    <CardTitle style={{ color: "#4ade80", marginBottom: "12px" }}>
+                        {isCompleted ? "FINAL VOTING RESULTS" : "CURRENT VOTING STATS"}
+                    </CardTitle>
+                    
+                    {/* Show vote counts only for active episodes */}
+                    {!isCompleted && (
+                        <div
+                            style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "8px",
+                                color: "#22c55e",
+                            }}
+                        >
+                            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap" }}>
+                                <p>Red Votes: {votingStatsLoading ? "Loading..." : redPillVotes}</p>
+                                <p>Total Votes: {votingStatsLoading ? "Loading..." : totalVotes}</p>
+                                <p>Green Votes: {votingStatsLoading ? "Loading..." : greenPillVotes}</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Winner display for completed episodes */}
+                    {isCompleted && (
+                        <div style={{
+                            marginTop: "8px",
+                            padding: "8px",
+                            backgroundColor: "rgba(34,197,94,0.1)",
+                            borderRadius: "4px",
+                            textAlign: "center",
+                            animation: 'winnerGlow 2s ease-in-out infinite'
+                        }}>
+                            <p style={{
+                                color: "#4ade80",
+                                fontSize: "0.9rem",
+                                animation: 'textGlow 2s ease-in-out infinite'
+                            }}>
+                                <span style={{ animation: 'trophyBounce 1.5s ease-in-out infinite' }}>🏆</span> Winner: {episode.winner === 'red' ? 'Red Path' : 'Green Path'}
+                            </p>
+                        </div>
+                    )}
+                </Card>
+            )}
+        </>
+    );
+};
+
+export default VotingSection;
