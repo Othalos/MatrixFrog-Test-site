@@ -30,10 +30,10 @@ export default function BuyBotSection() {
           At the end of each Peptrix episode, you&apos;ll enter the Construct and send MatrixFrog to one of two wallets. The wallet that receives the most MatrixFrog by the end of the voting period will determine the next episode&apos;s storyline.
         </p>
         <p className="text-white leading-relaxed mb-4">
-          Take a look at our current episode of the Peptrix series, <b>Calling Card</b>, and begin shaping your reality!
+          Take a look at our <b>PTX Promo</b>, and begin shaping your reality!
         </p>
         <p className="text-white leading-relaxed mb-4">
-          If you want to view past episodes and bloopers then head over to our YouTube channel:
+          If you want to view past Peptrix episodes and bloopers then goto our Contruct section or head over to our YouTube channel:
           <a href="https://www.youtube.com/@MatrixFrog" target="_blank" rel="noopener noreferrer" className="text-matrix-green hover:text-white ml-1 underline">@MatrixFrog</a>.
         </p>
       </div>
@@ -211,8 +211,8 @@ export default function BuyBotSection() {
               <div className="w-full max-w-sm aspect-video overflow-hidden border border-matrix-green" style={{ borderRadius: 0 }}>
                 <div className="w-full h-full" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
                   <iframe
-                    src="https://www.youtube.com/embed/Zmvv1Jr5Zmc"
-                    title="Peptrix Episode 2: Calling Card"
+                    src="https://www.youtube.com/embed/XpQV4PN0Gs8?enablejsapi=1"
+                    title="PTX Promo"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
