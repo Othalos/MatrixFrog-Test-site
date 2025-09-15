@@ -3,7 +3,7 @@
 import { ClientOnly } from "../../../components/ClientOnly";
 import StakingSection from "./StakingSection";
 import { Progress } from "@/app/components/ui/progress";
-import { BarChart3, FileVideo, User, Database, Gamepad2 } from "lucide-react";
+import { BarChart3, FileVideo, User, Database, Gamepad2, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Card,
@@ -206,6 +206,67 @@ const GamesSection = () => {
                 fontFamily: "monospace"
               }}>
                 🎯 Community Competitions
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Collectibles Section Component
+const CollectiblesSection = () => {
+  return (
+    <div style={{ opacity: 0.6 }}>
+      <Card style={{ backgroundColor: "black", border: "1px solid rgba(100,100,100,0.3)", marginBottom: "24px" }}>
+        <CardHeader>
+          <CardTitle style={{ color: "#6b7280", fontFamily: "monospace" }}>
+            MATRIX COLLECTIBLES
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+            <Star style={{ width: "48px", height: "48px", color: "#6b7280", margin: "0 auto 16px" }} />
+            <h3 style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "1.2rem", marginBottom: "12px" }}>
+              COMING SOON
+            </h3>
+            <p style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "0.9rem", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto" }}>
+              Discover and collect rare digital artifacts from the Matrix universe. Trade unique NFTs, showcase your collection, and unlock exclusive content based on your holdings.
+            </p>
+            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🎨 Unique Digital Artifacts
+              </div>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🔄 Peer-to-Peer Trading
+              </div>
+              <div style={{ 
+                padding: "8px 16px", 
+                backgroundColor: "rgba(100,100,100,0.1)", 
+                border: "1px solid rgba(100,100,100,0.3)",
+                borderRadius: "4px",
+                color: "#6b7280",
+                fontSize: "0.8rem",
+                fontFamily: "monospace"
+              }}>
+                🏛️ Virtual Gallery Display
               </div>
             </div>
           </div>
@@ -436,6 +497,15 @@ function MatrixConstructContent({
       href: "#", 
       active: activeSection === "games", 
       onClick: () => setActiveSection("games"),
+      disabled: true
+    },
+    { 
+      icon: Star, 
+      label: "Collectibles", 
+      subtitle: "Coming soon", 
+      href: "#", 
+      active: activeSection === "collectibles", 
+      onClick: () => setActiveSection("collectibles"),
       disabled: true
     },
   ];
@@ -730,6 +800,8 @@ function MatrixConstructContent({
             </>
           ) : activeSection === "games" ? (
             <GamesSection />
+          ) : activeSection === "collectibles" ? (
+            <CollectiblesSection />
           ) : (
             <StakingSection/>
           )}
