@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
-import { AlertTriangle, Wallet } from "lucide-react";
+import { AlertTriangle, Wallet, RefreshCw } from "lucide-react";
 import { useWalletConnect } from "../../hooks/useWalletConnect";
 
-// **FIX**: Corrected relative path to the abis folder
 import ERC20_ABI from "../../abis/ERC20.json";
 import STAKING_ABI from "../../abis/Staking.json";
 
@@ -43,7 +42,61 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
   });
 };
 
-// Custom Button Component that overrides all styles
+// Live Rewards Counter Hook
+const useLiveRewards = (
+  initialRewards: bigint,
+  stakedAmount: bigint,
+  dailyRewardRate: bigint,
+  totalStaked: bigint,
+  lastUpdateTime: number
+) => {
+  const [liveRewards, setLiveRewards] = useState(initialRewards);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateRef = useRef(lastUpdateTime);
+  const startRewardsRef = useRef(initialRewards);
+
+  useEffect(() => {
+    // Clear existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    // Reset when initial rewards change
+    setLiveRewards(initialRewards);
+    lastUpdateRef.current = Date.now();
+    startRewardsRef.current = initialRewards;
+
+    // Don't start counter if no stake or no pool data
+    if (stakedAmount === 0n || totalStaked === 0n || dailyRewardRate === 0n) {
+      return;
+    }
+
+    // Calculate rewards per second
+    const userShare = stakedAmount * BigInt(1e18) / totalStaked;
+    const rewardsPerSecond = (dailyRewardRate * userShare) / (BigInt(86400) * BigInt(1e18));
+
+    // Start live counter
+    intervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const secondsElapsed = Math.floor((now - lastUpdateRef.current) / 1000);
+      
+      if (secondsElapsed > 0) {
+        const additionalRewards = rewardsPerSecond * BigInt(secondsElapsed);
+        setLiveRewards(startRewardsRef.current + additionalRewards);
+      }
+    }, 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [initialRewards, stakedAmount, dailyRewardRate, totalStaked, lastUpdateTime]);
+
+  return liveRewards;
+};
+
+// Custom Button Component
 const MatrixButton = ({ 
   onClick, 
   disabled = false, 
@@ -54,7 +107,7 @@ const MatrixButton = ({
   onClick: () => void;
   disabled?: boolean;
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "warning" | "cancel";
+  variant?: "primary" | "secondary" | "warning" | "cancel" | "refresh";
   className?: string;
 }) => {
   const getVariantStyles = () => {
@@ -87,6 +140,13 @@ const MatrixButton = ({
           border: '2px solid #6b7280',
           hoverBg: '#4b5563'
         };
+      case "refresh":
+        return {
+          backgroundColor: '#166534',
+          color: '#4ade80',
+          border: '2px solid #15803d',
+          hoverBg: '#15803d'
+        };
       default:
         return {
           backgroundColor: '#16a34a',
@@ -103,13 +163,14 @@ const MatrixButton = ({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full px-4 py-3 font-bold rounded-md transition-all duration-200 disabled:opacity-50 ${className}`}
+      className={`px-4 py-3 font-bold rounded-md transition-all duration-200 disabled:opacity-50 ${className}`}
       style={{
         backgroundColor: styles.backgroundColor,
         color: styles.color,
         border: styles.border,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        fontFamily: 'monospace'
+        fontFamily: 'monospace',
+        width: className.includes('w-auto') ? 'auto' : '100%'
       }}
       onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
         if (!disabled) {
@@ -129,7 +190,6 @@ const MatrixButton = ({
 
 // --- Main Component ---
 export default function StakingSection() {
-  // Use centralized wallet hook
   const {
     isConnected,
     address,
@@ -145,6 +205,8 @@ export default function StakingSection() {
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showWalletOptions, setShowWalletOptions] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
   
   // Contract data states
   const [balance, setBalance] = useState<bigint>(0n);
@@ -164,6 +226,15 @@ export default function StakingSection() {
     dailyRewardRate: 0n
   });
 
+  // Live rewards counter
+  const liveRewards = useLiveRewards(
+    pendingRewards,
+    userStakedAmount,
+    poolInfo.dailyRewardRate,
+    poolInfo.totalStaked,
+    lastUpdateTime
+  );
+
   // Create clients
   const publicClient = createPublicClient({
     chain: pepuMainnet,
@@ -178,7 +249,7 @@ export default function StakingSection() {
     });
   }, []);
 
-  // Wallet connection handlers using centralized hook
+  // Wallet connection handlers
   const handleConnectMetaMask = useCallback(() => {
     connectMetaMask();
     setShowWalletOptions(false);
@@ -194,43 +265,49 @@ export default function StakingSection() {
     setShowWalletOptions(false);
   }, [connectCoinbase]);
 
-  // Read contract data
-  const readContractData = useCallback(async () => {
-    if (!address || !isCorrectNetwork) return;
+  // Optimized contract data fetching with stable reference
+  const fetchContractData = useCallback(async (userAddress: string) => {
+    if (!userAddress) return;
 
     try {
+      // Create a fresh publicClient instance to avoid stale references
+      const client = createPublicClient({
+        chain: pepuMainnet,
+        transport: http('/api/rpc'),
+      });
+
       const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult] = await Promise.all([
-        publicClient.readContract({
+        client.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
           functionName: 'balanceOf',
-          args: [address],
+          args: [userAddress],
         }),
-        publicClient.readContract({
+        client.readContract({
           address: MFG_ADDRESS,
           abi: ERC20_ABI as readonly unknown[],
           functionName: 'allowance',
-          args: [address, STAKING_ADDRESS],
+          args: [userAddress, STAKING_ADDRESS],
         }),
-        publicClient.readContract({
+        client.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'stakes',
-          args: [POOL_ID, address],
+          args: [POOL_ID, userAddress],
         }),
-        publicClient.readContract({
+        client.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'pendingRewards',
-          args: [POOL_ID, address],
+          args: [POOL_ID, userAddress],
         }),
-        publicClient.readContract({
+        client.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'getCurrentAPR',
           args: [POOL_ID],
         }),
-        publicClient.readContract({
+        client.readContract({
           address: STAKING_ADDRESS,
           abi: STAKING_ABI as readonly unknown[],
           functionName: 'getPoolInfo',
@@ -242,7 +319,7 @@ export default function StakingSection() {
       setAllowance(allowanceResult as bigint);
       setUserStakedAmount((stakesResult as [bigint, bigint, bigint, bigint])[0]);
       setPendingRewards(pendingResult as bigint);
-      setCurrentAPR(Number(aprResult as bigint) / 100); // Convert basis points to percentage
+      setCurrentAPR(Number(aprResult as bigint) / 100);
       
       const poolInfoData = poolInfoResult as [string, string, bigint, bigint, bigint, bigint, bigint, boolean];
       setPoolInfo({
@@ -251,12 +328,41 @@ export default function StakingSection() {
         distributionDays: Number(poolInfoData[4]),
         dailyRewardRate: poolInfoData[6]
       });
+      
+      setLastUpdateTime(Date.now());
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
-  }, [address, isCorrectNetwork, publicClient]);
+  }, []); // Empty dependency array is correct here
 
-  // Submit transaction
+  // Manual refresh handler
+  const handleManualRefresh = useCallback(async () => {
+    if (!address || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    await fetchContractData(address);
+    setIsRefreshing(false);
+  }, [address, fetchContractData, isRefreshing]);
+
+  // Smart polling - optimized for production
+  useEffect(() => {
+    if (!isConnected || !isCorrectNetwork || !address) return;
+
+    // Initial fetch
+    fetchContractData(address);
+    
+    // Set up 2-minute polling interval
+    const interval = setInterval(() => {
+      fetchContractData(address);
+    }, 120000); // 2 minutes
+
+    return () => {
+      clearInterval(interval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, isCorrectNetwork, address]);
+
+  // Submit transaction with auto-refresh
   const submitTransaction = useCallback(async (args: {
     address: `0x${string}`;
     abi: readonly unknown[];
@@ -269,7 +375,6 @@ export default function StakingSection() {
     setNotification(null);
 
     try {
-      // Check network and switch if necessary
       if (!isCorrectNetwork) {
         setNotification({ 
           message: "Switching to correct network...", 
@@ -278,7 +383,6 @@ export default function StakingSection() {
 
         try {
           await switchToPepeUnchained();
-          // Wait for network switch to complete
           await new Promise(resolve => setTimeout(resolve, 3000));
         } catch {
           setNotification({ 
@@ -303,7 +407,6 @@ export default function StakingSection() {
         type: "success" 
       });
 
-      // Wait for transaction
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
     
       if (receipt.status === 'success') {
@@ -312,9 +415,9 @@ export default function StakingSection() {
           type: "success" 
         });
       
-        // Refresh data after successful transaction
+        // Auto-refresh after successful transaction
         setTimeout(() => {
-          readContractData();
+          fetchContractData(address);
           setNotification(null);
         }, 2000);
       } else {
@@ -330,7 +433,7 @@ export default function StakingSection() {
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, readContractData, isCorrectNetwork, switchToPepeUnchained]);
+  }, [address, getWalletClient, publicClient, fetchContractData, isCorrectNetwork, switchToPepeUnchained]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
@@ -386,15 +489,6 @@ export default function StakingSection() {
       setStakeAmount(formatUnits(balance, 18));
     }
   }, [balance]);
-
-  // Effects
-  useEffect(() => {
-    if (isConnected && isCorrectNetwork) {
-      readContractData();
-      const interval = setInterval(readContractData, 30000); // Update every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [isConnected, isCorrectNetwork, readContractData]);
 
   // Derived values
   const stakeAmountBN = stakeAmount ? parseUnits(stakeAmount, 18) : 0n;
@@ -486,9 +580,19 @@ export default function StakingSection() {
                   <Wallet size={20} className="text-green-400" />
                   <span className="text-green-400 font-bold">Your MFG Balance:</span>
                 </div>
-                <span className="text-2xl font-bold text-white">
-                  {formatDisplayNumber(formatUnits(balance, 18))} MFG
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className="text-2xl font-bold text-white">
+                    {formatDisplayNumber(formatUnits(balance, 18), 2)} MFG
+                  </span>
+                  <MatrixButton 
+                    onClick={handleManualRefresh} 
+                    disabled={isRefreshing}
+                    variant="refresh"
+                    className="!w-auto px-3 py-1 text-xs"
+                  >
+                    <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+                  </MatrixButton>
+                </div>
               </div>
 
               {/* Staking Input Section */}
@@ -557,7 +661,7 @@ export default function StakingSection() {
                     <h3 className="text-lg font-bold text-blue-400 text-center mb-6">Staked MFG</h3>
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                       <div className="text-3xl font-bold text-white">
-                        {formatDisplayNumber(formatUnits(userStakedAmount, 18))}
+                        {formatDisplayNumber(formatUnits(userStakedAmount, 18), 2)}
                       </div>
                       <div className="text-sm text-gray-400">MFG Tokens</div>
                     </div>
@@ -573,21 +677,27 @@ export default function StakingSection() {
                 <div style={{ 
                   border: '1px solid rgba(21, 128, 61, 0.5)', 
                   borderRadius: '8px', 
-                  backgroundColor: 'rgba(147, 51, 234, 0.1)'
+                  backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                  position: 'relative'
                 }}>
                   <div style={{ padding: '24px' }}>
                     <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
+                    {userStakedAmount > 0n && (
+                      <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
+                        <span className="text-xs text-green-400 animate-pulse">● LIVE</span>
+                      </div>
+                    )}
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                      <div className="text-3xl font-bold text-white">
-                        {formatDisplayNumber(formatUnits(pendingRewards, 18))}
+                      <div className="text-3xl font-bold text-white font-mono">
+                        {formatDisplayNumber(formatUnits(liveRewards, 18), 2)}
                       </div>
                       <div className="text-sm text-gray-400">PTX Earned</div>
                     </div>
                     <MatrixButton 
                       onClick={handleClaim} 
-                      disabled={isLoading || pendingRewards === 0n}
+                      disabled={isLoading || liveRewards === 0n}
                     >
-                      {isLoading ? "Processing..." : "Claim PTX"}
+                      {isLoading ? "Processing..." : `Claim ${formatDisplayNumber(formatUnits(liveRewards, 18), 2)} PTX`}
                     </MatrixButton>
                   </div>
                 </div>
