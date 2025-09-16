@@ -370,7 +370,6 @@ function MatrixConstructContent({
     address,
     isCorrectNetwork,
     rawMfgBalance,
-    mfgBalance,
     refetchBalance,
   } = useWalletConnect();
 
