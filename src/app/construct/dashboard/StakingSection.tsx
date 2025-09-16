@@ -42,7 +42,7 @@ const formatDisplayNumber = (value: string | number, decimals = 4) => {
   });
 };
 
-// Live Rewards Counter Hook
+// Live Rewards Counter Hook with Blockchain Time Sync
 const useLiveRewards = (
   initialRewards: bigint,
   stakedAmount: bigint,
@@ -52,8 +52,6 @@ const useLiveRewards = (
 ) => {
   const [liveRewards, setLiveRewards] = useState(initialRewards);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef(lastUpdateTime);
-  const startRewardsRef = useRef(initialRewards);
 
   useEffect(() => {
     // Clear existing interval
@@ -63,28 +61,59 @@ const useLiveRewards = (
 
     // Reset when initial rewards change
     setLiveRewards(initialRewards);
-    lastUpdateRef.current = Date.now();
-    startRewardsRef.current = initialRewards;
 
     // Don't start counter if no stake or no pool data
     if (stakedAmount === 0n || totalStaked === 0n || dailyRewardRate === 0n) {
       return;
     }
 
-    // Calculate rewards per second
-    const userShare = stakedAmount * BigInt(1e18) / totalStaked;
-    const rewardsPerSecond = (dailyRewardRate * userShare) / (BigInt(86400) * BigInt(1e18));
+    // Get current block timestamp for accurate sync
+    const getCurrentBlockTime = async () => {
+      try {
+        const client = createPublicClient({
+          chain: pepuMainnet,
+          transport: http('/api/rpc'),
+        });
 
-    // Start live counter
-    intervalRef.current = setInterval(() => {
-      const now = Date.now();
-      const secondsElapsed = Math.floor((now - lastUpdateRef.current) / 1000);
-      
-      if (secondsElapsed > 0) {
-        const additionalRewards = rewardsPerSecond * BigInt(secondsElapsed);
-        setLiveRewards(startRewardsRef.current + additionalRewards);
+        const blockNumber = await client.getBlockNumber();
+        const block = await client.getBlock({ blockNumber });
+        const currentBlockTime = Number(block.timestamp);
+
+        // Calculate rewards per second based on user's share
+        const userShare = stakedAmount * BigInt(1e18) / totalStaked;
+        const rewardsPerSecond = (dailyRewardRate * userShare) / (BigInt(86400) * BigInt(1e18));
+
+        // Start live counter synchronized with blockchain time
+        intervalRef.current = setInterval(() => {
+          const now = Math.floor(Date.now() / 1000); // Current Unix timestamp
+          const secondsElapsed = now - currentBlockTime;
+          
+          if (secondsElapsed > 0) {
+            const additionalRewards = rewardsPerSecond * BigInt(secondsElapsed);
+            setLiveRewards(initialRewards + additionalRewards);
+          }
+        }, 1000);
+
+      } catch (error) {
+        console.error('Failed to get block timestamp:', error);
+        // Fallback to Date.now() based calculation
+        const userShare = stakedAmount * BigInt(1e18) / totalStaked;
+        const rewardsPerSecond = (dailyRewardRate * userShare) / (BigInt(86400) * BigInt(1e18));
+        const startTime = Date.now();
+
+        intervalRef.current = setInterval(() => {
+          const now = Date.now();
+          const secondsElapsed = Math.floor((now - startTime) / 1000);
+          
+          if (secondsElapsed > 0) {
+            const additionalRewards = rewardsPerSecond * BigInt(secondsElapsed);
+            setLiveRewards(initialRewards + additionalRewards);
+          }
+        }, 1000);
       }
-    }, 1000);
+    };
+
+    getCurrentBlockTime();
 
     return () => {
       if (intervalRef.current) {
