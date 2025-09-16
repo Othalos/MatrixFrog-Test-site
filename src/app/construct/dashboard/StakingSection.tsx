@@ -5,31 +5,15 @@ import { Card, CardHeader, CardTitle } from "../../components/ui/card";
 import { createPublicClient, createWalletClient, custom, http, parseUnits, formatUnits, maxUint256 } from "viem";
 import { AlertTriangle, Wallet, RefreshCw } from "lucide-react";
 import { useWalletConnect } from "../../hooks/useWalletConnect";
+import { pepuMainnet, PEPE_UNCHAINED_CHAIN_ID, isCorrectChain } from "../../lib/chains";
 
 import ERC20_ABI from "../../abis/ERC20.json";
 import STAKING_ABI from "../../abis/Staking.json";
 
-// --- Chain & Contract Configuration ---
-const PEPU_MAINNET_ID = 97741;
+// --- Contract Configuration ---
 const STAKING_ADDRESS = "0x0B71b6CCB73F60bED2612B1A7Cbe271b7bAf3D0E" as `0x${string}`;
 const MFG_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5" as `0x${string}`;
 const POOL_ID = 0n;
-
-// Define chain for viem
-const pepuMainnet = {
-  id: PEPU_MAINNET_ID,
-  name: 'Pepu Mainnet',
-  nativeCurrency: {
-    decimals: 18,
-    name: 'PEPU',
-    symbol: 'PEPU',
-  },
-  rpcUrls: {
-    default: {
-      http: ['/api/rpc'],
-    },
-  },
-} as const;
 
 // --- Helper Functions ---
 const formatDisplayNumber = (value: string | number, decimals = 4) => {
@@ -264,19 +248,39 @@ export default function StakingSection() {
     lastUpdateTime
   );
 
-  // Create clients
+  // Einheitliche Client-Erstellung mit zentraler Chain-Config
   const publicClient = createPublicClient({
     chain: pepuMainnet,
-    transport: http('/api/rpc'),
+    transport: http('/api/rpc', {
+      batch: true,
+      retryCount: 3,
+      retryDelay: 1000,
+    }),
   });
 
   const getWalletClient = useCallback(async () => {
     if (!window.ethereum) return null;
+    
     return createWalletClient({
       chain: pepuMainnet,
-      transport: custom(window.ethereum as { request: (args: { method: string; params?: unknown[] }) => Promise<unknown> }),
+      transport: custom(window.ethereum, {
+        retryCount: 3,
+        retryDelay: 1000,
+      }),
     });
   }, []);
+
+  // Debug-Helper für besseres Monitoring
+  useEffect(() => {
+    console.log('Wallet State Debug:', {
+      isConnected,
+      address,
+      chainId: isConnected ? 'connected' : 'not connected',
+      expectedChainId: PEPE_UNCHAINED_CHAIN_ID,
+      isCorrectNetwork,
+      timestamp: new Date().toISOString()
+    });
+  }, [isConnected, address, isCorrectNetwork]);
 
   // Wallet connection handlers
   const handleConnectMetaMask = useCallback(() => {
@@ -299,10 +303,14 @@ export default function StakingSection() {
     if (!userAddress) return;
 
     try {
-      // Create a fresh publicClient instance to avoid stale references
+      // Create a fresh publicClient instance für bessere Stabilität
       const client = createPublicClient({
         chain: pepuMainnet,
-        transport: http('/api/rpc'),
+        transport: http('/api/rpc', {
+          batch: true,
+          retryCount: 3,
+          retryDelay: 1000,
+        }),
       });
 
       const [balanceResult, allowanceResult, stakesResult, pendingResult, aprResult, poolInfoResult] = await Promise.all([
@@ -362,7 +370,7 @@ export default function StakingSection() {
     } catch (error) {
       console.error('Failed to read contract data:', error);
     }
-  }, []); // Empty dependency array is correct here
+  }, []); // Empty dependency array ist korrekt hier
 
   // Manual refresh handler
   const handleManualRefresh = useCallback(async () => {
@@ -391,7 +399,7 @@ export default function StakingSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, isCorrectNetwork, address]);
 
-  // Submit transaction with auto-refresh
+  // Verbesserte Transaction-Submission mit besserer Fehlerbehandlung
   const submitTransaction = useCallback(async (args: {
     address: `0x${string}`;
     abi: readonly unknown[];
@@ -404,18 +412,47 @@ export default function StakingSection() {
     setNotification(null);
 
     try {
+      // Detaillierte Validierung
+      console.log('Transaction attempt:', {
+        isConnected,
+        isCorrectNetwork,
+        expectedChainId: PEPE_UNCHAINED_CHAIN_ID,
+        address,
+        contractAddress: args.address,
+        functionName: args.functionName
+      });
+
+      if (!isConnected) {
+        throw new Error('Wallet not connected');
+      }
+
+      // Chain-Validierung mit besserer Fehlerbehandlung
       if (!isCorrectNetwork) {
         setNotification({ 
-          message: "Switching to correct network...", 
+          message: "Wrong network detected. Switching to Pepe Unchained...", 
           type: "success" 
         });
 
         try {
           await switchToPepeUnchained();
-          await new Promise(resolve => setTimeout(resolve, 3000));
-        } catch {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          // Nach Network-Switch nochmal prüfen
+          const freshWalletClient = await getWalletClient();
+          if (!freshWalletClient) {
+            throw new Error('Failed to reconnect after network switch');
+          }
+          
+          const currentChainId = await freshWalletClient.getChainId();
+          console.log('Network switch result:', { currentChainId, expected: PEPE_UNCHAINED_CHAIN_ID });
+          
+          if (!isCorrectChain(currentChainId)) {
+            throw new Error(`Network switch incomplete. Current: ${currentChainId}, Expected: ${PEPE_UNCHAINED_CHAIN_ID}`);
+          }
+        } catch (networkError: unknown) {
+          console.error('Network switch failed:', networkError);
           setNotification({ 
-            message: "Please manually switch to the correct network in your wallet", 
+            message: "Network switch failed. Please manually switch to Pepe Unchained in your wallet and try again.", 
             type: "error" 
           });
           setIsLoading(false);
@@ -423,8 +460,24 @@ export default function StakingSection() {
         }
       }
 
+      // Contract-Parameter validieren
+      if (!args.address || !args.abi || !args.functionName) {
+        throw new Error('Invalid contract parameters - missing address, abi, or function name');
+      }
+
       const walletClient = await getWalletClient();
-      if (!walletClient) throw new Error('No wallet client');
+      if (!walletClient) {
+        throw new Error('Failed to create wallet client');
+      }
+
+      // Extra Logging für Debug
+      console.log('Submitting transaction with params:', {
+        contract: args.address,
+        function: args.functionName,
+        args: args.args,
+        from: address,
+        chainId: await walletClient.getChainId()
+      });
 
       const hash = await walletClient.writeContract({
         ...args,
@@ -432,37 +485,61 @@ export default function StakingSection() {
       });
 
       setNotification({ 
-        message: "Transaction submitted! Waiting for confirmation...", 
+        message: `Transaction submitted: ${hash.slice(0, 10)}... Waiting for confirmation...`, 
         type: "success" 
       });
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient.waitForTransactionReceipt({ 
+        hash,
+        timeout: 60_000,
+        confirmations: 1,
+      });
     
       if (receipt.status === 'success') {
         setNotification({ 
-          message: "Transaction confirmed! Refreshing data...", 
+          message: "Transaction confirmed successfully! Refreshing data...", 
           type: "success" 
         });
       
-        // Auto-refresh after successful transaction
         setTimeout(() => {
           fetchContractData(address);
           setNotification(null);
-        }, 2000);
+        }, 3000);
       } else {
-        throw new Error('Transaction failed');
+        throw new Error(`Transaction failed with status: ${receipt.status}`);
       }
     } catch (error: unknown) {
-      console.error('Transaction error:', error);
-      const err = error as { message?: string };
+      console.error('Transaction error details:', error);
+      
+      let errorMessage = 'Transaction failed';
+      const err = error as { code?: number; message?: string };
+      
+      // Spezifische Fehlerbehandlung
+      if (err.code === 4001) {
+        errorMessage = 'Transaction rejected by user';
+      } else if (err.code === -32603) {
+        errorMessage = 'Internal RPC error - please try again';
+      } else if (err.message?.includes('insufficient funds')) {
+        errorMessage = 'Insufficient funds for transaction';
+      } else if (err.message?.includes('tokenAddress') || err.message?.includes('undefined')) {
+        errorMessage = 'Network configuration error. Please refresh the page and try again.';
+        console.error('TokenAddress error detected:', error);
+      } else if (err.message?.includes('user rejected')) {
+        errorMessage = 'Transaction cancelled by user';
+      } else if (err.message?.includes('network')) {
+        errorMessage = 'Network error - please check your connection';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setNotification({ 
-        message: `Error: ${err.message || 'Transaction failed'}`, 
+        message: `Error: ${errorMessage}`, 
         type: "error" 
       });
     } finally {
       setIsLoading(false);
     }
-  }, [address, getWalletClient, publicClient, fetchContractData, isCorrectNetwork, switchToPepeUnchained]);
+  }, [address, getWalletClient, publicClient, fetchContractData, isConnected, isCorrectNetwork, switchToPepeUnchained]);
 
   // Transaction handlers
   const handleApprove = useCallback(() => {
