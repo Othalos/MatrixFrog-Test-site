@@ -680,12 +680,12 @@ export default function StakingSection() {
                   backgroundColor: 'rgba(147, 51, 234, 0.1)'
                 }}>
                   <div style={{ padding: '24px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                      <h3 className="text-lg font-bold text-purple-400">PTX Rewards</h3>
-                      {userStakedAmount > 0n && (
+                    <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
+                    {userStakedAmount > 0n && (
+                      <div style={{ position: 'absolute', top: '24px', right: '24px' }}>
                         <span className="text-xs text-green-400 animate-pulse">● LIVE</span>
-                      )}
-                    </div>
+                      </div>
+                    )}
                     <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                       <div className="text-3xl font-bold text-white font-mono">
                         {formatDisplayNumber(formatUnits(liveRewards, 18), 2)}
