@@ -183,7 +183,7 @@ const GamesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🎮 Story-driven Adventures
+                Story-driven Adventures
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -194,7 +194,7 @@ const GamesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🏆 Token-based Rewards
+                Token-based Rewards
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -205,7 +205,7 @@ const GamesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🎯 Community Competitions
+                Community Competitions
               </div>
             </div>
           </div>
@@ -244,7 +244,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🎨 Unique Digital Artifacts
+                Unique Digital Artifacts
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -255,7 +255,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🔄 Peer-to-Peer Trading
+                Peer-to-Peer Trading
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -266,7 +266,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                🏛️ Virtual Gallery Display
+                Virtual Gallery Display
               </div>
             </div>
           </div>
@@ -368,11 +368,25 @@ function MatrixConstructContent({
   const {
     isConnected,
     address,
+    isCorrectNetwork,
     rawMfgBalance,
+    mfgBalance,
     refetchBalance,
   } = useWalletConnect();
 
   const router = useRouter();
+
+  // Debug für Rewards-Problem - zeigt Chain-Status
+  useEffect(() => {
+    console.log('CONSTRUCT DEBUG:', {
+      isConnected,
+      isCorrectNetwork,
+      address,
+      mfgBalance,
+      rawMfgBalance: rawMfgBalance ? formatUnits(rawMfgBalance, 18) : '0',
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [isConnected, isCorrectNetwork, address, mfgBalance, rawMfgBalance]);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -401,7 +415,7 @@ function MatrixConstructContent({
       setVoteSuccess(true);
       setIsVoting(false);
       setVoteError(null);
-      refetchBalance();
+      refetchBalance(); // Verwendet zentrale refetchBalance Funktion
       refetchVotingStats();
       setTimeout(() => { setVoteSuccess(false); }, 5000);
     }
@@ -455,6 +469,13 @@ function MatrixConstructContent({
       setVoteError("Please select a pill option first");
       return;
     }
+    
+    // Zusätzliche Network-Prüfung für bessere UX
+    if (!isCorrectNetwork) {
+      setVoteError("Please switch to the correct network first");
+      return;
+    }
+    
     const episode = getEpisodeStatus(selectedEpisode);
     if (!episode || episode.status !== 'active') {
       setVoteError("Voting is not active for this episode");

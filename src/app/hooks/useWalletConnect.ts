@@ -7,9 +7,7 @@ import {
   useReadContract 
 } from 'wagmi';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
-
-// Chain Konfiguration
-export const PEPE_UNCHAINED_CHAIN_ID = 97741;
+import { PEPE_UNCHAINED_CHAIN_ID, getNetworkParams } from '../lib/chains';
 
 // MFG Token Konfiguration  
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
@@ -38,28 +36,19 @@ const ERC20_ABI = [
 ];
 
 interface WalletConnectHook {
-  // Wallet Status
   isConnected: boolean;
   address: string | undefined;
   isCorrectNetwork: boolean;
   isConnecting: boolean;
-  
-  // MFG Token Balance
   mfgBalance: string;
   rawMfgBalance: bigint | undefined;
   balanceLoading: boolean;
-  
-  // Connection Methods
   connectMetaMask: () => Promise<void>;
   connectWalletConnect: () => Promise<void>;
   connectCoinbase: () => Promise<void>;
   disconnect: () => void;
-  
-  // Network Management
   switchToPepeUnchained: () => Promise<void>;
   handleNetworkSwitch: () => void;
-  
-  // Utility
   formatTokenBalance: (balance: bigint, decimals?: number) => string;
   refetchBalance: () => void;
 }
@@ -71,7 +60,6 @@ export const useWalletConnect = (): WalletConnectHook => {
   const { switchChain } = useSwitchChain();
   
   const [isConnecting, setIsConnecting] = useState(false);
-  
   const isCorrectNetwork = chain?.id === PEPE_UNCHAINED_CHAIN_ID;
   
   // MFG Token Balance
@@ -107,10 +95,7 @@ export const useWalletConnect = (): WalletConnectHook => {
       return quotient.toLocaleString("en-US");
     }
     
-    // Convert to number for proper formatting
     const fullNumber = Number(balance) / Math.pow(10, decimals);
-    
-    // Format with max 2 decimal places and proper thousands separators
     return fullNumber.toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2
@@ -119,112 +104,104 @@ export const useWalletConnect = (): WalletConnectHook => {
 
   const formattedBalance = balance ? formatTokenBalance(balance as bigint) : "0";
 
-  // Enhanced network addition specifically for Coinbase Wallet
-  const addPepeUnchainedNetworkCoinbase = async (): Promise<boolean> => {
+  // Network-Addition mit Coinbase-spezifischen Anpassungen
+  const addNetwork = useCallback(async (): Promise<boolean> => {
     try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        const networkParams = {
-          chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
-          chainName: "Pepe Unchained Mainnet",
-          rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-          nativeCurrency: { 
-            name: "PEPU", 
-            symbol: "PEPU", 
-            decimals: 18 
-          },
-          blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
-        };
-
-        console.log("Adding network with params:", networkParams);
-
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [networkParams],
-        });
-
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
+      if (typeof window === "undefined" || !window.ethereum) return false;
+      
+      const networkParams = getNetworkParams();
+      
+      // Erst versuchen zu switchen, dann hinzufügen
+      try {
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: networkParams.chainId }],
         });
-
         return true;
+      } catch (switchError) {
+        const error = switchError as { code?: number };
+        // Network existiert nicht - hinzufügen
+        if (error.code === 4902 || error.code === -32603) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [networkParams],
+          });
+          
+          // Coinbase braucht längere Pause nach Network-Addition
+          if (isCoinbaseWallet()) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          
+          // Nach Hinzufügen nochmal switchen
+          await window.ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: networkParams.chainId }],
+          });
+          return true;
+        }
+        throw switchError;
+      }
+    } catch (error) {
+      const err = error as { code?: number };
+      
+      // Bei User-Reject trotzdem prüfen ob Chain gewechselt wurde (typisch für Coinbase)
+      if (err.code === 4001 && isCoinbaseWallet()) {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+          if (currentChainId === getNetworkParams().chainId) {
+            console.log("Network switched despite user rejection");
+            return true;
+          }
+        } catch {
+          console.log("Could not verify chain state");
+        }
+      }
+      
+      // Nur loggen wenn es ein echter Fehler ist (nicht leeres Objekt)
+      if (err.code && err.code !== 4001) {
+        console.error("Network operation failed:", error);
+      } else if (!err.code && Object.keys(error as object).length > 0) {
+        // Prüfen ob das Error-Objekt wirklich Inhalte hat
+        const hasRealContent = Object.values(error as object).some(val => val !== undefined && val !== null && val !== '');
+        if (hasRealContent) {
+          console.error("Network operation failed:", error);
+        } else {
+          console.log("Network operation completed with empty response");
+        }
       }
       return false;
-    } catch (error) {
-      console.error("Failed to add/switch network for Coinbase:", error);
-      return false;
     }
-  };
+  }, [isCoinbaseWallet]);
 
-  // Standard network addition for other wallets
-  const addPepeUnchainedNetwork = async (): Promise<boolean> => {
-    try {
-      if (typeof window !== "undefined" && window.ethereum) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: `0x${PEPE_UNCHAINED_CHAIN_ID.toString(16)}`,
-              chainName: "Pepe Unchained Mainnet",
-              rpcUrls: ["https://rpc-pepu-v2-mainnet-0.t.conduit.xyz"],
-              nativeCurrency: { 
-                name: "PEPE", 
-                symbol: "PEPU", 
-                decimals: 18 
-              },
-              blockExplorerUrls: ["https://explorer-pepu-v2-mainnet-0.t.conduit.xyz"],
-            },
-          ],
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Failed to add network:", error);
-      return false;
-    }
-  };
-
+  // Vereinfachte Network-Switch-Funktion
   const switchToPepeUnchained = useCallback(async () => {
     try {
-      if (isCoinbaseWallet()) {
-        console.log("Detected Coinbase Wallet, using enhanced network handling");
-        const success = await addPepeUnchainedNetworkCoinbase();
-        if (!success) {
-          throw new Error("Failed to add network via Coinbase Wallet method");
-        }
+      // Wagmi-basierter Switch für normale Wallets
+      if (switchChain && !isCoinbaseWallet()) {
+        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
         return;
       }
-
-      if (switchChain) {
-        await switchChain({ chainId: PEPE_UNCHAINED_CHAIN_ID });
-      } else {
-        await addPepeUnchainedNetwork();
-      }
-    } catch (error) {
-      console.error("Failed to switch network:", error);
       
-      if (isCoinbaseWallet()) {
-        await addPepeUnchainedNetworkCoinbase();
-      } else {
-        await addPepeUnchainedNetwork();
-      }
+      // Fallback für alle Wallets (inkl. Coinbase)
+      await addNetwork();
+    } catch (error) {
+      console.log("Switch failed, trying fallback:", error);
+      await addNetwork();
     }
-  }, [switchChain, isCoinbaseWallet]);
+  }, [switchChain, isCoinbaseWallet, addNetwork]);
 
-  // Synchrone Wrapper-Funktion für onClick-Handler
   const handleNetworkSwitch = useCallback(() => {
     switchToPepeUnchained();
   }, [switchToPepeUnchained]);
 
-  // Enhanced MetaMask connection with provider selection
+  // Enhanced MetaMask Connection mit Provider-Selection
   const connectMetaMask = useCallback(async () => {
     setIsConnecting(true);
     try {
       let provider = window.ethereum;
       
+      // Provider-Selection für Multi-Wallet-Umgebungen
       if (window.ethereum?.providers?.length > 0) {
         provider = window.ethereum.providers.find((p: unknown) => {
           const typedProvider = p as { isMetaMask?: boolean; isCoinbaseWallet?: boolean };
@@ -244,9 +221,6 @@ export const useWalletConnect = (): WalletConnectHook => {
         throw new Error("MetaMask not found");
       }
 
-      const typedProvider = provider as { isMetaMask?: boolean };
-      console.log("Using provider:", typedProvider?.isMetaMask ? "MetaMask" : "Unknown", provider);
-
       const connector = injected({
         target() {
           return {
@@ -258,9 +232,9 @@ export const useWalletConnect = (): WalletConnectHook => {
       });
 
       await connect({ connector });
-      setIsConnecting(false);
     } catch (error) {
       console.error("MetaMask connection failed:", error);
+    } finally {
       setIsConnecting(false);
     }
   }, [connect]);
@@ -279,10 +253,9 @@ export const useWalletConnect = (): WalletConnectHook => {
           }
         }),
       });
-      
-      setIsConnecting(false);
     } catch (error) {
       console.error("WalletConnect connection failed:", error);
+    } finally {
       setIsConnecting(false);
     }
   }, [connect]);
@@ -295,87 +268,49 @@ export const useWalletConnect = (): WalletConnectHook => {
           appName: 'MatrixFrog'
         })
       });
-      
-      setIsConnecting(false);
     } catch (error) {
       console.error("Coinbase connection failed:", error);
+    } finally {
       setIsConnecting(false);
     }
   }, [connect]);
 
+  // Enhanced Disconnect mit Coinbase-spezifischer Bereinigung
   const disconnect = useCallback(async () => {
+    // Coinbase Wallet localStorage cleanup (verhindert Reconnection-Probleme)
     if (isCoinbaseWallet()) {
       try {
-        console.log("Attempting Coinbase Wallet deep disconnect...");
+        const keysToRemove = [
+          'coinbase-wallet-session',
+          'coinbase-wallet-addresses',
+          'coinbase-wallet-permission',
+          '-walletlink:https://www.walletlink.org:version',
+          '-walletlink:https://www.walletlink.org:session:id',
+          '-walletlink:https://www.walletlink.org:session:secret',
+          '-walletlink:https://www.walletlink.org:session:linked'
+        ];
         
-        if (typeof window !== 'undefined' && window.ethereum?.isCoinbaseWallet) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_revokePermissions',
-              params: [{ eth_accounts: {} }]
-            });
-          } catch (revokeError) {
-            console.log("Permission revoke attempted:", revokeError);
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        });
+
+        // Bereinige alle coinbase/walletlink keys
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('coinbase') || key.includes('walletlink')) {
+            localStorage.removeItem(key);
           }
-
-          try {
-            await window.ethereum.request({
-              method: 'wallet_requestPermissions',
-              params: [{ eth_accounts: {} }]
-            });
-          } catch (requestError) {
-            console.log("Permission request attempted:", requestError);
-          }
-        }
-
-        try {
-          if (typeof window !== 'undefined') {
-            const keysToRemove = [
-              'coinbase-wallet-session',
-              'coinbase-wallet-addresses',
-              'coinbase-wallet-permission',
-              '-walletlink:https://www.walletlink.org:version',
-              '-walletlink:https://www.walletlink.org:session:id',
-              '-walletlink:https://www.walletlink.org:session:secret',
-              '-walletlink:https://www.walletlink.org:session:linked'
-            ];
-            
-            keysToRemove.forEach(key => {
-              localStorage.removeItem(key);
-              sessionStorage.removeItem(key);
-            });
-
-            Object.keys(localStorage).forEach(key => {
-              if (key.includes('coinbase') || key.includes('walletlink')) {
-                localStorage.removeItem(key);
-              }
-            });
-          }
-        } catch (storageError) {
-          console.log("Storage cleanup attempted:", storageError);
-        }
-
-        try {
-          const ethereum = window.ethereum as { close?: () => void; isCoinbaseWallet?: boolean };
-          if (ethereum?.isCoinbaseWallet && ethereum.close) {
-            ethereum.close();
-          }
-        } catch (closeError) {
-          console.log("Provider close attempted:", closeError);
-        }
-
-      } catch (disconnectError) {
-        console.log("Enhanced Coinbase disconnect attempted:", disconnectError);
+        });
+      } catch (storageError) {
+        console.log("Storage cleanup attempted:", storageError);
       }
     }
     
     wagmiDisconnect();
     setIsConnecting(false);
-
-    await new Promise(resolve => setTimeout(resolve, 500));
   }, [wagmiDisconnect, isCoinbaseWallet]);
 
-  // Auto-save balance to localStorage
+  // Auto-save balance
   useEffect(() => {
     if (typeof window !== 'undefined' && formattedBalance && isConnected) {
       window.localStorage.setItem("Mat_bal", formattedBalance);
@@ -383,28 +318,19 @@ export const useWalletConnect = (): WalletConnectHook => {
   }, [formattedBalance, isConnected]);
 
   return {
-    // Wallet Status
     isConnected,
     address,
     isCorrectNetwork,
     isConnecting,
-    
-    // MFG Token Balance
     mfgBalance: formattedBalance,
     rawMfgBalance: balance as bigint | undefined,
     balanceLoading,
-    
-    // Connection Methods
     connectMetaMask,
     connectWalletConnect,
     connectCoinbase,
     disconnect,
-    
-    // Network Management
     switchToPepeUnchained,
     handleNetworkSwitch,
-    
-    // Utility
     formatTokenBalance,
     refetchBalance,
   };

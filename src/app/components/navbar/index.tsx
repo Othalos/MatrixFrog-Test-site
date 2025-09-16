@@ -75,6 +75,15 @@ export default function Navbar() {
     window.location.href = "/construct";
   };
 
+  // Verbesserte Network-Switch-Handler
+  const handleNetworkSwitch = async () => {
+    try {
+      await switchToPepeUnchained();
+    } catch (error) {
+      console.error('Network switch failed:', error);
+    }
+  };
+
   return (
     <>
       <style jsx>{`
@@ -247,7 +256,7 @@ export default function Navbar() {
                               }`}
                             onClick={
                               !isCorrectNetwork
-                                ? switchToPepeUnchained
+                                ? handleNetworkSwitch
                                 : undefined
                             }
                             title={
@@ -417,7 +426,7 @@ export default function Navbar() {
               formattedAddress={formattedAddress}
               tokenBalance={tokenBalance}
               isCorrectNetwork={isCorrectNetwork}
-              handleNetworkSwitch={switchToPepeUnchained}
+              handleNetworkSwitch={handleNetworkSwitch}
             />
           )}
         </div>
