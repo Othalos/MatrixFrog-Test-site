@@ -677,7 +677,8 @@ export default function StakingSection() {
                 <div style={{ 
                   border: '1px solid rgba(21, 128, 61, 0.5)', 
                   borderRadius: '8px', 
-                  backgroundColor: 'rgba(147, 51, 234, 0.1)'
+                  backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                  position: 'relative'
                 }}>
                   <div style={{ padding: '24px' }}>
                     <h3 className="text-lg font-bold text-purple-400 text-center mb-6">PTX Rewards</h3>
