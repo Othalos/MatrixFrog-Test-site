@@ -376,18 +376,6 @@ function MatrixConstructContent({
 
   const router = useRouter();
 
-  // Debug für Rewards-Problem - zeigt Chain-Status
-  useEffect(() => {
-    console.log('CONSTRUCT DEBUG:', {
-      isConnected,
-      isCorrectNetwork,
-      address,
-      mfgBalance,
-      rawMfgBalance: rawMfgBalance ? formatUnits(rawMfgBalance, 18) : '0',
-      timestamp: new Date().toLocaleTimeString()
-    });
-  }, [isConnected, isCorrectNetwork, address, mfgBalance, rawMfgBalance]);
-
   useEffect(() => {
     setIsHydrated(true);
   }, [setIsHydrated]);
