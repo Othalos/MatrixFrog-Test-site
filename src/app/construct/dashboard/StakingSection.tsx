@@ -51,7 +51,6 @@ const useLiveRewards = (
   lastUpdateTime: number
 ) => {
   const [liveRewards, setLiveRewards] = useState(initialRewards);
-  const [blockTimestamp, setBlockTimestamp] = useState<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,7 +78,6 @@ const useLiveRewards = (
         const blockNumber = await client.getBlockNumber();
         const block = await client.getBlock({ blockNumber });
         const currentBlockTime = Number(block.timestamp);
-        setBlockTimestamp(currentBlockTime);
 
         // Calculate rewards per second based on user's share
         const userShare = stakedAmount * BigInt(1e18) / totalStaked;
@@ -101,7 +99,7 @@ const useLiveRewards = (
         // Fallback to Date.now() based calculation
         const userShare = stakedAmount * BigInt(1e18) / totalStaked;
         const rewardsPerSecond = (dailyRewardRate * userShare) / (BigInt(86400) * BigInt(1e18));
-        let startTime = Date.now();
+        const startTime = Date.now();
 
         intervalRef.current = setInterval(() => {
           const now = Date.now();
