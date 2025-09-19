@@ -609,7 +609,6 @@ export default function StakingSection() {
           </CardTitle>
           <div className="text-sm text-green-300 mt-2">
             Rewards Budget: {formatDisplayNumber(formatUnits(poolInfo.rewardBudget, 18))} PTX | 
-            Days Remaining: {poolInfo.distributionDays} | 
             Total Staked: {formatDisplayNumber(formatUnits(poolInfo.totalStaked, 18))} MFG
           </div>
         </CardHeader>
@@ -771,12 +770,6 @@ export default function StakingSection() {
                       </div>
                       <div className="text-sm text-gray-400">MFG Tokens</div>
                     </div>
-                    <MatrixButton 
-                      onClick={handleUnstake} 
-                      disabled={isLoading || userStakedAmount === 0n}
-                    >
-                      {isLoading ? "Processing..." : "Unstake All"}
-                    </MatrixButton>
                   </div>
                 </div>
 
