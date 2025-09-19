@@ -770,6 +770,12 @@ export default function StakingSection() {
                       </div>
                       <div className="text-sm text-gray-400">MFG Tokens</div>
                     </div>
+                    <MatrixButton 
+                      onClick={handleUnstake} 
+                      disabled={isLoading || userStakedAmount === 0n}
+                    >
+                      {isLoading ? "Processing..." : "Unstake All"}
+                    </MatrixButton>
                   </div>
                 </div>
 
