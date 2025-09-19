@@ -609,7 +609,6 @@ export default function StakingSection() {
           </CardTitle>
           <div className="text-sm text-green-300 mt-2">
             Rewards Budget: {formatDisplayNumber(formatUnits(poolInfo.rewardBudget, 18))} PTX | 
-            Days Remaining: {poolInfo.distributionDays} | 
             Total Staked: {formatDisplayNumber(formatUnits(poolInfo.totalStaked, 18))} MFG
           </div>
         </CardHeader>
