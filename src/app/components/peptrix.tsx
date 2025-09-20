@@ -206,9 +206,9 @@ export default function BuyBotSection() {
           </div>
           <div className="terminal-content">
             {tabContents[activeTab]}
-            {/* Video Embed - inside the same terminal frame */}
-            <div className="mt-[50px] flex flex-col items-center w-[60%] mx-auto items-center">
-              <div className="w-full max-w-sm aspect-video overflow-hidden border border-matrix-green" style={{ borderRadius: 0 }}>
+            {/* Video Embed - inside the same terminal frame with responsive sizing */}
+            <div className="mt-[50px] flex flex-col items-center w-full mx-auto">
+              <div className="w-full max-w-[90%] sm:max-w-md md:max-w-sm aspect-video overflow-hidden border border-matrix-green" style={{ borderRadius: 0 }}>
                 <div className="w-full h-full" style={{ position: 'relative', width: '100%', paddingBottom: '56.25%' }}>
                   <iframe
                     src="https://www.youtube.com/embed/XpQV4PN0Gs8?enablejsapi=1"
