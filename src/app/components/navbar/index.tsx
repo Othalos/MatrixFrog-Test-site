@@ -122,7 +122,7 @@ export default function Navbar() {
                 <div className="nav-items">
                   <NavLink href={getNavLink("about")} label="About" />
                   <div className="divider">|</div>
-                  <NavLink href={getNavLink("buybot")} label="PepTrix" />
+                  <NavLink href={getNavLink("peptrix")} label="PepTrix" />
                   <div className="divider">|</div>
                   <NavLink href="/treasury" label="Treasury" />
                   <div className="divider">|</div>
