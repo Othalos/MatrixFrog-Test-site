@@ -4,7 +4,7 @@ import Image from "next/image";
 import InitialPage from "./initial-page";
 import Navbar from "./components/navbar";
 import AboutSection from "./components/about-section";
-import BuyBotSection from "./components/buybot-section";
+import PeptrixSection from "./components/peptrix";
 import RoadmapSection from "./components/roadmap-section";
 import Footer from "./components/footer";
 import MatrixScrollArrow from "./components/matrix-scroll-arrow";
@@ -483,8 +483,8 @@ export default function Home() {
             </div>
 
             {/* Buy Bot Section */}
-            <div id="buybot">
-              <BuyBotSection />
+            <div id="peptrix">
+              <PeptrixSection />
             </div>
 
             {/* Roadmap Section - Jetzt nach dem Wallet Tracker */}
