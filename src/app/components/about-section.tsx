@@ -130,7 +130,7 @@ export default function AboutSection() {
     <section
       id="about"
       ref={sectionRef}
-      className="w-full min-h-screen py-12 md:py-24 flex items-center justify-center relative"
+      className="w-full min-h-screen py-12 md:py-24 flex items-center justify-center relative overflow-hidden"
     >
       <div className="max-w-5xl w-full mx-auto px-4 md:px-8 relative z-20">
         <h2 className="sr-only">About MatrixFrog</h2>
@@ -196,42 +196,61 @@ export default function AboutSection() {
         </div>
       </div>
 
-      {/* Custom CSS für spezielle Effekte */}
+      {/* Custom CSS für spezielle Effekte - MOBILE OPTIMIZED */}
       <style jsx>{`
         .perspective-container {
           perspective: 1000px;
           margin-bottom: 2rem;
           width: 100%;
+          max-width: 100%;
+          overflow: hidden;
         }
 
         @media (min-width: 640px) {
           .perspective-container {
-            margin-bottom: 3rem; /* Mehr Abstand unten auf Desktop */
-            width: 85%; /* Etwas schmaler auf Desktop für ein eleganteres Layout */
+            margin-bottom: 3rem;
+            width: 90%;
             margin-left: auto;
             margin-right: auto;
           }
         }
 
+        @media (min-width: 1024px) {
+          .perspective-container {
+            width: 85%;
+          }
+        }
+
         .hologram-frame {
           width: 100%;
-          min-height: 400px; /* Erhöht von 350px auf 400px */
+          max-width: 100%;
+          min-height: 350px;
           background-color: rgba(0, 20, 0, 0.8);
           border: 1px solid rgba(0, 255, 65, 0.5);
           border-radius: 4px;
           position: relative;
           transform-style: preserve-3d;
-          box-shadow: 0 0 20px rgba(0, 255, 65, 0.4),
-            inset 0 0 15px rgba(0, 255, 65, 0.2);
+          box-shadow: 0 0 15px rgba(0, 255, 65, 0.4),
+            inset 0 0 10px rgba(0, 255, 65, 0.2);
           overflow: hidden;
-          padding: 1.5rem;
+          padding: 1rem;
           transition: all 0.5s ease-in-out;
+          box-sizing: border-box;
         }
 
         @media (min-width: 640px) {
           .hologram-frame {
+            padding: 2rem;
+            min-height: 400px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.4),
+              inset 0 0 15px rgba(0, 255, 65, 0.2);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .hologram-frame {
             padding: 2.5rem;
-            min-height: 450px; /* Noch höher für Desktops */
+            min-height: 450px;
           }
         }
 
@@ -242,23 +261,36 @@ export default function AboutSection() {
 
         .hologram-frame.active {
           opacity: 1;
-          transform: translateY(0) rotateX(2deg);
-          animation: hologram-float 8s ease-in-out infinite;
+          transform: translateY(0) rotateX(1deg);
+          animation: hologram-float 10s ease-in-out infinite;
+        }
+
+        @media (min-width: 640px) {
+          .hologram-frame.active {
+            transform: translateY(0) rotateX(2deg);
+          }
         }
 
         @keyframes hologram-float {
           0%,
           100% {
-            transform: translateY(0) rotateX(2deg);
+            transform: translateY(0) rotateX(1deg);
           }
           50% {
-            transform: translateY(-10px) rotateX(-2deg);
+            transform: translateY(-5px) rotateX(-1deg);
           }
         }
 
-        /* Langsamere Animation für Hologram-Float */
-        .hologram-frame.active {
-          animation: hologram-float 10s ease-in-out infinite; /* von 12s auf 10s reduziert */
+        @media (min-width: 640px) {
+          @keyframes hologram-float {
+            0%,
+            100% {
+              transform: translateY(0) rotateX(2deg);
+            }
+            50% {
+              transform: translateY(-10px) rotateX(-2deg);
+            }
+          }
         }
 
         .hologram-scan-line {
@@ -266,15 +298,21 @@ export default function AboutSection() {
           top: 0;
           left: 0;
           right: 0;
-          height: 5px;
+          height: 3px;
           background: linear-gradient(
             to bottom,
             rgba(0, 255, 65, 0.5),
             rgba(0, 255, 65, 0)
           );
-          animation: scan 3s linear infinite;
+          animation: scan 5s linear infinite;
           z-index: 5;
           pointer-events: none;
+        }
+
+        @media (min-width: 640px) {
+          .hologram-scan-line {
+            height: 5px;
+          }
         }
 
         @keyframes scan {
@@ -284,11 +322,6 @@ export default function AboutSection() {
           100% {
             top: 100%;
           }
-        }
-
-        /* Langsamere Scan-Animation */
-        .hologram-scan-line {
-          animation: scan 5s linear infinite; /* von 6s auf 5s reduziert */
         }
 
         .glitch-overlay {
@@ -311,68 +344,115 @@ export default function AboutSection() {
 
         .hologram-pyramid {
           position: absolute;
-          width: 40px;
-          height: 40px;
+          width: 20px;
+          height: 20px;
           border: 1px solid rgba(0, 255, 65, 0.7);
           z-index: 2;
         }
 
+        @media (min-width: 640px) {
+          .hologram-pyramid {
+            width: 30px;
+            height: 30px;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .hologram-pyramid {
+            width: 40px;
+            height: 40px;
+          }
+        }
+
         .top-left {
-          top: -5px;
-          left: -5px;
+          top: -3px;
+          left: -3px;
           border-right: none;
           border-bottom: none;
         }
 
         .top-right {
-          top: -5px;
-          right: -5px;
+          top: -3px;
+          right: -3px;
           border-left: none;
           border-bottom: none;
         }
 
         .bottom-left {
-          bottom: -5px;
-          left: -5px;
+          bottom: -3px;
+          left: -3px;
           border-right: none;
           border-top: none;
         }
 
         .bottom-right {
-          bottom: -5px;
-          right: -5px;
+          bottom: -3px;
+          right: -3px;
           border-left: none;
           border-top: none;
+        }
+
+        @media (min-width: 640px) {
+          .top-left, .top-right, .bottom-left, .bottom-right {
+            top: -5px;
+            bottom: -5px;
+            left: -5px;
+            right: -5px;
+          }
+          .top-left { top: -5px; left: -5px; }
+          .top-right { top: -5px; right: -5px; }
+          .bottom-left { bottom: -5px; left: -5px; }
+          .bottom-right { bottom: -5px; right: -5px; }
         }
 
         .console-container {
           font-family: "Courier New", monospace;
           color: #00ff41;
           overflow-y: auto;
-          max-height: 250px; /* Erhöht von 220px auf 250px */
+          overflow-x: hidden;
+          max-height: 200px;
           position: relative;
           z-index: 4;
-          font-size: 0.9rem;
+          font-size: 0.75rem;
           word-break: break-word;
-          line-height: 1.6;
+          line-height: 1.4;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         @media (min-width: 640px) {
           .console-container {
-            font-size: 1.1rem; /* Erhöht von 1rem auf 1.1rem */
-            max-height: 300px; /* Zusätzlich mehr Höhe auf Desktop */
-            line-height: 1.8; /* Mehr Zeilenabstand auf Desktop */
+            font-size: 0.9rem;
+            max-height: 250px;
+            line-height: 1.6;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .console-container {
+            font-size: 1.1rem;
+            max-height: 300px;
+            line-height: 1.8;
           }
         }
 
         .console-line {
-          margin-bottom: 0.7rem;
+          margin-bottom: 0.5rem;
           text-shadow: 0 0 5px rgba(0, 255, 65, 0.7);
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          hyphens: auto;
         }
 
         @media (min-width: 640px) {
           .console-line {
-            margin-bottom: 1rem; /* Mehr Abstand zwischen den Zeilen auf Desktop */
+            margin-bottom: 0.7rem;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .console-line {
+            margin-bottom: 1rem;
           }
         }
 
@@ -383,25 +463,38 @@ export default function AboutSection() {
 
         .output-line {
           color: rgba(255, 255, 255, 0.85);
-          padding-left: 0.5rem;
+          padding-left: 0.25rem;
         }
 
         @media (min-width: 640px) {
           .output-line {
-            padding-left: 1.5rem; /* Mehr Einrückung auf Desktop */
-            letter-spacing: 0.5px; /* Bessere Lesbarkeit auf Desktop */
+            padding-left: 0.5rem;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .output-line {
+            padding-left: 1.5rem;
+            letter-spacing: 0.5px;
           }
         }
 
         .console-cursor {
           display: inline-block;
-          width: 8px;
-          height: 16px;
+          width: 6px;
+          height: 12px;
           background-color: #00ff41;
           animation: blink 1s step-end infinite;
         }
 
         @media (min-width: 640px) {
+          .console-cursor {
+            width: 8px;
+            height: 16px;
+          }
+        }
+
+        @media (min-width: 1024px) {
           .console-cursor {
             width: 10px;
             height: 20px;
@@ -421,24 +514,40 @@ export default function AboutSection() {
 
         /* MatrixFrog Portal & Button Styles */
         .matrix-portal-container {
-          margin-top: 2rem;
+          margin-top: 1.5rem;
           position: relative;
           z-index: 10;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         @media (min-width: 640px) {
           .matrix-portal-container {
-            margin-top: 3rem; /* Mehr Abstand auf Desktop */
+            margin-top: 2rem;
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .matrix-portal-container {
+            margin-top: 3rem;
           }
         }
 
         .matrix-portal-frame {
           position: relative;
-          padding: 1.5rem 0;
+          padding: 1rem 0;
           border-top: 1px solid rgba(0, 255, 65, 0.3);
           opacity: 0;
           transform: translateY(20px);
           transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+          width: 100%;
+          box-sizing: border-box;
+        }
+
+        @media (min-width: 640px) {
+          .matrix-portal-frame {
+            padding: 1.5rem 0;
+          }
         }
 
         .matrix-portal-frame.active {
@@ -451,6 +560,8 @@ export default function AboutSection() {
           justify-content: center;
           align-items: center;
           position: relative;
+          width: 100%;
+          box-sizing: border-box;
         }
 
         .connector {
@@ -463,11 +574,17 @@ export default function AboutSection() {
             rgba(0, 255, 65, 0)
           );
           top: 50%;
-          width: 20%;
+          width: 15%;
           z-index: -1;
         }
 
         @media (min-width: 640px) {
+          .connector {
+            width: 20%;
+          }
+        }
+
+        @media (min-width: 1024px) {
           .connector {
             width: 30%;
           }
@@ -481,33 +598,51 @@ export default function AboutSection() {
           right: 0;
         }
 
-        /* Button Styles */
+        /* Button Styles - Mobile First */
         .buy-matrix-button {
           position: relative;
-          padding: 12px 24px;
+          padding: 10px 20px;
           background: rgba(0, 20, 0, 0.9);
           color: #00ff41;
           border: 2px solid #00ff41;
           border-radius: 4px;
           font-family: "Courier New", monospace;
-          font-size: 1rem;
+          font-size: 0.85rem;
           font-weight: bold;
           text-transform: uppercase;
           letter-spacing: 1px;
           cursor: pointer;
           overflow: hidden;
           transition: all 0.3s;
-          box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+          box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
           text-decoration: none;
           display: inline-block;
           transform-style: preserve-3d;
           text-align: center;
+          max-width: 100%;
+          box-sizing: border-box;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 400px) {
+          .buy-matrix-button {
+            font-size: 0.75rem;
+            padding: 8px 16px;
+          }
         }
 
         @media (min-width: 640px) {
           .buy-matrix-button {
+            padding: 12px 24px;
+            font-size: 1rem;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+          }
+        }
+
+        @media (min-width: 1024px) {
+          .buy-matrix-button {
             padding: 16px 36px;
-            font-size: 1.2rem; /* Korrigiert von .2rem auf 1.2rem */
+            font-size: 1.2rem;
             letter-spacing: 2px;
           }
         }
@@ -515,30 +650,56 @@ export default function AboutSection() {
         .buy-matrix-button:before {
           content: "";
           position: absolute;
-          top: -5px;
-          left: -5px;
-          right: -5px;
-          bottom: -5px;
+          top: -3px;
+          left: -3px;
+          right: -3px;
+          bottom: -3px;
           border: 1px solid rgba(0, 255, 65, 0.3);
           pointer-events: none;
           opacity: 0;
           transition: all 0.3s;
         }
 
+        @media (min-width: 640px) {
+          .buy-matrix-button:before {
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+          }
+        }
+
         .buy-matrix-button:hover:before {
           opacity: 1;
-          top: -8px;
-          left: -8px;
-          right: -8px;
-          bottom: -8px;
+          top: -6px;
+          left: -6px;
+          right: -6px;
+          bottom: -6px;
+        }
+
+        @media (min-width: 640px) {
+          .buy-matrix-button:hover:before {
+            top: -8px;
+            left: -8px;
+            right: -8px;
+            bottom: -8px;
+          }
         }
 
         .buy-matrix-button:hover {
           background: rgba(0, 40, 0, 0.9);
-          box-shadow: 0 0 25px rgba(0, 255, 65, 0.7);
-          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 0 20px rgba(0, 255, 65, 0.7);
+          transform: translateY(-1px) scale(1.02);
           color: #ffffff;
-          text-shadow: 0 0 10px rgba(0, 255, 65, 1);
+          text-shadow: 0 0 8px rgba(0, 255, 65, 1);
+        }
+
+        @media (min-width: 640px) {
+          .buy-matrix-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.7);
+            text-shadow: 0 0 10px rgba(0, 255, 65, 1);
+          }
         }
 
         .buy-matrix-button:active {
@@ -565,7 +726,7 @@ export default function AboutSection() {
             transparent
           );
           z-index: 1;
-          animation: glitch-animation 2s linear infinite;
+          animation: glitch-animation 3s linear infinite;
         }
 
         @keyframes glitch-animation {
@@ -577,33 +738,40 @@ export default function AboutSection() {
           }
         }
 
-        /* Langsamere Glitch-Animation */
-        .button-glitch {
-          animation: glitch-animation 3s linear infinite; /* von 4s auf 3s reduziert */
-        }
-
         .pulse-active {
-          animation: pulse 2s infinite;
+          animation: pulse 3s infinite;
         }
 
         @keyframes pulse {
           0% {
             transform: scale(1);
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
           }
           50% {
-            transform: scale(1.03);
-            box-shadow: 0 0 25px rgba(0, 255, 65, 0.6);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.6);
           }
           100% {
             transform: scale(1);
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.4);
           }
         }
 
-        /* Langsamere Pulse-Animation */
-        .pulse-active {
-          animation: pulse 3s infinite; /* von 4s auf 3s reduziert */
+        @media (min-width: 640px) {
+          @keyframes pulse {
+            0% {
+              transform: scale(1);
+              box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+            }
+            50% {
+              transform: scale(1.03);
+              box-shadow: 0 0 25px rgba(0, 255, 65, 0.6);
+            }
+            100% {
+              transform: scale(1);
+              box-shadow: 0 0 15px rgba(0, 255, 65, 0.4);
+            }
+          }
         }
 
         /* Glitch effect for button */
@@ -616,19 +784,42 @@ export default function AboutSection() {
             transform: translate(0);
           }
           20% {
-            transform: translate(-3px, 3px);
+            transform: translate(-2px, 2px);
           }
           40% {
-            transform: translate(-3px, -3px);
+            transform: translate(-2px, -2px);
           }
           60% {
-            transform: translate(3px, 3px);
+            transform: translate(2px, 2px);
           }
           80% {
-            transform: translate(3px, -3px);
+            transform: translate(2px, -2px);
           }
           100% {
             transform: translate(0);
+          }
+        }
+
+        @media (min-width: 640px) {
+          @keyframes glitch {
+            0% {
+              transform: translate(0);
+            }
+            20% {
+              transform: translate(-3px, 3px);
+            }
+            40% {
+              transform: translate(-3px, -3px);
+            }
+            60% {
+              transform: translate(3px, 3px);
+            }
+            80% {
+              transform: translate(3px, -3px);
+            }
+            100% {
+              transform: translate(0);
+            }
           }
         }
 
@@ -641,6 +832,11 @@ export default function AboutSection() {
             opacity: 1;
             transform: translateY(0);
           }
+        }
+
+        /* Ensure no horizontal overflow */
+        * {
+          box-sizing: border-box;
         }
       `}</style>
     </section>
