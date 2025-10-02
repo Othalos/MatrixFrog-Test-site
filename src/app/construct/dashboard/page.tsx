@@ -26,10 +26,17 @@ import {
   useWaitForTransactionReceipt,
 } from "wagmi";
 import VotingSection from "./VotingSection";
-import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes } from "./episodeConfig";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { EPISODE_CONFIGS, getEpisodeStatus, getCachedVotingResults, finalizeVotingResults, checkAndAutoFinalizeAllEpisodes, getVotingTokenInfo } from "./episodeConfig";
 import { useWalletConnect } from "../../hooks/useWalletConnect";
+// Import games - add more games here as they're created
+import FlapMatrix from "./games/FlapMatrix";
+import MatrixSnake from "./games/MatrixSnake";
+import { PepuMemeWars, PepuJump } from "./games/JonnyGames";
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const PTX_TOKEN_ADDRESS = "0xE17387d0b67aa4E2d595D8fC547297cabDf2a7d2";
 
 const ERC20_ABI = [
   {
@@ -154,61 +161,124 @@ const getVotingBalances = async (episodeId: string) => {
   }
 };
 
-// Games Section Component
+// Games Section Component - Now Active with Mobile Dropdown Fix!
 const GamesSection = () => {
+  const [selectedGame, setSelectedGame] = useState("flap-matrix");
+  
+  // Available games configuration - easily extensible for future games
+  const availableGames = [
+    { 
+      value: "flap-matrix", 
+      title: "Flap Matrix", 
+      description: "Navigate the Matrix character through green candles and avoid obstacles",
+      component: FlapMatrix
+    },
+    { 
+      value: "matrix-snake", 
+      title: "Matrix Snake", 
+      description: "Classic snake game with Matrix frog head - eat green dots and grow longer",
+      component: MatrixSnake
+    },
+    { 
+      value: "pepu-memewars", 
+      title: "Pepu MemeWars By Jonny", 
+      description: "Click and hold to play this exciting meme battle game",
+      component: PepuMemeWars
+    },
+    { 
+      value: "pepu-jump", 
+      title: "Pepu Jump By Jonny", 
+      description: "Tap in the direction you want to jump and navigate through challenges",
+      component: PepuJump
+    },
+    // Add more games here in the future:
+    // { 
+    //   value: "matrix-runner", 
+    //   title: "Matrix Runner", 
+    //   description: "Run through the digital world",
+    //   component: MatrixRunner
+    // },
+  ];
+
+  const currentGame = availableGames.find(game => game.value === selectedGame);
+  const GameComponent = currentGame?.component;
+
   return (
-    <div style={{ opacity: 0.6 }}>
-      <Card style={{ backgroundColor: "black", border: "1px solid rgba(100,100,100,0.3)", marginBottom: "24px" }}>
-        <CardHeader>
-          <CardTitle style={{ color: "#6b7280", fontFamily: "monospace" }}>
+    <div className="games-section-container">
+      <Card style={{ backgroundColor: "black", border: "1px solid #22c55e", marginBottom: "24px" }}>
+        <CardHeader style={{ padding: "24px" }}>
+          <CardTitle style={{ color: "#4ade80", fontFamily: "monospace" }}>
             MATRIX GAMES
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div style={{ textAlign: "center", padding: "40px 20px" }}>
-            <Gamepad2 style={{ width: "48px", height: "48px", color: "#6b7280", margin: "0 auto 16px" }} />
-            <h3 style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "1.2rem", marginBottom: "12px" }}>
-              COMING SOON
-            </h3>
-            <p style={{ color: "#6b7280", fontFamily: "monospace", fontSize: "0.9rem", lineHeight: "1.6", maxWidth: "400px", margin: "0 auto" }}>
-              Enter the Matrix through immersive gaming experiences. Compete with other community members, earn rewards, and shape the narrative through gameplay.
-            </p>
-            <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "8px", alignItems: "center" }}>
-              <div style={{ 
-                padding: "8px 16px", 
-                backgroundColor: "rgba(100,100,100,0.1)", 
-                border: "1px solid rgba(100,100,100,0.3)",
-                borderRadius: "4px",
-                color: "#6b7280",
-                fontSize: "0.8rem",
+        <CardContent style={{ padding: "24px", paddingTop: "0" }}>
+          {/* Game Selection Dropdown - Fixed for mobile */}
+          <div className="games-dropdown-container" style={{ marginBottom: "24px" }}>
+            <Select value={selectedGame} onValueChange={setSelectedGame}>
+              <SelectTrigger style={{ 
+                width: "100%", 
+                backgroundColor: "black", 
+                border: "1px solid rgba(34,197,94,0.3)", 
+                color: "#4ade80",
                 fontFamily: "monospace"
               }}>
-                Story-driven Adventures
+                <SelectValue placeholder="Select Game" />
+              </SelectTrigger>
+              <SelectContent style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
+                {availableGames.map((game) => (
+                  <SelectItem 
+                    key={game.value} 
+                    value={game.value} 
+                    style={{ 
+                      color: "#4ade80", 
+                      paddingTop: "4px", 
+                      paddingBottom: "4px",
+                      fontFamily: "monospace"
+                    }}
+                  >
+                    {game.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Game Description and Component */}
+          {currentGame && (
+            <div>
+              <div style={{ 
+                marginBottom: "20px", 
+                padding: "16px", 
+                backgroundColor: "rgba(34,197,94,0.1)", 
+                border: "1px solid rgba(34,197,94,0.3)",
+                borderRadius: "4px"
+              }}>
+                <h3 style={{ 
+                  color: "#4ade80", 
+                  fontFamily: "monospace", 
+                  fontSize: "1.1rem", 
+                  marginBottom: "8px",
+                  margin: "0 0 8px 0" 
+                }}>
+                  {currentGame.title}
+                </h3>
+                <p style={{ 
+                  color: "#86efac", 
+                  fontFamily: "monospace", 
+                  fontSize: "0.9rem", 
+                  lineHeight: "1.5",
+                  margin: "0"
+                }}>
+                  {currentGame.description}
+                </p>
               </div>
-              <div style={{ 
-                padding: "8px 16px", 
-                backgroundColor: "rgba(100,100,100,0.1)", 
-                border: "1px solid rgba(100,100,100,0.3)",
-                borderRadius: "4px",
-                color: "#6b7280",
-                fontSize: "0.8rem",
-                fontFamily: "monospace"
-              }}>
-                Token-based Rewards
-              </div>
-              <div style={{ 
-                padding: "8px 16px", 
-                backgroundColor: "rgba(100,100,100,0.1)", 
-                border: "1px solid rgba(100,100,100,0.3)",
-                borderRadius: "4px",
-                color: "#6b7280",
-                fontSize: "0.8rem",
-                fontFamily: "monospace"
-              }}>
-                Community Competitions
+              
+              {/* Game component with mobile-optimized wrapper */}
+              <div className="game-component-wrapper">
+                {GameComponent && <GameComponent />}
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -244,7 +314,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                Unique Digital Artifacts
+                🎨 Unique Digital Artifacts
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -255,7 +325,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                Peer-to-Peer Trading
+                🔄 Peer-to-Peer Trading
               </div>
               <div style={{ 
                 padding: "8px 16px", 
@@ -266,7 +336,7 @@ const CollectiblesSection = () => {
                 fontSize: "0.8rem",
                 fontFamily: "monospace"
               }}>
-                Virtual Gallery Display
+                🏛️ Virtual Gallery Display
               </div>
             </div>
           </div>
@@ -368,7 +438,6 @@ function MatrixConstructContent({
   const {
     isConnected,
     address,
-    isCorrectNetwork,
     rawMfgBalance,
     refetchBalance,
   } = useWalletConnect();
@@ -402,7 +471,7 @@ function MatrixConstructContent({
       setVoteSuccess(true);
       setIsVoting(false);
       setVoteError(null);
-      refetchBalance(); // Verwendet zentrale refetchBalance Funktion
+      refetchBalance();
       refetchVotingStats();
       setTimeout(() => { setVoteSuccess(false); }, 5000);
     }
@@ -456,13 +525,6 @@ function MatrixConstructContent({
       setVoteError("Please select a pill option first");
       return;
     }
-    
-    // Zusätzliche Network-Prüfung für bessere UX
-    if (!isCorrectNetwork) {
-      setVoteError("Please switch to the correct network first");
-      return;
-    }
-    
     const episode = getEpisodeStatus(selectedEpisode);
     if (!episode || episode.status !== 'active') {
       setVoteError("Voting is not active for this episode");
@@ -501,11 +563,11 @@ function MatrixConstructContent({
     { 
       icon: Gamepad2, 
       label: "Games", 
-      subtitle: "Coming soon", 
+      subtitle: "Play Matrix games", 
       href: "#", 
       active: activeSection === "games", 
       onClick: () => setActiveSection("games"),
-      disabled: true
+      disabled: false // Now enabled!
     },
     { 
       icon: Star, 
@@ -770,7 +832,7 @@ function MatrixConstructContent({
             </>
           ) : activeSection === "bloopers" ? (
             <>
-              <div style={{ marginBottom: "24px" }}>
+              <div style={{ marginBottom: "24px" }} className="bloopers-section">
                 <Card style={{ backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)" }}>
                   <CardContent style={{ padding: "32px", textAlign: "center" }}>
                     <div className="video-container" style={{ width: "100%", margin: "0 auto", border: "2px solid #22c55e", borderRadius: "8px", overflow: "hidden" }}>
@@ -791,7 +853,7 @@ function MatrixConstructContent({
                   </CardContent>
                 </Card>
               </div>
-              <div style={{ marginBottom: "24px" }}>
+              <div style={{ marginBottom: "24px" }} className="bloopers-section">
                 <Select value={selectedBlooper} onValueChange={setSelectedBlooper}>
                   <SelectTrigger style={{ width: "100%", backgroundColor: "black", border: "1px solid rgba(34,197,94,0.3)", color: "#4ade80" }}>
                     <SelectValue placeholder="Select Blooper" />
