@@ -18,6 +18,9 @@ export interface EpisodeConfig {
     cachedGreenVotes?: number;
     cachedTotalVotes?: number;
     cacheTimestamp?: Date;
+    // New voting token configuration
+    votingToken: 'MFG' | 'PTX';
+    votingAmount: number;
 }
 
 // Episode Configuration - Easy to update for new episodes
@@ -38,6 +41,8 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
         redPathDescription: "The Red Path: The Human. A harrowing journey into the depths of the mind, where sanity hangs by a thread.",
         greenPathDescription: "The Green Path: The Amphibian. A profound exploration beyond perceived reality, embracing a new, expansive consciousness.",
         videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs",
+        votingToken: "MFG",
+        votingAmount: 25000,
     },
     {
         id: "episode-2",
@@ -54,7 +59,9 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
         description: "Pax's strange visions of frogs won't go away. As he goes about his normal day, a series of bizarre coincidences and amphibious events leave him questioning what's real. When a familiar face and a mysterious note from Lily force a choice, Pax must decide: embrace his human reality, or leap into the unknown. The time has come to choose... red or green?",
         redPathDescription: "The Red Path: Who is this? Don't answer and lets ask Lily about these cryptic notes.",
         greenPathDescription: "The Green Path: Answer the call? maybe you can get some answers to these visions.",
-        videoUrl: "https://www.youtube.com/embed/Zmvv1Jr5Zmc"
+        videoUrl: "https://www.youtube.com/embed/Zmvv1Jr5Zmc",
+        votingToken: "MFG",
+        votingAmount: 25000,
     },
      {
          id: "episode-3",
@@ -67,7 +74,9 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
          description: "...",
          redPathDescription: "The Red Path: ...",
          greenPathDescription: "The Green Path: ...",
-         videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs"
+         videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs",
+         votingToken: "PTX",
+         votingAmount: 5000,
      } 
     // {
     //     id: "episode-4",
@@ -80,7 +89,9 @@ export const EPISODE_CONFIGS: EpisodeConfig[] = [
     //     description: "The battle for reality reaches its climax as forces beyond comprehension clash in the ultimate showdown. The fate of consciousness itself hangs in the balance as our protagonist must make the final choice that will determine not just their own destiny, but the destiny of all who have been touched by this extraordinary journey.",
     //     redPathDescription: "The Red Path: Stand against the system and fight for human consciousness.",
     //     greenPathDescription: "The Green Path: Evolve beyond the conflict and find harmony in the new reality.",
-    //     videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs"
+    //     videoUrl: "https://www.youtube.com/embed/0roDfig5Ycs",
+    //     votingToken: "PTX",
+    //     votingAmount: 5000,
     // }
 ];
 
@@ -109,6 +120,15 @@ export const getVotingCountdown = (episode: EpisodeConfig): string | null => {
     const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
     return `${days}d ${hours}h`;
+};
+
+// Helper function to get voting token details
+export const getVotingTokenInfo = (episode: EpisodeConfig) => {
+    return {
+        token: episode.votingToken,
+        amount: episode.votingAmount,
+        displayText: `${episode.votingAmount.toLocaleString()} ${episode.votingToken}`,
+    };
 };
 
 // Function to automatically update episode status based on dates
@@ -245,4 +265,4 @@ export const checkAndAutoFinalizeAllEpisodes = async (
     }
 
     return results;
-}; 
+};
