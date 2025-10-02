@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle } from "../../components/ui/card";
-import { type EpisodeConfig, getVotingCountdown } from "./episodeConfig";
+import { type EpisodeConfig, getVotingCountdown, getVotingTokenInfo } from "./episodeConfig";
 import { useWalletConnect } from "../../hooks/useWalletConnect";
 
 const winnerAnimationStyles = `
@@ -96,6 +96,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     const isUpcoming = episode.status === 'upcoming';
 
     const countdown = getVotingCountdown(episode);
+    const tokenInfo = getVotingTokenInfo(episode);
 
     // Wallet Connect Handler
     const handleWalletConnect = () => {
@@ -145,7 +146,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                     </CardTitle>
                 </CardHeader>
 
-                {/* MFG Token Balance Display */}
+                {/* Token Balance Display */}
                 {isConnected && isCorrectNetwork && (
                     <div
                         style={{
@@ -166,7 +167,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 marginBottom: "4px",
                             }}
                         >
-                            MFG Token Balance
+                            {tokenInfo.token} Token Balance
                         </div>
                         <div
                             style={{
@@ -176,7 +177,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 fontWeight: "bold",
                             }}
                         >
-                            {mfgBalance} MFG
+                            {mfgBalance} {tokenInfo.token}
                         </div>
                         <div
                             style={{
@@ -186,7 +187,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                 fontFamily: "monospace",
                             }}
                         >
-                            25000 MFG required per vote
+                            {tokenInfo.displayText} required per vote
                         </div>
                     </div>
                 )}
@@ -280,7 +281,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                25000 MatrixFrog required to vote
+                                {tokenInfo.displayText} required to vote
                             </p>
                         )}
                     </div>
@@ -365,7 +366,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                     fontFamily: "monospace",
                                 }}
                             >
-                                25000 MatrixFrog required to vote
+                                {tokenInfo.displayText} required to vote
                             </p>
                         )}
                     </div>
@@ -384,7 +385,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                             fontFamily: "monospace",
                         }}
                     >
-                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! 25000 MATRIX transferred.
+                        ✅ {selected === "red" ? "Red Pill" : "Green Pill"} vote successful! {tokenInfo.displayText} transferred.
                     </div>
                 )}
 
@@ -595,7 +596,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
                                                         ? "Confirming Transaction..."
                                                         : isConfirming
                                                             ? "Processing Vote..."
-                                                            : "Cast Vote (25000 MATRIX)"}
+                                                            : `Cast Vote (${tokenInfo.displayText})`}
                     </button>
                 </div>
 
