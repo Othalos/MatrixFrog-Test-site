@@ -1,679 +1,366 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const GAME_CONFIG = {
-  MAP_WIDTH: 10000,
-  MAP_HEIGHT: 10000,
-  VIEWPORT_WIDTH: 750,
-  VIEWPORT_HEIGHT: 750,
-  PLAYER_SIZE: 32,
-  PLAYER_BASE_SPEED: 200,
-  PLAYER_BASE_HEALTH: 100,
-  PLAYER_BASE_ATTACK: 10,
-  ENEMY_SIZE: 32,
-  ENEMY_SPEED: 100,
-  ENEMY_SPEED_INCREASE_PER_WAVE: 0.01, // 1% per wave
-  ENEMY_HEALTH: 30,
-  ENEMY_DAMAGE: 10,
-  ENEMY_ATTACK_COOLDOWN: 1000,
-  BOSS_SIZE_MULTIPLIER: 2,
-  BOSS_HEALTH_MULTIPLIER: 2,
-  BOSS_DAMAGE_MULTIPLIER: 2,
-  PISTOL_FIRE_RATE: 500,
-  PISTOL_DAMAGE: 10,
-  PISTOL_SPEED: 400,
-  PROJECTILE_SIZE: 6,
-  XP_PER_ENEMY: 10,
-  XP_PER_BOSS: 50,
-  XP_TO_LEVEL: 100,
-  STAT_BONUS: 0.02,
-  INITIAL_ENEMIES_PER_WAVE: 5,
-  WAVE_MULTIPLIER: 2,
+const CONFIG = {
+  MAP: 10000, VIEW: 750, PLAYER_SIZE: 32, ENEMY_SIZE: 32, ENEMY_SPEED: 100, ENEMY_SPEED_INC: 0.01,
+  ENEMY_HP: 25, ENEMY_DMG: 10, ENEMY_COOLDOWN: 1000, BOSS_SIZE: 2, BOSS_HP: 2, BOSS_DMG: 2,
+  PROJ_SIZE: 6, XP_ENEMY: 10, XP_BOSS: 50, XP_LEVEL: 100, 
+  HEALTH_BONUS: 0.07, ATTACK_BONUS: 0.08, SPEED_BONUS: 0.02,
+  ENEMIES_FOR_BOSS: 15, BASE_SPAWN_RATE: 1500, MIN_SPAWN_RATE: 300,
 };
 
-const COLORS = {
-  BACKGROUND: '#000000',
-  MATRIX_GREEN: '#00FF00',
-  PLAYER: '#4ade80',
-  ENEMY: '#228B22',
-  BOSS: '#8B0000',
-  PROJECTILE: '#FFD700',
-  HEALTH_BAR_BG: '#333333',
-  HEALTH_BAR_FILL: '#00FF00',
-  XP_BAR_BG: '#333333',
-  XP_BAR_FILL: '#FFD700',
-  GRID: '#003300',
-  UI_BG: 'rgba(0, 0, 0, 0.9)',
-  UI_BORDER: '#22c55e',
+const CHARS = {
+  pax: { id: 'pax', name: 'Pax', hp: 100, spd: 200, atk: 10, wpn: 'pistol', unlock: 0 },
+  lilly: { id: 'lilly', name: 'Lilly', hp: 75, spd: 250, atk: 8, wpn: 'shotgun', unlock: 5 },
+  theOne: { id: 'theOne', name: 'The One', hp: 150, spd: 200, atk: 6, wpn: 'arc', unlock: 7 },
 };
 
-interface Vector2D {
-  x: number;
-  y: number;
-}
+const WPNS = {
+  pistol: { rate: 500, dmg: 1.0, spd: 400, cnt: 1, spread: 0, pierce: false },
+  shotgun: { rate: 800, dmg: 0.5, spd: 350, cnt: 5, spread: 0.3, pierce: false },
+  arc: { rate: 600, dmg: 0.75, spd: 400, cnt: 1, spread: 0, pierce: true },
+};
 
-interface Enemy {
-  id: number;
-  position: Vector2D;
-  health: number;
-  maxHealth: number;
-  lastAttack: number;
-  isBoss: boolean;
-  damage: number;
-}
+const COL = {
+  BG: '#000', GREEN: '#00FF00', PLAYER: '#4ade80', ENEMY: '#228B22', BOSS: '#8B0000',
+  PROJ: '#FFD700', VIOLET: '#8b5cf6', HP_BG: '#333', HP: '#00FF00', XP_BG: '#333', XP: '#FFD700', GRID: '#003300',
+};
 
-interface Projectile {
-  id: number;
-  position: Vector2D;
-  velocity: Vector2D;
-  damage: number;
-}
+const MatrixSurvivor = () => {
+  const canvasRef = useRef(null);
+  const [phase, setPhase] = useState('menu');
+  const [mobile, setMobile] = useState(false);
+  const [char, setChar] = useState('pax');
+  const [highWave, setHighWave] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('matrixSurvivorHighWave');
+      return saved ? parseInt(saved) : 0;
+    }
+    return 0;
+  });
+  const [unlockedChars, setUnlockedChars] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('matrixSurvivorUnlocked');
+      const unlocked = saved ? JSON.parse(saved) : ['pax'];
+      if (!unlocked.includes('pax')) unlocked.push('pax');
+      return unlocked;
+    }
+    return ['pax'];
+  });
+  
+  const pos = useRef({ x: 5000, y: 5000 }), vel = useRef({ x: 0, y: 0 }), hp = useRef(100), maxHp = useRef(100);
+  const xp = useRef(0), lvl = useRef(1), atk = useRef(10), spd = useRef(200), wpn = useRef('pistol');
+  const hpBonus = useRef(0), atkBonus = useRef(0), spdBonus = useRef(0);
+  const wave = useRef(1), totalKilled = useRef(0), bossKilled = useRef(0), nextBossAt = useRef(CONFIG.ENEMIES_FOR_BOSS);
+  const cam = useRef({ x: 0, y: 0 }), enemies = useRef([]), projs = useRef([]);
+  const nextEId = useRef(0), nextPId = useRef(0), lastFire = useRef(0), lastSpawn = useRef(0);
+  const keys = useRef(new Set()), joyActive = useRef(false), joyStart = useRef({ x: 0, y: 0 });
+  const joyCur = useRef({ x: 0, y: 0 }), joyDir = useRef({ x: 0, y: 0 });
+  const lastTime = useRef(0), frame = useRef(0);
 
-type GamePhase = 'menu' | 'playing' | 'levelup' | 'gameover';
+  useEffect(() => { setMobile('ontouchstart' in window || navigator.maxTouchPoints > 0); }, []);
 
-const MatrixSurvivor: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [gamePhase, setGamePhase] = useState<GamePhase>('menu');
-  const [isMobile, setIsMobile] = useState(false);
-  
-  const playerPos = useRef<Vector2D>({ x: 5000, y: 5000 });
-  const playerVel = useRef<Vector2D>({ x: 0, y: 0 });
-  const playerHealth = useRef(GAME_CONFIG.PLAYER_BASE_HEALTH);
-  const playerMaxHealth = useRef(GAME_CONFIG.PLAYER_BASE_HEALTH);
-  const playerXP = useRef(0);
-  const playerLevel = useRef(1);
-  const playerAttack = useRef(GAME_CONFIG.PLAYER_BASE_ATTACK);
-  const playerSpeed = useRef(GAME_CONFIG.PLAYER_BASE_SPEED);
-  
-  const healthBonus = useRef(0);
-  const attackBonus = useRef(0);
-  const speedBonus = useRef(0);
-  
-  const currentWave = useRef(1);
-  const enemiesThisWave = useRef(0);
-  const enemiesKilledThisWave = useRef(0);
-  const bossDefeated = useRef(false);
-  
-  const camera = useRef<Vector2D>({ x: 0, y: 0 });
-  const enemies = useRef<Enemy[]>([]);
-  const projectiles = useRef<Projectile[]>([]);
-  const nextEnemyId = useRef(0);
-  const nextProjectileId = useRef(0);
-  const lastWeaponFire = useRef(0);
-  
-  const keys = useRef<Set<string>>(new Set());
-  const joystickActive = useRef(false);
-  const joystickStart = useRef<Vector2D>({ x: 0, y: 0 });
-  const joystickCurrent = useRef<Vector2D>({ x: 0, y: 0 });
-  const joystickDirection = useRef<Vector2D>({ x: 0, y: 0 });
-  
-  const lastTime = useRef<number>(0);
-  const animationFrame = useRef<number>(0);
-
-  useEffect(() => {
-    setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  }, []);
-
-  const normalizePosition = (pos: Vector2D): Vector2D => {
-    let x = pos.x;
-    let y = pos.y;
-    if (x < 0) x += GAME_CONFIG.MAP_WIDTH;
-    if (x > GAME_CONFIG.MAP_WIDTH) x -= GAME_CONFIG.MAP_WIDTH;
-    if (y < 0) y += GAME_CONFIG.MAP_HEIGHT;
-    if (y > GAME_CONFIG.MAP_HEIGHT) y -= GAME_CONFIG.MAP_HEIGHT;
+  const norm = (p) => {
+    let x = p.x, y = p.y;
+    if (x < 0) x += CONFIG.MAP; if (x > CONFIG.MAP) x -= CONFIG.MAP;
+    if (y < 0) y += CONFIG.MAP; if (y > CONFIG.MAP) y -= CONFIG.MAP;
     return { x, y };
   };
 
-  const updateCamera = () => {
-    camera.current = {
-      x: playerPos.current.x - GAME_CONFIG.VIEWPORT_WIDTH / 2,
-      y: playerPos.current.y - GAME_CONFIG.VIEWPORT_HEIGHT / 2,
-    };
-  };
+  const dist = (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
-  const distance = (a: Vector2D, b: Vector2D): number => {
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const spawnWave = (waveNumber: number) => {
-    const enemyCount = GAME_CONFIG.INITIAL_ENEMIES_PER_WAVE * Math.pow(GAME_CONFIG.WAVE_MULTIPLIER, waveNumber - 1);
-    enemiesThisWave.current = enemyCount;
-    enemiesKilledThisWave.current = 0;
-    bossDefeated.current = false;
-    
-    for (let i = 0; i < enemyCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const dist = 400 + Math.random() * 200;
-      
-      const enemy: Enemy = {
-        id: nextEnemyId.current++,
-        position: normalizePosition({
-          x: playerPos.current.x + Math.cos(angle) * dist,
-          y: playerPos.current.y + Math.sin(angle) * dist,
-        }),
-        health: GAME_CONFIG.ENEMY_HEALTH,
-        maxHealth: GAME_CONFIG.ENEMY_HEALTH,
-        lastAttack: 0,
-        isBoss: false,
-        damage: GAME_CONFIG.ENEMY_DAMAGE,
-      };
-      
-      enemies.current.push(enemy);
-    }
-  };
-
-  const spawnBoss = (waveNumber: number) => {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 500;
-    
-    const bossHealth = GAME_CONFIG.ENEMY_HEALTH * GAME_CONFIG.BOSS_HEALTH_MULTIPLIER * waveNumber;
-    const bossDamage = GAME_CONFIG.ENEMY_DAMAGE * GAME_CONFIG.BOSS_DAMAGE_MULTIPLIER * waveNumber;
-    
-    const boss: Enemy = {
-      id: nextEnemyId.current++,
-      position: normalizePosition({
-        x: playerPos.current.x + Math.cos(angle) * dist,
-        y: playerPos.current.y + Math.sin(angle) * dist,
-      }),
-      health: bossHealth,
-      maxHealth: bossHealth,
-      lastAttack: 0,
-      isBoss: true,
-      damage: bossDamage,
-    };
-    
-    enemies.current.push(boss);
-  };
-
-  const findNearestEnemy = (): Enemy | null => {
-    if (enemies.current.length === 0) return null;
-    let nearest = enemies.current[0];
-    let minDist = distance(playerPos.current, nearest.position);
-    for (const enemy of enemies.current) {
-      const dist = distance(playerPos.current, enemy.position);
-      if (dist < minDist) {
-        minDist = dist;
-        nearest = enemy;
-      }
-    }
-    return nearest;
-  };
-
-  const fireWeapon = (timestamp: number) => {
-    if (timestamp - lastWeaponFire.current < GAME_CONFIG.PISTOL_FIRE_RATE) return;
-    const target = findNearestEnemy();
-    if (!target) return;
-    
-    lastWeaponFire.current = timestamp;
-    const dx = target.position.x - playerPos.current.x;
-    const dy = target.position.y - playerPos.current.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    projectiles.current.push({
-      id: nextProjectileId.current++,
-      position: { ...playerPos.current },
-      velocity: {
-        x: (dx / dist) * GAME_CONFIG.PISTOL_SPEED,
-        y: (dy / dist) * GAME_CONFIG.PISTOL_SPEED,
-      },
-      damage: playerAttack.current,
+  const spawnEnemy = () => {
+    const ang = Math.random() * Math.PI * 2, d = 400 + Math.random() * 200;
+    enemies.current.push({
+      id: nextEId.current++, 
+      position: norm({ x: pos.current.x + Math.cos(ang) * d, y: pos.current.y + Math.sin(ang) * d }),
+      health: CONFIG.ENEMY_HP, maxHealth: CONFIG.ENEMY_HP, lastAttack: 0, isBoss: false, damage: CONFIG.ENEMY_DMG,
     });
   };
 
-  const applyStat = (stat: 'health' | 'attack' | 'speed') => {
-    if (stat === 'health') {
-      healthBonus.current += GAME_CONFIG.STAT_BONUS;
-      const newMaxHealth = GAME_CONFIG.PLAYER_BASE_HEALTH * (1 + healthBonus.current);
-      const healthIncrease = newMaxHealth - playerMaxHealth.current;
-      playerMaxHealth.current = newMaxHealth;
-      playerHealth.current += healthIncrease;
-    } else if (stat === 'attack') {
-      attackBonus.current += GAME_CONFIG.STAT_BONUS;
-      playerAttack.current = GAME_CONFIG.PLAYER_BASE_ATTACK * (1 + attackBonus.current);
-    } else if (stat === 'speed') {
-      speedBonus.current += GAME_CONFIG.STAT_BONUS;
-      playerSpeed.current = GAME_CONFIG.PLAYER_BASE_SPEED * (1 + speedBonus.current);
+  const spawnBoss = () => {
+    const ang = Math.random() * Math.PI * 2;
+    const bossNum = bossKilled.current + 1;
+    enemies.current.push({
+      id: nextEId.current++, 
+      position: norm({ x: pos.current.x + Math.cos(ang) * 500, y: pos.current.y + Math.sin(ang) * 500 }),
+      health: CONFIG.ENEMY_HP * CONFIG.BOSS_HP * bossNum, 
+      maxHealth: CONFIG.ENEMY_HP * CONFIG.BOSS_HP * bossNum,
+      lastAttack: 0, isBoss: true, damage: CONFIG.ENEMY_DMG * CONFIG.BOSS_DMG * bossNum,
+    });
+  };
+
+  const nearest = () => {
+    if (!enemies.current.length) return null;
+    let n = enemies.current[0], min = dist(pos.current, n.position);
+    for (const e of enemies.current) {
+      const d = dist(pos.current, e.position);
+      if (d < min) { min = d; n = e; }
     }
-    // Reset lastTime to prevent time jump
-    lastTime.current = 0;
-    setGamePhase('playing');
+    return n;
+  };
+
+  const fire = (t) => {
+    const w = WPNS[wpn.current];
+    if (t - lastFire.current < w.rate) return;
+    const tgt = nearest();
+    if (!tgt) return;
+    lastFire.current = t;
+    const base = Math.atan2(tgt.position.y - pos.current.y, tgt.position.x - pos.current.x);
+    for (let i = 0; i < w.cnt; i++) {
+      let ang = base;
+      if (w.cnt > 1) ang += (i - (w.cnt - 1) / 2) * w.spread;
+      projs.current.push({
+        id: nextPId.current++, position: { ...pos.current }, velocity: { x: Math.cos(ang) * w.spd, y: Math.sin(ang) * w.spd },
+        damage: atk.current * w.dmg, piercing: w.pierce, hitEnemies: new Set(), color: wpn.current === 'arc' ? COL.VIOLET : COL.PROJ,
+      });
+    }
+  };
+
+  const applyS = (s) => {
+    const c = CHARS[char];
+    if (s === 'health') {
+      hpBonus.current += CONFIG.HEALTH_BONUS;
+      const newMax = c.hp * (1 + hpBonus.current), inc = newMax - maxHp.current;
+      maxHp.current = newMax; hp.current += inc;
+    } else if (s === 'attack') { 
+      atkBonus.current += CONFIG.ATTACK_BONUS; 
+      atk.current = c.atk * (1 + atkBonus.current); 
+    } else { 
+      spdBonus.current += CONFIG.SPEED_BONUS; 
+      spd.current = c.spd * (1 + spdBonus.current); 
+    }
+    lastTime.current = 0; setPhase('playing');
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => keys.current.add(e.key.toLowerCase());
-    const handleKeyUp = (e: KeyboardEvent) => keys.current.delete(e.key.toLowerCase());
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
+    const kd = (e) => keys.current.add(e.key.toLowerCase()), ku = (e) => keys.current.delete(e.key.toLowerCase());
+    window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
+    return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
   }, []);
 
   useEffect(() => {
-    if (!isMobile) return;
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      joystickActive.current = true;
-      joystickStart.current = { x: touch.clientX, y: touch.clientY };
-      joystickCurrent.current = { x: touch.clientX, y: touch.clientY };
+    if (!mobile) return;
+    const ts = (e) => { const t = e.touches[0]; joyActive.current = true; joyStart.current = { x: t.clientX, y: t.clientY }; joyCur.current = { x: t.clientX, y: t.clientY }; };
+    const tm = (e) => {
+      if (!joyActive.current) return; e.preventDefault();
+      const t = e.touches[0]; joyCur.current = { x: t.clientX, y: t.clientY };
+      const dx = joyCur.current.x - joyStart.current.x, dy = joyCur.current.y - joyStart.current.y, d = Math.sqrt(dx * dx + dy * dy);
+      joyDir.current = d > 5 ? { x: dx / d, y: dy / d } : { x: 0, y: 0 };
     };
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!joystickActive.current) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      joystickCurrent.current = { x: touch.clientX, y: touch.clientY };
-      const dx = joystickCurrent.current.x - joystickStart.current.x;
-      const dy = joystickCurrent.current.y - joystickStart.current.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      joystickDirection.current = dist > 5 ? { x: dx / dist, y: dy / dist } : { x: 0, y: 0 };
-    };
-    const handleTouchEnd = () => {
-      joystickActive.current = false;
-      joystickDirection.current = { x: 0, y: 0 };
-    };
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('touchend', handleTouchEnd);
-    return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isMobile]);
+    const te = () => { joyActive.current = false; joyDir.current = { x: 0, y: 0 }; };
+    window.addEventListener('touchstart', ts); window.addEventListener('touchmove', tm, { passive: false }); window.addEventListener('touchend', te);
+    return () => { window.removeEventListener('touchstart', ts); window.removeEventListener('touchmove', tm); window.removeEventListener('touchend', te); };
+  }, [mobile]);
 
   useEffect(() => {
-    if (gamePhase !== 'playing') return;
-
+    if (phase !== 'playing') return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const gameLoop = (timestamp: number) => {
-      const deltaTime = lastTime.current ? (timestamp - lastTime.current) / 1000 : 0;
-      lastTime.current = timestamp;
+    const loop = (t) => {
+      const dt = lastTime.current ? (t - lastTime.current) / 1000 : 0;
+      lastTime.current = t;
 
-      let vx = 0;
-      let vy = 0;
+      let vx = 0, vy = 0;
       if (keys.current.has('w') || keys.current.has('arrowup')) vy -= 1;
       if (keys.current.has('s') || keys.current.has('arrowdown')) vy += 1;
       if (keys.current.has('a') || keys.current.has('arrowleft')) vx -= 1;
       if (keys.current.has('d') || keys.current.has('arrowright')) vx += 1;
+      if (joyActive.current) { vx = joyDir.current.x; vy = joyDir.current.y; }
+      else if (vx && vy) { const l = Math.sqrt(vx * vx + vy * vy); vx /= l; vy /= l; }
 
-      if (joystickActive.current) {
-        vx = joystickDirection.current.x;
-        vy = joystickDirection.current.y;
-      } else if (vx !== 0 && vy !== 0) {
-        const len = Math.sqrt(vx * vx + vy * vy);
-        vx /= len;
-        vy /= len;
+      vel.current = { x: vx * spd.current, y: vy * spd.current };
+      pos.current = { x: pos.current.x + vel.current.x * dt, y: pos.current.y + vel.current.y * dt };
+      pos.current = norm(pos.current);
+      fire(t);
+
+      const spawnRate = Math.max(CONFIG.MIN_SPAWN_RATE, CONFIG.BASE_SPAWN_RATE - (wave.current - 1) * 100);
+      if (t - lastSpawn.current > spawnRate && enemies.current.length < 40) {
+        spawnEnemy();
+        lastSpawn.current = t;
       }
 
-      playerVel.current = { x: vx * playerSpeed.current, y: vy * playerSpeed.current };
-      playerPos.current = {
-        x: playerPos.current.x + playerVel.current.x * deltaTime,
-        y: playerPos.current.y + playerVel.current.y * deltaTime,
-      };
-      playerPos.current = normalizePosition(playerPos.current);
+      projs.current = projs.current.filter(p => { p.position.x += p.velocity.x * dt; p.position.y += p.velocity.y * dt; return dist(p.position, pos.current) < 1000; });
 
-      fireWeapon(timestamp);
-
-      projectiles.current = projectiles.current.filter(proj => {
-        proj.position.x += proj.velocity.x * deltaTime;
-        proj.position.y += proj.velocity.y * deltaTime;
-        return distance(proj.position, playerPos.current) < 1000;
-      });
-
-      for (const enemy of enemies.current) {
-        const dx = playerPos.current.x - enemy.position.x;
-        const dy = playerPos.current.y - enemy.position.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const enemySize = enemy.isBoss ? GAME_CONFIG.ENEMY_SIZE * GAME_CONFIG.BOSS_SIZE_MULTIPLIER : GAME_CONFIG.ENEMY_SIZE;
-        
-        // Enemy speed scales with wave number
-        const enemySpeed = GAME_CONFIG.ENEMY_SPEED * (1 + (currentWave.current - 1) * GAME_CONFIG.ENEMY_SPEED_INCREASE_PER_WAVE);
-        
-        if (dist > enemySize) {
-          // Move toward player
-          const moveX = (dx / dist) * enemySpeed * deltaTime;
-          const moveY = (dy / dist) * enemySpeed * deltaTime;
-          
-          enemy.position.x += moveX;
-          enemy.position.y += moveY;
-          enemy.position = normalizePosition(enemy.position);
-          
-          // Enemy collision avoidance
-          for (const otherEnemy of enemies.current) {
-            if (enemy.id === otherEnemy.id) continue;
-            
-            const otherSize = otherEnemy.isBoss ? GAME_CONFIG.ENEMY_SIZE * GAME_CONFIG.BOSS_SIZE_MULTIPLIER : GAME_CONFIG.ENEMY_SIZE;
-            const edx = enemy.position.x - otherEnemy.position.x;
-            const edy = enemy.position.y - otherEnemy.position.y;
-            const edist = Math.sqrt(edx * edx + edy * edy);
-            const minDist = (enemySize + otherSize) / 2;
-            
-            if (edist < minDist && edist > 0) {
-              const pushForce = (minDist - edist) / 2;
-              enemy.position.x += (edx / edist) * pushForce;
-              enemy.position.y += (edy / edist) * pushForce;
-              enemy.position = normalizePosition(enemy.position);
-            }
+      const espd = CONFIG.ENEMY_SPEED * (1 + (wave.current - 1) * CONFIG.ENEMY_SPEED_INC);
+      for (const e of enemies.current) {
+        const dx = pos.current.x - e.position.x, dy = pos.current.y - e.position.y, d = Math.sqrt(dx * dx + dy * dy);
+        const sz = e.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
+        if (d > sz) {
+          e.position.x += (dx / d) * espd * dt; e.position.y += (dy / d) * espd * dt; e.position = norm(e.position);
+          for (const o of enemies.current) {
+            if (e.id === o.id) continue;
+            const osz = o.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
+            const edx = e.position.x - o.position.x, edy = e.position.y - o.position.y, ed = Math.sqrt(edx * edx + edy * edy);
+            const min = (sz + osz) / 2;
+            if (ed < min && ed > 0) { const push = (min - ed) / 2; e.position.x += (edx / ed) * push; e.position.y += (edy / ed) * push; e.position = norm(e.position); }
           }
-        } else {
-          if (timestamp - enemy.lastAttack > GAME_CONFIG.ENEMY_ATTACK_COOLDOWN) {
-            playerHealth.current -= enemy.damage;
-            enemy.lastAttack = timestamp;
-            if (playerHealth.current <= 0) {
-              setGamePhase('gameover');
-            }
-          }
-        }
+        } else if (t - e.lastAttack > CONFIG.ENEMY_COOLDOWN) { hp.current -= e.damage; e.lastAttack = t; if (hp.current <= 0) setPhase('gameover'); }
       }
 
-      for (let i = projectiles.current.length - 1; i >= 0; i--) {
-        const proj = projectiles.current[i];
+      for (let i = projs.current.length - 1; i >= 0; i--) {
+        const p = projs.current[i]; let hitThisFrame = false;
         for (let j = enemies.current.length - 1; j >= 0; j--) {
-          const enemy = enemies.current[j];
-          const enemySize = enemy.isBoss ? GAME_CONFIG.ENEMY_SIZE * GAME_CONFIG.BOSS_SIZE_MULTIPLIER : GAME_CONFIG.ENEMY_SIZE;
-          
-          if (distance(proj.position, enemy.position) < enemySize / 2) {
-            enemy.health -= proj.damage;
-            projectiles.current.splice(i, 1);
-            
-            if (enemy.health <= 0) {
-              const xpGained = enemy.isBoss ? GAME_CONFIG.XP_PER_BOSS : GAME_CONFIG.XP_PER_ENEMY;
-              playerXP.current += xpGained;
-              
-              if (enemy.isBoss) {
-                bossDefeated.current = true;
-              } else {
-                enemiesKilledThisWave.current++;
+          const e = enemies.current[j];
+          if (p.piercing && p.hitEnemies.has(e.id)) continue;
+          const sz = e.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
+          if (dist(p.position, e.position) < sz / 2) {
+            e.health -= p.damage;
+            if (p.piercing) p.hitEnemies.add(e.id); else hitThisFrame = true;
+            if (e.health <= 0) {
+              xp.current += e.isBoss ? CONFIG.XP_BOSS : CONFIG.XP_ENEMY;
+              totalKilled.current++;
+              if (e.isBoss) {
+                bossKilled.current++;
+                nextBossAt.current = totalKilled.current + CONFIG.ENEMIES_FOR_BOSS;
+                wave.current++;
+                if (wave.current > highWave) {
+                  const newHigh = wave.current;
+                  setHighWave(newHigh);
+                  if (typeof window !== 'undefined') localStorage.setItem('matrixSurvivorHighWave', newHigh.toString());
+                  const newUnlocked = [...unlockedChars];
+                  if (newHigh >= 5 && !newUnlocked.includes('lilly')) newUnlocked.push('lilly');
+                  if (newHigh >= 7 && !newUnlocked.includes('theOne')) newUnlocked.push('theOne');
+                  if (newUnlocked.length > unlockedChars.length) {
+                    setUnlockedChars(newUnlocked);
+                    if (typeof window !== 'undefined') localStorage.setItem('matrixSurvivorUnlocked', JSON.stringify(newUnlocked));
+                  }
+                }
               }
-              
               enemies.current.splice(j, 1);
-              
-              if (playerXP.current >= GAME_CONFIG.XP_TO_LEVEL) {
-                playerXP.current -= GAME_CONFIG.XP_TO_LEVEL;
-                playerLevel.current++;
-                setGamePhase('levelup');
-              }
+              if (totalKilled.current >= nextBossAt.current && !enemies.current.some(e => e.isBoss)) spawnBoss();
+              if (xp.current >= CONFIG.XP_LEVEL) { xp.current -= CONFIG.XP_LEVEL; lvl.current++; setPhase('levelup'); }
             }
-            break;
+            if (!p.piercing) break;
           }
         }
+        if (hitThisFrame) projs.current.splice(i, 1);
       }
 
-      if (enemiesKilledThisWave.current >= enemiesThisWave.current && !bossDefeated.current && enemies.current.length === 0) {
-        spawnBoss(currentWave.current);
-      } else if (bossDefeated.current && enemies.current.length === 0) {
-        currentWave.current++;
-        spawnWave(currentWave.current);
+      cam.current = { x: pos.current.x - CONFIG.VIEW / 2, y: pos.current.y - CONFIG.VIEW / 2 };
+
+      ctx.fillStyle = COL.BG; ctx.fillRect(0, 0, CONFIG.VIEW, CONFIG.VIEW);
+      ctx.strokeStyle = COL.GRID; ctx.lineWidth = 1;
+      const g = 100, sx = Math.floor(cam.current.x / g) * g, sy = Math.floor(cam.current.y / g) * g;
+      for (let x = sx; x < cam.current.x + CONFIG.VIEW + g; x += g) { ctx.beginPath(); ctx.moveTo(x - cam.current.x, 0); ctx.lineTo(x - cam.current.x, CONFIG.VIEW); ctx.stroke(); }
+      for (let y = sy; y < cam.current.y + CONFIG.VIEW + g; y += g) { ctx.beginPath(); ctx.moveTo(0, y - cam.current.y); ctx.lineTo(CONFIG.VIEW, y - cam.current.y); ctx.stroke(); }
+
+      for (const e of enemies.current) {
+        const sz = e.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
+        const ex = e.position.x - cam.current.x - sz / 2, ey = e.position.y - cam.current.y - sz / 2;
+        ctx.fillStyle = e.isBoss ? COL.BOSS : COL.ENEMY; ctx.fillRect(ex, ey, sz, sz);
+        ctx.fillStyle = COL.HP_BG; ctx.fillRect(ex, ey - 8, sz, 4);
+        ctx.fillStyle = COL.HP; ctx.fillRect(ex, ey - 8, sz * (e.health / e.maxHealth), 4);
       }
 
-      updateCamera();
-      render(ctx);
-      animationFrame.current = requestAnimationFrame(gameLoop);
-    };
+      for (const p of projs.current) { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.position.x - cam.current.x, p.position.y - cam.current.y, CONFIG.PROJ_SIZE / 2, 0, Math.PI * 2); ctx.fill(); }
 
-    animationFrame.current = requestAnimationFrame(gameLoop);
-    return () => {
-      if (animationFrame.current) cancelAnimationFrame(animationFrame.current);
-    };
-  }, [gamePhase]);
+      ctx.fillStyle = COL.PLAYER; ctx.fillRect(CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.PLAYER_SIZE, CONFIG.PLAYER_SIZE);
 
-  const render = (ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = COLORS.BACKGROUND;
-    ctx.fillRect(0, 0, GAME_CONFIG.VIEWPORT_WIDTH, GAME_CONFIG.VIEWPORT_HEIGHT);
+      const pad = 10, bw = 200, bh = 20;
+      ctx.fillStyle = COL.HP_BG; ctx.fillRect(pad, pad, bw, bh); ctx.fillStyle = COL.HP; ctx.fillRect(pad, pad, bw * Math.max(0, hp.current / maxHp.current), bh);
+      ctx.strokeStyle = COL.GREEN; ctx.strokeRect(pad, pad, bw, bh); ctx.fillStyle = COL.GREEN; ctx.font = '12px monospace';
+      ctx.fillText(`HP: ${Math.max(0, Math.floor(hp.current))}/${Math.floor(maxHp.current)}`, pad + 5, pad + 15);
+      ctx.fillStyle = COL.XP_BG; ctx.fillRect(pad, pad + 30, bw, bh); ctx.fillStyle = COL.XP; ctx.fillRect(pad, pad + 30, bw * (xp.current / CONFIG.XP_LEVEL), bh);
+      ctx.strokeStyle = COL.GREEN; ctx.strokeRect(pad, pad + 30, bw, bh);
+      ctx.fillText(`XP: ${xp.current}/${CONFIG.XP_LEVEL}`, pad + 5, pad + 45);
+      ctx.fillText(`Level: ${lvl.current}`, pad, pad + 70); ctx.fillText(`Wave: ${wave.current}`, pad, pad + 90); ctx.fillText(`Enemies: ${enemies.current.length}`, pad, pad + 110);
 
-    ctx.strokeStyle = COLORS.GRID;
-    ctx.lineWidth = 1;
-    const gridSize = 100;
-    const startX = Math.floor(camera.current.x / gridSize) * gridSize;
-    const startY = Math.floor(camera.current.y / gridSize) * gridSize;
-    for (let x = startX; x < camera.current.x + GAME_CONFIG.VIEWPORT_WIDTH + gridSize; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x - camera.current.x, 0);
-      ctx.lineTo(x - camera.current.x, GAME_CONFIG.VIEWPORT_HEIGHT);
-      ctx.stroke();
-    }
-    for (let y = startY; y < camera.current.y + GAME_CONFIG.VIEWPORT_HEIGHT + gridSize; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y - camera.current.y);
-      ctx.lineTo(GAME_CONFIG.VIEWPORT_WIDTH, y - camera.current.y);
-      ctx.stroke();
-    }
-
-    for (const enemy of enemies.current) {
-      const size = enemy.isBoss ? GAME_CONFIG.ENEMY_SIZE * GAME_CONFIG.BOSS_SIZE_MULTIPLIER : GAME_CONFIG.ENEMY_SIZE;
-      const screenX = enemy.position.x - camera.current.x - size / 2;
-      const screenY = enemy.position.y - camera.current.y - size / 2;
-      
-      ctx.fillStyle = enemy.isBoss ? COLORS.BOSS : COLORS.ENEMY;
-      ctx.fillRect(screenX, screenY, size, size);
-      
-      const barWidth = size;
-      const barHeight = 4;
-      ctx.fillStyle = COLORS.HEALTH_BAR_BG;
-      ctx.fillRect(screenX, screenY - 8, barWidth, barHeight);
-      ctx.fillStyle = COLORS.HEALTH_BAR_FILL;
-      ctx.fillRect(screenX, screenY - 8, barWidth * (enemy.health / enemy.maxHealth), barHeight);
-    }
-
-    for (const proj of projectiles.current) {
-      ctx.fillStyle = COLORS.PROJECTILE;
-      ctx.beginPath();
-      ctx.arc(proj.position.x - camera.current.x, proj.position.y - camera.current.y, GAME_CONFIG.PROJECTILE_SIZE / 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    const playerScreenX = GAME_CONFIG.VIEWPORT_WIDTH / 2 - GAME_CONFIG.PLAYER_SIZE / 2;
-    const playerScreenY = GAME_CONFIG.VIEWPORT_HEIGHT / 2 - GAME_CONFIG.PLAYER_SIZE / 2;
-    ctx.fillStyle = COLORS.PLAYER;
-    ctx.fillRect(playerScreenX, playerScreenY, GAME_CONFIG.PLAYER_SIZE, GAME_CONFIG.PLAYER_SIZE);
-
-    const padding = 10;
-    const barWidth = 200;
-    const barHeight = 20;
-
-    ctx.fillStyle = COLORS.HEALTH_BAR_BG;
-    ctx.fillRect(padding, padding, barWidth, barHeight);
-    ctx.fillStyle = COLORS.HEALTH_BAR_FILL;
-    ctx.fillRect(padding, padding, barWidth * Math.max(0, playerHealth.current / playerMaxHealth.current), barHeight);
-    ctx.strokeStyle = COLORS.MATRIX_GREEN;
-    ctx.strokeRect(padding, padding, barWidth, barHeight);
-    ctx.fillStyle = COLORS.MATRIX_GREEN;
-    ctx.font = '12px monospace';
-    ctx.fillText(`HP: ${Math.max(0, Math.floor(playerHealth.current))}/${Math.floor(playerMaxHealth.current)}`, padding + 5, padding + 15);
-
-    ctx.fillStyle = COLORS.XP_BAR_BG;
-    ctx.fillRect(padding, padding + 30, barWidth, barHeight);
-    ctx.fillStyle = COLORS.XP_BAR_FILL;
-    ctx.fillRect(padding, padding + 30, barWidth * (playerXP.current / GAME_CONFIG.XP_TO_LEVEL), barHeight);
-    ctx.strokeStyle = COLORS.MATRIX_GREEN;
-    ctx.strokeRect(padding, padding + 30, barWidth, barHeight);
-    ctx.fillText(`XP: ${playerXP.current}/${GAME_CONFIG.XP_TO_LEVEL}`, padding + 5, padding + 45);
-    
-    ctx.fillText(`Level: ${playerLevel.current}`, padding, padding + 70);
-    ctx.fillText(`Wave: ${currentWave.current}`, padding, padding + 90);
-    ctx.fillText(`Enemies: ${enemies.current.length}`, padding, padding + 110);
-
-    if (isMobile && joystickActive.current) {
-      const canvas = canvasRef.current;
-      if (canvas) {
+      if (mobile && joyActive.current) {
         const rect = canvas.getBoundingClientRect();
-        const jx = joystickStart.current.x - rect.left;
-        const jy = joystickStart.current.y - rect.top;
-        const cx = joystickCurrent.current.x - rect.left;
-        const cy = joystickCurrent.current.y - rect.top;
-        ctx.strokeStyle = COLORS.MATRIX_GREEN;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(jx, jy, 50, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
-        ctx.beginPath();
-        ctx.arc(cx, cy, 20, 0, Math.PI * 2);
-        ctx.fill();
+        const jx = joyStart.current.x - rect.left, jy = joyStart.current.y - rect.top;
+        const cx = joyCur.current.x - rect.left, cy = joyCur.current.y - rect.top;
+        ctx.strokeStyle = COL.GREEN; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(jx, jy, 50, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.fill();
       }
-    }
+
+      frame.current = requestAnimationFrame(loop);
+    };
+
+    frame.current = requestAnimationFrame(loop);
+    return () => { if (frame.current) cancelAnimationFrame(frame.current); };
+  }, [phase, highWave, char, mobile, unlockedChars]);
+
+  const start = (cid) => {
+    const c = CHARS[cid]; setChar(cid); pos.current = { x: 5000, y: 5000 };
+    hp.current = c.hp; maxHp.current = c.hp; xp.current = 0; lvl.current = 1;
+    atk.current = c.atk; spd.current = c.spd; wpn.current = c.wpn;
+    hpBonus.current = 0; atkBonus.current = 0; spdBonus.current = 0;
+    wave.current = 1; totalKilled.current = 0; bossKilled.current = 0; nextBossAt.current = CONFIG.ENEMIES_FOR_BOSS;
+    enemies.current = []; projs.current = []; lastTime.current = 0; lastSpawn.current = 0;
+    for (let i = 0; i < 5; i++) spawnEnemy();
+    setPhase('playing');
   };
 
-  const startGame = () => {
-    playerPos.current = { x: 5000, y: 5000 };
-    playerHealth.current = GAME_CONFIG.PLAYER_BASE_HEALTH;
-    playerMaxHealth.current = GAME_CONFIG.PLAYER_BASE_HEALTH;
-    playerXP.current = 0;
-    playerLevel.current = 1;
-    playerAttack.current = GAME_CONFIG.PLAYER_BASE_ATTACK;
-    playerSpeed.current = GAME_CONFIG.PLAYER_BASE_SPEED;
-    healthBonus.current = 0;
-    attackBonus.current = 0;
-    speedBonus.current = 0;
-    currentWave.current = 1;
-    enemies.current = [];
-    projectiles.current = [];
-    lastTime.current = 0;
-    spawnWave(1);
-    setGamePhase('playing');
-  };
+  if (phase === 'menu') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: COL.BG, border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN }}>
+      <h1 style={{ marginBottom: 20, textShadow: '0 0 10px #00FF00' }}>MATRIX SURVIVOR</h1>
+      <p style={{ marginBottom: 30, textAlign: 'center', maxWidth: 400 }}>{mobile ? 'Touch and drag to move' : 'Use WASD or Arrow Keys to move'}. Survive waves!</p>
+      <button onClick={() => setPhase('charselect')} style={{ padding: '15px 40px', fontSize: 18, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>START</button>
+    </div>
+  );
 
-  if (gamePhase === 'menu') {
-    return (
-      <div style={{
-        width: `${GAME_CONFIG.VIEWPORT_WIDTH}px`,
-        height: `${GAME_CONFIG.VIEWPORT_HEIGHT}px`,
-        backgroundColor: COLORS.BACKGROUND,
-        border: `2px solid ${COLORS.MATRIX_GREEN}`,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'monospace',
-        color: COLORS.MATRIX_GREEN,
-      }}>
-        <h1 style={{ marginBottom: '20px', textShadow: '0 0 10px #00FF00' }}>MATRIX SURVIVOR</h1>
-        <p style={{ marginBottom: '30px', textAlign: 'center', maxWidth: '400px' }}>
-          {isMobile ? 'Touch and drag to move' : 'Use WASD or Arrow Keys to move'}. 
-          Survive waves, defeat bosses, and level up!
-        </p>
-        <button onClick={startGame} style={{
-          padding: '15px 40px',
-          fontSize: '18px',
-          backgroundColor: 'transparent',
-          border: `2px solid ${COLORS.MATRIX_GREEN}`,
-          color: COLORS.MATRIX_GREEN,
-          cursor: 'pointer',
-          fontFamily: 'monospace',
-        }}>START GAME</button>
+  if (phase === 'charselect') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: COL.BG, border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN, padding: 20, overflow: 'auto' }}>
+      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>SELECT CHARACTER</h2>
+      <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row', width: '100%', justifyContent: 'center' }}>
+        {Object.values(CHARS).map(c => {
+          const lock = !unlockedChars.includes(c.id);
+          return (
+            <div key={c.id} onClick={() => !lock && start(c.id)} style={{ padding: 20, border: `2px solid ${lock ? '#666' : COL.GREEN}`, backgroundColor: lock ? 'rgba(100,100,100,0.1)' : 'rgba(34,197,94,0.1)', cursor: lock ? 'not-allowed' : 'pointer', opacity: lock ? 0.5 : 1, flex: 1, maxWidth: 200 }}>
+              <h3 style={{ marginBottom: 15, color: lock ? '#666' : COL.GREEN }}>{c.name}</h3>
+              {lock && <div style={{ marginBottom: 10, fontSize: 12, color: '#999' }}>Unlock at Wave {c.unlock}</div>}
+              <div style={{ fontSize: 14, marginBottom: 5 }}>HP: {c.hp}</div>
+              <div style={{ fontSize: 14, marginBottom: 5 }}>Speed: {c.spd}</div>
+              <div style={{ fontSize: 14, marginBottom: 5 }}>Attack: {c.atk}</div>
+              <div style={{ fontSize: 14, marginTop: 10, color: '#86efac' }}>Weapon: {c.wpn.toUpperCase()}</div>
+            </div>
+          );
+        })}
       </div>
-    );
-  }
+      <button onClick={() => setPhase('menu')} style={{ marginTop: 30, padding: '10px 30px', backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>BACK</button>
+    </div>
+  );
 
-  if (gamePhase === 'levelup') {
-    return (
-      <div style={{
-        width: `${GAME_CONFIG.VIEWPORT_WIDTH}px`,
-        height: `${GAME_CONFIG.VIEWPORT_HEIGHT}px`,
-        backgroundColor: COLORS.UI_BG,
-        border: `2px solid ${COLORS.UI_BORDER}`,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'monospace',
-        color: COLORS.MATRIX_GREEN,
-      }}>
-        <h2 style={{ marginBottom: '30px', textShadow: '0 0 10px #00FF00' }}>LEVEL UP!</h2>
-        <p style={{ marginBottom: '40px' }}>Choose a stat to improve by 2%:</p>
-        <div style={{ display: 'flex', gap: '20px', flexDirection: isMobile ? 'column' : 'row' }}>
-          <button onClick={() => applyStat('health')} style={{
-            padding: '20px 30px',
-            fontSize: '16px',
-            backgroundColor: 'transparent',
-            border: `2px solid ${COLORS.MATRIX_GREEN}`,
-            color: COLORS.MATRIX_GREEN,
-            cursor: 'pointer',
-            fontFamily: 'monospace',
-          }}>
-            <div style={{ fontSize: '18px', marginBottom: '8px' }}>HEALTH</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>Max HP +2%</div>
+  if (phase === 'levelup') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: 'rgba(0,0,0,0.9)', border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN }}>
+      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>LEVEL UP!</h2>
+      <p style={{ marginBottom: 40 }}>Choose a stat to improve:</p>
+      <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row' }}>
+        {[
+          { s: 'health', label: 'HEALTH', desc: 'Max HP +7%' },
+          { s: 'attack', label: 'ATTACK', desc: 'Damage +8%' },
+          { s: 'speed', label: 'SPEED', desc: 'Speed +2%' },
+        ].map(({ s, label, desc }) => (
+          <button key={s} onClick={() => applyS(s)} style={{ padding: '20px 30px', fontSize: 16, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 18, marginBottom: 8 }}>{label}</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{desc}</div>
           </button>
-          <button onClick={() => applyStat('attack')} style={{
-            padding: '20px 30px',
-            fontSize: '16px',
-            backgroundColor: 'transparent',
-            border: `2px solid ${COLORS.MATRIX_GREEN}`,
-            color: COLORS.MATRIX_GREEN,
-            cursor: 'pointer',
-            fontFamily: 'monospace',
-          }}>
-            <div style={{ fontSize: '18px', marginBottom: '8px' }}>ATTACK</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>Damage +2%</div>
-          </button>
-          <button onClick={() => applyStat('speed')} style={{
-            padding: '20px 30px',
-            fontSize: '16px',
-            backgroundColor: 'transparent',
-            border: `2px solid ${COLORS.MATRIX_GREEN}`,
-            color: COLORS.MATRIX_GREEN,
-            cursor: 'pointer',
-            fontFamily: 'monospace',
-          }}>
-            <div style={{ fontSize: '18px', marginBottom: '8px' }}>SPEED</div>
-            <div style={{ fontSize: '12px', opacity: 0.7 }}>Move Speed +2%</div>
-          </button>
-        </div>
+        ))}
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (gamePhase === 'gameover') {
-    return (
-      <div style={{
-        width: `${GAME_CONFIG.VIEWPORT_WIDTH}px`,
-        height: `${GAME_CONFIG.VIEWPORT_HEIGHT}px`,
-        backgroundColor: COLORS.UI_BG,
-        border: '2px solid #DC143C',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontFamily: 'monospace',
-        color: '#DC143C',
-      }}>
-        <h1 style={{ marginBottom: '20px', textShadow: '0 0 10px #DC143C' }}>GAME OVER</h1>
-        <div style={{ marginBottom: '40px', textAlign: 'center', color: COLORS.MATRIX_GREEN }}>
-          <p>Wave Reached: {currentWave.current}</p>
-          <p>Final Level: {playerLevel.current}</p>
-        </div>
-        <button onClick={startGame} style={{
-          padding: '15px 40px',
-          fontSize: '18px',
-          backgroundColor: 'transparent',
-          border: `2px solid ${COLORS.MATRIX_GREEN}`,
-          color: COLORS.MATRIX_GREEN,
-          cursor: 'pointer',
-          fontFamily: 'monospace',
-        }}>RESTART</button>
+  if (phase === 'gameover') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: 'rgba(0,0,0,0.9)', border: '2px solid #DC143C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#DC143C' }}>
+      <h1 style={{ marginBottom: 20, textShadow: '0 0 10px #DC143C' }}>GAME OVER</h1>
+      <div style={{ marginBottom: 40, textAlign: 'center', color: COL.GREEN }}>
+        <p>Wave Reached: {wave.current}</p><p>Final Level: {lvl.current}</p>
+        {wave.current >= 5 && highWave >= 5 && <p style={{ color: '#FFD700', marginTop: 10 }}>Lilly Unlocked!</p>}
+        {wave.current >= 7 && highWave >= 7 && <p style={{ color: '#8b5cf6', marginTop: 10 }}>The One Unlocked!</p>}
       </div>
-    );
-  }
+      <div style={{ display: 'flex', gap: 15, flexDirection: mobile ? 'column' : 'row' }}>
+        <button onClick={() => start(char)} style={{ padding: '15px 40px', fontSize: 18, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>RESTART</button>
+        <button onClick={() => setPhase('charselect')} style={{ padding: '15px 40px', fontSize: 18, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>CHANGE CHARACTER</button>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={{
-      width: `${GAME_CONFIG.VIEWPORT_WIDTH}px`,
-      height: `${GAME_CONFIG.VIEWPORT_HEIGHT}px`,
-      border: `2px solid ${COLORS.MATRIX_GREEN}`,
-      position: 'relative',
-    }}>
-      <canvas
-        ref={canvasRef}
-        width={GAME_CONFIG.VIEWPORT_WIDTH}
-        height={GAME_CONFIG.VIEWPORT_HEIGHT}
-        style={{ display: 'block', touchAction: 'none' }}
-      />
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, border: `2px solid ${COL.GREEN}`, position: 'relative' }}>
+      <canvas ref={canvasRef} width={CONFIG.VIEW} height={CONFIG.VIEW} style={{ display: 'block', touchAction: 'none' }} />
     </div>
   );
 };
