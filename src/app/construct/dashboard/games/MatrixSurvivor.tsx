@@ -404,9 +404,7 @@ export default function MatrixSurvivor() {
 
   if (phase === 'charselect') return (
     <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: COL.BG, border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN, padding: 20, overflow: 'auto' }}>
-      <h2 style={{if (phase === 'charselect') return (
-    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: COL.BG, border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN, padding: 20, overflow: 'auto' }}>
-      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>SELECT CHARACTER</h2>
+     <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>SELECT CHARACTER</h2><h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>SELECT CHARACTER</h2>
       <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row', width: '100%', justifyContent: 'center' }}>
         {Object.values(CHARS).map(c => {
           const lock = !unlockedChars.includes(c.id);
