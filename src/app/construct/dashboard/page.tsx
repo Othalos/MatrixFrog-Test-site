@@ -33,6 +33,7 @@ import { useWalletConnect } from "../../hooks/useWalletConnect";
 import FlapMatrix from "./games/FlapMatrix";
 import MatrixSnake from "./games/MatrixSnake";
 import { PepuMemeWars, PepuJump } from "./games/JonnyGames";
+import MatrixSurvivor from "./games/MatrixSurvivor";
 
 const MFG_TOKEN_ADDRESS = "0x434DD2AFe3BAf277ffcFe9Bef9787EdA6b4C38D5";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -190,6 +191,12 @@ const GamesSection = () => {
       title: "Pepu Jump By Jonny", 
       description: "Tap in the direction you want to jump and navigate through challenges",
       component: PepuJump
+    },
+    { 
+      value: "matrix-survivor", 
+      title: "Matrix Survivor", 
+      description: "Survive waves of enemies in this action-packed survivor game",
+      component: MatrixSurvivor
     },
     // Add more games here in the future:
     // { 
