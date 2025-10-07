@@ -1,42 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-const CONFIG = {
-  MAP: 10000, VIEW: 750, PLAYER_SIZE: 32, ENEMY_SIZE: 32, ENEMY_SPEED: 100, ENEMY_SPEED_INC: 0.01,
-  ENEMY_HP: 25, ENEMY_DMG: 10, ENEMY_COOLDOWN: 1000, BOSS_SIZE: 2, BOSS_HP: 2, BOSS_DMG: 2,
-  PROJ_SIZE: 6, XP_ENEMY: 10, XP_BOSS: 50, XP_LEVEL: 100, 
-  HEALTH_BONUS: 0.07, ATTACK_BONUS: 0.08, SPEED_BONUS: 0.02,
-  ENEMIES_FOR_BOSS: 15, BASE_SPAWN_RATE: 1500, MIN_SPAWN_RATE: 300,
-};
-
-const CHARS = {
-  pax: { id: 'pax', name: 'Pax', hp: 100, spd: 200, atk: 10, wpn: 'pistol', unlock: 0 },
-  lilly: { id: 'lilly', name: 'Lilly', hp: 75, spd: 250, atk: 8, wpn: 'shotgun', unlock: 5 },
-  theOne: { id: 'theOne', name: 'The One', hp: 150, spd: 200, atk: 6, wpn: 'arc', unlock: 7 },
-};
-
-const WPNS = {
-  pistol: { rate: 500, dmg: 1.0, spd: 400, cnt: 1, spread: 0, pierce: false },
-  shotgun: { rate: 800, dmg: 0.5, spd: 350, cnt: 5, spread: 0.3, pierce: false },
-  arc: { rate: 600, dmg: 0.75, spd: 400, cnt: 1, spread: 0, pierce: true, isArc: true },
-  assault: { rate: 100, dmg: 0.4, spd: 450, cnt: 1, spread: 0, pierce: false, burst: 3, burstDelay: 50 },
-  rocket: { rate: 1500, dmg: 2.0, spd: 300, cnt: 1, spread: 0, pierce: false, aoe: 80 },
-  shockwave: { rate: 5000, dmg: 1.5, spd: 0, cnt: 1, spread: 0, pierce: false, radius: 150 },
-};
-
-const COL = {
-  BG: '#000', GREEN: '#00FF00', PLAYER: '#4ade80', ENEMY: '#228B22', BOSS: '#8B0000',
-  PROJ: '#FFD700', VIOLET: '#8b5cf6', HP_BG: '#333', HP: '#00FF00', XP_BG: '#333', XP: '#FFD700', GRID: '#003300',
-};
+import { CONFIG, CHARS, WPNS, COL } from './constants/GameConstants';
+import { GameState, GamePhase, Position } from './types/GameTypes';
 
 export default function MatrixSurvivor() {
-  const canvasRef = useRef(null);
-  const [phase, setPhase] = useState('menu');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [phase, setPhase] = useState<GamePhase>('menu');
   const [mobile, setMobile] = useState(false);
   const [char, setChar] = useState('pax');
   const [highWave, setHighWave] = useState(0);
   const [unlockedChars, setUnlockedChars] = useState(['pax']);
   
-  const gameState = useRef({
+  const gameState = useRef<GameState>({
     pos: { x: 5000, y: 5000 }, vel: { x: 0, y: 0 }, hp: 100, maxHp: 100,
     xp: 0, lvl: 1, atk: 10, spd: 200, wpn: 'pistol',
     hpBonus: 0, atkBonus: 0, spdBonus: 0,
@@ -51,16 +25,16 @@ export default function MatrixSurvivor() {
 
   useEffect(() => { setMobile('ontouchstart' in window || navigator.maxTouchPoints > 0); }, []);
 
-  const norm = (p) => {
+  const norm = (p: Position): Position => {
     let x = p.x, y = p.y;
     if (x < 0) x += CONFIG.MAP; if (x > CONFIG.MAP) x -= CONFIG.MAP;
     if (y < 0) y += CONFIG.MAP; if (y > CONFIG.MAP) y -= CONFIG.MAP;
     return { x, y };
   };
 
-  const dist = (a, b) => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+  const dist = (a: Position, b: Position): number => Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 
-  const spawnEnemy = (gs) => {
+  const spawnEnemy = (gs: GameState) => {
     const ang = Math.random() * Math.PI * 2, d = 400 + Math.random() * 200;
     gs.enemies.push({
       id: gs.nextEId++, 
@@ -69,7 +43,7 @@ export default function MatrixSurvivor() {
     });
   };
 
-  const spawnBoss = (gs) => {
+  const spawnBoss = (gs: GameState) => {
     const ang = Math.random() * Math.PI * 2;
     const bossNum = gs.bossKilled + 1;
     gs.enemies.push({
@@ -81,7 +55,7 @@ export default function MatrixSurvivor() {
     });
   };
 
-  const nearest = (gs) => {
+  const nearest = (gs: GameState) => {
     if (!gs.enemies.length) return null;
     let n = gs.enemies[0], min = dist(gs.pos, n.position);
     for (const e of gs.enemies) {
@@ -91,7 +65,7 @@ export default function MatrixSurvivor() {
     return n;
   };
 
-  const fire = (gs, t) => {
+  const fire = (gs: GameState, t: number) => {
     const w = WPNS[gs.wpn];
     if (t - gs.lastFire < w.rate) return;
     const tgt = nearest(gs);
@@ -107,7 +81,7 @@ export default function MatrixSurvivor() {
             damage: gs.atk * w.dmg, piercing: w.pierce, hitEnemies: new Set(), color: COL.PROJ,
             aoe: w.aoe, isRocket: false, isArc: w.isArc || false,
           });
-        }, i * w.burstDelay);
+        }, i * (w.burstDelay || 0));
       }
     } else {
       for (let i = 0; i < w.cnt; i++) {
@@ -128,7 +102,7 @@ export default function MatrixSurvivor() {
       
       if (addWpn === 'shockwave') {
         for (const e of gs.enemies) {
-          if (dist(gs.pos, e.position) < aw.radius) e.health -= gs.atk * aw.dmg;
+          if (dist(gs.pos, e.position) < (aw.radius || 0)) e.health -= gs.atk * aw.dmg;
         }
         gs.lastWeaponFires[addWpn] = t;
       } else {
@@ -145,7 +119,7 @@ export default function MatrixSurvivor() {
                 damage: gs.atk * aw.dmg, piercing: aw.pierce, hitEnemies: new Set(), 
                 color: '#FF6B6B', aoe: aw.aoe, isRocket: false, isArc: false,
               });
-            }, i * aw.burstDelay);
+            }, i * (aw.burstDelay || 0));
           }
         } else {
           for (let i = 0; i < aw.cnt; i++) {
@@ -163,7 +137,7 @@ export default function MatrixSurvivor() {
     }
   };
 
-  const applyS = (s) => {
+  const applyS = (s: string) => {
     const gs = gameState.current;
     const c = CHARS[char];
     if (s === 'health') {
@@ -182,24 +156,42 @@ export default function MatrixSurvivor() {
 
   useEffect(() => {
     const gs = gameState.current;
-    const kd = (e) => gs.keys.add(e.key.toLowerCase()), ku = (e) => gs.keys.delete(e.key.toLowerCase());
-    window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
-    return () => { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); };
+    const kd = (e: KeyboardEvent) => gs.keys.add(e.key.toLowerCase());
+    const ku = (e: KeyboardEvent) => gs.keys.delete(e.key.toLowerCase());
+    window.addEventListener('keydown', kd); 
+    window.addEventListener('keyup', ku);
+    return () => { 
+      window.removeEventListener('keydown', kd); 
+      window.removeEventListener('keyup', ku); 
+    };
   }, []);
 
   useEffect(() => {
     if (!mobile) return;
     const gs = gameState.current;
-    const ts = (e) => { const t = e.touches[0]; gs.joyActive = true; gs.joyStart = { x: t.clientX, y: t.clientY }; gs.joyCur = { x: t.clientX, y: t.clientY }; };
-    const tm = (e) => {
-      if (!gs.joyActive) return; e.preventDefault();
-      const t = e.touches[0]; gs.joyCur = { x: t.clientX, y: t.clientY };
+    const ts = (e: TouchEvent) => { 
+      const t = e.touches[0]; 
+      gs.joyActive = true; 
+      gs.joyStart = { x: t.clientX, y: t.clientY }; 
+      gs.joyCur = { x: t.clientX, y: t.clientY }; 
+    };
+    const tm = (e: TouchEvent) => {
+      if (!gs.joyActive) return; 
+      e.preventDefault();
+      const t = e.touches[0]; 
+      gs.joyCur = { x: t.clientX, y: t.clientY };
       const dx = gs.joyCur.x - gs.joyStart.x, dy = gs.joyCur.y - gs.joyStart.y, d = Math.sqrt(dx * dx + dy * dy);
       gs.joyDir = d > 5 ? { x: dx / d, y: dy / d } : { x: 0, y: 0 };
     };
     const te = () => { gs.joyActive = false; gs.joyDir = { x: 0, y: 0 }; };
-    window.addEventListener('touchstart', ts); window.addEventListener('touchmove', tm, { passive: false }); window.addEventListener('touchend', te);
-    return () => { window.removeEventListener('touchstart', ts); window.removeEventListener('touchmove', tm); window.removeEventListener('touchend', te); };
+    window.addEventListener('touchstart', ts); 
+    window.addEventListener('touchmove', tm, { passive: false }); 
+    window.addEventListener('touchend', te);
+    return () => { 
+      window.removeEventListener('touchstart', ts); 
+      window.removeEventListener('touchmove', tm); 
+      window.removeEventListener('touchend', te); 
+    };
   }, [mobile]);
 
   useEffect(() => {
@@ -209,7 +201,7 @@ export default function MatrixSurvivor() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const loop = (t) => {
+    const loop = (t: number) => {
       const gs = gameState.current;
       const dt = gs.lastTime ? (t - gs.lastTime) / 1000 : 0;
       gs.lastTime = t;
@@ -233,26 +225,42 @@ export default function MatrixSurvivor() {
         gs.lastSpawn = t;
       }
 
-      gs.projs = gs.projs.filter(p => { p.position.x += p.velocity.x * dt; p.position.y += p.velocity.y * dt; return dist(p.position, gs.pos) < 1000; });
+      gs.projs = gs.projs.filter(p => { 
+        p.position.x += p.velocity.x * dt; 
+        p.position.y += p.velocity.y * dt; 
+        return dist(p.position, gs.pos) < 1000; 
+      });
 
       const espd = CONFIG.ENEMY_SPEED * (1 + (gs.wave - 1) * CONFIG.ENEMY_SPEED_INC);
       for (const e of gs.enemies) {
         const dx = gs.pos.x - e.position.x, dy = gs.pos.y - e.position.y, d = Math.sqrt(dx * dx + dy * dy);
         const sz = e.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
         if (d > sz) {
-          e.position.x += (dx / d) * espd * dt; e.position.y += (dy / d) * espd * dt; e.position = norm(e.position);
+          e.position.x += (dx / d) * espd * dt; 
+          e.position.y += (dy / d) * espd * dt; 
+          e.position = norm(e.position);
           for (const o of gs.enemies) {
             if (e.id === o.id) continue;
             const osz = o.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
             const edx = e.position.x - o.position.x, edy = e.position.y - o.position.y, ed = Math.sqrt(edx * edx + edy * edy);
             const min = (sz + osz) / 2;
-            if (ed < min && ed > 0) { const push = (min - ed) / 2; e.position.x += (edx / ed) * push; e.position.y += (edy / ed) * push; e.position = norm(e.position); }
+            if (ed < min && ed > 0) { 
+              const push = (min - ed) / 2; 
+              e.position.x += (edx / ed) * push; 
+              e.position.y += (edy / ed) * push; 
+              e.position = norm(e.position); 
+            }
           }
-        } else if (t - e.lastAttack > CONFIG.ENEMY_COOLDOWN) { gs.hp -= e.damage; e.lastAttack = t; if (gs.hp <= 0) setPhase('gameover'); }
+        } else if (t - e.lastAttack > CONFIG.ENEMY_COOLDOWN) { 
+          gs.hp -= e.damage; 
+          e.lastAttack = t; 
+          if (gs.hp <= 0) setPhase('gameover'); 
+        }
       }
 
       for (let i = gs.projs.length - 1; i >= 0; i--) {
-        const p = gs.projs[i]; let hitThisFrame = false;
+        const p = gs.projs[i]; 
+        let hitThisFrame = false;
         for (let j = gs.enemies.length - 1; j >= 0; j--) {
           const e = gs.enemies[j];
           if (p.piercing && p.hitEnemies.has(e.id)) continue;
@@ -288,7 +296,11 @@ export default function MatrixSurvivor() {
               }
               gs.enemies.splice(j, 1);
               if (gs.totalKilled >= gs.nextBossAt && !gs.enemies.some(e => e.isBoss)) spawnBoss(gs);
-              if (gs.xp >= CONFIG.XP_LEVEL) { gs.xp -= CONFIG.XP_LEVEL; gs.lvl++; setPhase('levelup'); }
+              if (gs.xp >= CONFIG.XP_LEVEL) { 
+                gs.xp -= CONFIG.XP_LEVEL; 
+                gs.lvl++; 
+                setPhase('levelup'); 
+              }
             }
             if (!p.piercing) break;
           }
@@ -306,18 +318,33 @@ export default function MatrixSurvivor() {
 
       gs.cam = { x: gs.pos.x - CONFIG.VIEW / 2, y: gs.pos.y - CONFIG.VIEW / 2 };
 
-      ctx.fillStyle = COL.BG; ctx.fillRect(0, 0, CONFIG.VIEW, CONFIG.VIEW);
-      ctx.strokeStyle = COL.GRID; ctx.lineWidth = 1;
+      ctx.fillStyle = COL.BG; 
+      ctx.fillRect(0, 0, CONFIG.VIEW, CONFIG.VIEW);
+      ctx.strokeStyle = COL.GRID; 
+      ctx.lineWidth = 1;
       const g = 100, sx = Math.floor(gs.cam.x / g) * g, sy = Math.floor(gs.cam.y / g) * g;
-      for (let x = sx; x < gs.cam.x + CONFIG.VIEW + g; x += g) { ctx.beginPath(); ctx.moveTo(x - gs.cam.x, 0); ctx.lineTo(x - gs.cam.x, CONFIG.VIEW); ctx.stroke(); }
-      for (let y = sy; y < gs.cam.y + CONFIG.VIEW + g; y += g) { ctx.beginPath(); ctx.moveTo(0, y - gs.cam.y); ctx.lineTo(CONFIG.VIEW, y - gs.cam.y); ctx.stroke(); }
+      for (let x = sx; x < gs.cam.x + CONFIG.VIEW + g; x += g) { 
+        ctx.beginPath(); 
+        ctx.moveTo(x - gs.cam.x, 0); 
+        ctx.lineTo(x - gs.cam.x, CONFIG.VIEW); 
+        ctx.stroke(); 
+      }
+      for (let y = sy; y < gs.cam.y + CONFIG.VIEW + g; y += g) { 
+        ctx.beginPath(); 
+        ctx.moveTo(0, y - gs.cam.y); 
+        ctx.lineTo(CONFIG.VIEW, y - gs.cam.y); 
+        ctx.stroke(); 
+      }
 
       for (const e of gs.enemies) {
         const sz = e.isBoss ? CONFIG.ENEMY_SIZE * CONFIG.BOSS_SIZE : CONFIG.ENEMY_SIZE;
         const ex = e.position.x - gs.cam.x - sz / 2, ey = e.position.y - gs.cam.y - sz / 2;
-        ctx.fillStyle = e.isBoss ? COL.BOSS : COL.ENEMY; ctx.fillRect(ex, ey, sz, sz);
-        ctx.fillStyle = COL.HP_BG; ctx.fillRect(ex, ey - 8, sz, 4);
-        ctx.fillStyle = COL.HP; ctx.fillRect(ex, ey - 8, sz * (e.health / e.maxHealth), 4);
+        ctx.fillStyle = e.isBoss ? COL.BOSS : COL.ENEMY; 
+        ctx.fillRect(ex, ey, sz, sz);
+        ctx.fillStyle = COL.HP_BG; 
+        ctx.fillRect(ex, ey - 8, sz, 4);
+        ctx.fillStyle = COL.HP; 
+        ctx.fillRect(ex, ey - 8, sz * (e.health / e.maxHealth), 4);
       }
 
       for (const p of gs.projs) { 
@@ -345,50 +372,93 @@ export default function MatrixSurvivor() {
 
       for (const chest of gs.chests) {
         const cx = chest.position.x - gs.cam.x - 20, cy = chest.position.y - gs.cam.y - 20;
-        ctx.fillStyle = '#FFD700'; ctx.fillRect(cx, cy, 40, 40);
-        ctx.strokeStyle = '#FFA500'; ctx.lineWidth = 2; ctx.strokeRect(cx, cy, 40, 40);
+        ctx.fillStyle = '#FFD700'; 
+        ctx.fillRect(cx, cy, 40, 40);
+        ctx.strokeStyle = '#FFA500'; 
+        ctx.lineWidth = 2; 
+        ctx.strokeRect(cx, cy, 40, 40);
       }
 
-      ctx.fillStyle = COL.PLAYER; ctx.fillRect(CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.PLAYER_SIZE, CONFIG.PLAYER_SIZE);
+      ctx.fillStyle = COL.PLAYER; 
+      ctx.fillRect(CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.VIEW / 2 - CONFIG.PLAYER_SIZE / 2, CONFIG.PLAYER_SIZE, CONFIG.PLAYER_SIZE);
 
       const pad = 10, bw = 200, bh = 20;
-      ctx.fillStyle = COL.HP_BG; ctx.fillRect(pad, pad, bw, bh); ctx.fillStyle = COL.HP; ctx.fillRect(pad, pad, bw * Math.max(0, gs.hp / gs.maxHp), bh);
-      ctx.strokeStyle = COL.GREEN; ctx.strokeRect(pad, pad, bw, bh); ctx.fillStyle = COL.GREEN; ctx.font = '12px monospace';
+      ctx.fillStyle = COL.HP_BG; 
+      ctx.fillRect(pad, pad, bw, bh); 
+      ctx.fillStyle = COL.HP; 
+      ctx.fillRect(pad, pad, bw * Math.max(0, gs.hp / gs.maxHp), bh);
+      ctx.strokeStyle = COL.GREEN; 
+      ctx.strokeRect(pad, pad, bw, bh); 
+      ctx.fillStyle = COL.GREEN; 
+      ctx.font = '12px monospace';
       ctx.fillText(`HP: ${Math.max(0, Math.floor(gs.hp))}/${Math.floor(gs.maxHp)}`, pad + 5, pad + 15);
-      ctx.fillStyle = COL.XP_BG; ctx.fillRect(pad, pad + 30, bw, bh); ctx.fillStyle = COL.XP; ctx.fillRect(pad, pad + 30, bw * (gs.xp / CONFIG.XP_LEVEL), bh);
-      ctx.strokeStyle = COL.GREEN; ctx.strokeRect(pad, pad + 30, bw, bh);
+      ctx.fillStyle = COL.XP_BG; 
+      ctx.fillRect(pad, pad + 30, bw, bh); 
+      ctx.fillStyle = COL.XP; 
+      ctx.fillRect(pad, pad + 30, bw * (gs.xp / CONFIG.XP_LEVEL), bh);
+      ctx.strokeStyle = COL.GREEN; 
+      ctx.strokeRect(pad, pad + 30, bw, bh);
       ctx.fillText(`XP: ${gs.xp}/${CONFIG.XP_LEVEL}`, pad + 5, pad + 45);
-      ctx.fillText(`Level: ${gs.lvl}`, pad, pad + 70); ctx.fillText(`Wave: ${gs.wave}`, pad, pad + 90); ctx.fillText(`Enemies: ${gs.enemies.length}`, pad, pad + 110);
+      ctx.fillText(`Level: ${gs.lvl}`, pad, pad + 70); 
+      ctx.fillText(`Wave: ${gs.wave}`, pad, pad + 90); 
+      ctx.fillText(`Enemies: ${gs.enemies.length}`, pad, pad + 110);
 
       if (mobile && gs.joyActive) {
         const rect = canvas.getBoundingClientRect();
         const jx = gs.joyStart.x - rect.left, jy = gs.joyStart.y - rect.top;
         const cx = gs.joyCur.x - rect.left, cy = gs.joyCur.y - rect.top;
-        ctx.strokeStyle = COL.GREEN; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(jx, jy, 50, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'; ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = COL.GREEN; 
+        ctx.lineWidth = 2; 
+        ctx.beginPath(); 
+        ctx.arc(jx, jy, 50, 0, Math.PI * 2); 
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.5)'; 
+        ctx.beginPath(); 
+        ctx.arc(cx, cy, 20, 0, Math.PI * 2); 
+        ctx.fill();
       }
 
       gs.frame = requestAnimationFrame(loop);
     };
 
-    gameState.current.frame = requestAnimationFrame(loop);
-    return () => { if (gameState.current.frame) cancelAnimationFrame(gameState.current.frame); };
+    const currentState = gameState.current;
+    currentState.frame = requestAnimationFrame(loop);
+    return () => { 
+      if (currentState.frame) cancelAnimationFrame(currentState.frame); 
+    };
   }, [phase, highWave, char, mobile, unlockedChars]);
 
-  const start = (cid) => {
+  const start = (cid: string) => {
     const gs = gameState.current;
-    const c = CHARS[cid]; setChar(cid); gs.pos = { x: 5000, y: 5000 };
-    gs.hp = c.hp; gs.maxHp = c.hp; gs.xp = 0; gs.lvl = 1;
-    gs.atk = c.atk; gs.spd = c.spd; gs.wpn = c.wpn;
-    gs.hpBonus = 0; gs.atkBonus = 0; gs.spdBonus = 0;
-    gs.wave = 1; gs.totalKilled = 0; gs.bossKilled = 0; gs.nextBossAt = CONFIG.ENEMIES_FOR_BOSS;
-    gs.enemies = []; gs.projs = []; gs.chests = []; gs.additionalWeapons = []; gs.lastWeaponFires = {};
-    gs.lastTime = 0; gs.lastSpawn = 0;
+    const c = CHARS[cid]; 
+    setChar(cid); 
+    gs.pos = { x: 5000, y: 5000 };
+    gs.hp = c.hp; 
+    gs.maxHp = c.hp; 
+    gs.xp = 0; 
+    gs.lvl = 1;
+    gs.atk = c.atk; 
+    gs.spd = c.spd; 
+    gs.wpn = c.wpn;
+    gs.hpBonus = 0; 
+    gs.atkBonus = 0; 
+    gs.spdBonus = 0;
+    gs.wave = 1; 
+    gs.totalKilled = 0; 
+    gs.bossKilled = 0; 
+    gs.nextBossAt = CONFIG.ENEMIES_FOR_BOSS;
+    gs.enemies = []; 
+    gs.projs = []; 
+    gs.chests = []; 
+    gs.additionalWeapons = []; 
+    gs.lastWeaponFires = {};
+    gs.lastTime = 0; 
+    gs.lastSpawn = 0;
     for (let i = 0; i < 5; i++) spawnEnemy(gs);
     setPhase('playing');
   };
 
-  const selectWeapon = (wpnId) => {
+  const selectWeapon = (wpnId: string) => {
     gameState.current.additionalWeapons.push(wpnId);
     gameState.current.lastTime = 0;
     setPhase('playing');
@@ -404,4 +474,82 @@ export default function MatrixSurvivor() {
 
   if (phase === 'charselect') return (
     <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: COL.BG, border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN, padding: 20, overflow: 'auto' }}>
-      <h2 style={{
+      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>SELECT CHARACTER</h2>
+      <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row', width: '100%', justifyContent: 'center' }}>
+        {Object.values(CHARS).map(c => {
+          const lock = !unlockedChars.includes(c.id);
+          return (
+            <div key={c.id} onClick={() => !lock && start(c.id)} style={{ padding: 20, border: `2px solid ${lock ? '#666' : COL.GREEN}`, backgroundColor: lock ? 'rgba(100,100,100,0.1)' : 'rgba(34,197,94,0.1)', cursor: lock ? 'not-allowed' : 'pointer', opacity: lock ? 0.5 : 1, flex: 1, maxWidth: 200 }}>
+              <h3 style={{ marginBottom: 15, color: lock ? '#666' : COL.GREEN }}>{c.name}</h3>
+              {lock && <div style={{ marginBottom: 10, fontSize: 12, color: '#999' }}>Unlock at Wave {c.unlock}</div>}
+              <div style={{ fontSize: 14, marginBottom: 5 }}>HP: {c.hp}</div>
+              <div style={{ fontSize: 14, marginBottom: 5 }}>Speed: {c.spd}</div>
+              <div style={{ fontSize: 14, marginBottom: 5 }}>Attack: {c.atk}</div>
+              <div style={{ fontSize: 14, marginTop: 10, color: '#86efac' }}>Weapon: {c.wpn.toUpperCase()}</div>
+            </div>
+          );
+        })}
+      </div><button onClick={() => setPhase('menu')} style={{ marginTop: 30, padding: '10px 30px', backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>BACK</button>
+    </div>
+  );
+
+  if (phase === 'levelup') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: 'rgba(0,0,0,0.9)', border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN }}>
+      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>LEVEL UP!</h2>
+      <p style={{ marginBottom: 40 }}>Choose a stat to improve:</p>
+      <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row' }}>
+        {[
+          { s: 'health', label: 'HEALTH', desc: 'Max HP +7%' },
+          { s: 'attack', label: 'ATTACK', desc: 'Damage +8%' },
+          { s: 'speed', label: 'SPEED', desc: 'Speed +2%' },
+        ].map(({ s, label, desc }) => (
+          <button key={s} onClick={() => applyS(s)} style={{ padding: '20px 30px', fontSize: 16, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 18, marginBottom: 8 }}>{label}</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{desc}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (phase === 'weaponselect') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: 'rgba(0,0,0,0.9)', border: `2px solid ${COL.GREEN}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: COL.GREEN }}>
+      <h2 style={{ marginBottom: 30, textShadow: '0 0 10px #00FF00' }}>WEAPON CHEST!</h2>
+      <p style={{ marginBottom: 40 }}>Choose a weapon to add:</p>
+      <div style={{ display: 'flex', gap: 20, flexDirection: mobile ? 'column' : 'row' }}>
+        {[
+          { id: 'assault', name: 'ASSAULT RIFLE', desc: '3-round burst, fast fire' },
+          { id: 'rocket', name: 'ROCKET LAUNCHER', desc: 'AOE explosion damage' },
+          { id: 'shockwave', name: 'SHOCKWAVE', desc: 'Electric pulse every 5s' },
+        ].map(({ id, name, desc }) => (
+          <button key={id} onClick={() => selectWeapon(id)} style={{ padding: '20px 30px', fontSize: 16, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace', minWidth: 200 }}>
+            <div style={{ fontSize: 18, marginBottom: 8 }}>{name}</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{desc}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  if (phase === 'gameover') return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, backgroundColor: 'rgba(0,0,0,0.9)', border: '2px solid #DC143C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace', color: '#DC143C' }}>
+      <h1 style={{ marginBottom: 20, textShadow: '0 0 10px #DC143C' }}>GAME OVER</h1>
+      <div style={{ marginBottom: 40, textAlign: 'center', color: COL.GREEN }}>
+        <p>Wave Reached: {gameState.current.wave}</p>
+        <p>Final Level: {gameState.current.lvl}</p>
+        {gameState.current.wave >= 5 && highWave >= 5 && <p style={{ color: '#FFD700', marginTop: 10 }}>Lilly Unlocked!</p>}
+        {gameState.current.wave >= 7 && highWave >= 7 && <p style={{ color: '#8b5cf6', marginTop: 10 }}>The One Unlocked!</p>}
+      </div>
+      <div style={{ display: 'flex', gap: 15, flexDirection: mobile ? 'column' : 'row' }}>
+        <button onClick={() => start(char)} style={{ padding: '15px 40px', fontSize: 18, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>RESTART</button>
+        <button onClick={() => setPhase('charselect')} style={{ padding: '15px 40px', fontSize: 18, backgroundColor: 'transparent', border: `2px solid ${COL.GREEN}`, color: COL.GREEN, cursor: 'pointer', fontFamily: 'monospace' }}>CHANGE CHARACTER</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ width: CONFIG.VIEW, height: CONFIG.VIEW, border: `2px solid ${COL.GREEN}`, position: 'relative' }}>
+      <canvas ref={canvasRef} width={CONFIG.VIEW} height={CONFIG.VIEW} style={{ display: 'block', touchAction: 'none' }} />
+    </div>
+  );
+}
