@@ -1,4 +1,4 @@
-//Main Construct page
+//Test Construct page
 "use client";
 import { ClientOnly } from "../../../components/ClientOnly";
 import StakingSection from "./StakingSection";
