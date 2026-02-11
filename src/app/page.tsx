@@ -11,7 +11,7 @@ import MatrixScrollArrow from "./components/matrix-scroll-arrow";
 import "./home-styles.css";
 
 export default function Home() {
-  // InitialPage nur beim ersten Besuch anzeigen mit localStorage
+  // InitialPage nur beim ersten Besuch anzeigen mit localStorage i
   const [loading, setLoading] = useState(true);
 
   // Nach dem ersten Rendering die localStorage-Prüfung durchführen
