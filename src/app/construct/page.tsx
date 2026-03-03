@@ -13,7 +13,7 @@ export default function ConstructPage() {
   useEffect(() => {
     const timers: NodeJS.Timeout[] = [];
 
-    // Step 1: Show loading message for 2 seconds
+    // Step 1: Show loading message for 2 seconds ok
     timers.push(
       setTimeout(() => {
         setShowEnteringText(true);
