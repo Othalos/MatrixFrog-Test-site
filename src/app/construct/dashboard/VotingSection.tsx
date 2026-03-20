@@ -76,7 +76,7 @@ const VotingSection: React.FC<VotingSectionProps> = ({
     totalVotes,
     votingStatsLoading,
 }) => {
-    // Use centralized wallet hook
+    // Use centralized wallet hook.
     const {
         isConnected,
         isCorrectNetwork,
