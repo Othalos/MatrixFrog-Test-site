@@ -14,7 +14,7 @@ export default function Home() {
   // InitialPage nur beim ersten Besuch anzeigen mit localStorage i
   const [loading, setLoading] = useState(true);
 
-  // Nach dem ersten Rendering die localStorage-Prüfung durchführen
+  // Nach dem ersten Rendering die localStorage-Prüfung durchführen.
   useEffect(() => {
     // Prüfen, ob der Benutzer die Seite bereits besucht hat
     const hasVisited = localStorage.getItem("hasSeenInitialPage") === "true";
