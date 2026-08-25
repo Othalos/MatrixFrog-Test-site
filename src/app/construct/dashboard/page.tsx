@@ -370,7 +370,7 @@ function MatrixConstructContent({
     { icon: User,      label: "The Peptrix Saga",  subtitle: "Interactive story",      href: "#",  active: activeSection === "saga",        onClick: () => setActiveSection("saga") },
     { icon: FileVideo, label: "Bloopers",          subtitle: "Explore scene",          href: "#",  active: activeSection === "bloopers",    onClick: () => setActiveSection("bloopers") },
     { icon: Database,  label: "Staking",           subtitle: "Stake MFG, earn PTX",   href: "#",  active: activeSection === "staking",     onClick: () => setActiveSection("staking") },
-    { icon: Sprout,    label: "Farms",             subtitle: "Auto-compound LP pools", href: "#",  active: activeSection === "farms",       onClick: () => setActiveSection("farms"),       disabled: false },
+    { icon: Sprout,    label: "Farms",             subtitle: "Paused for maintenance", href: "#",  active: activeSection === "farms",       onClick: () => setActiveSection("farms"),       disabled: true },
     { icon: Gamepad2,  label: "Games",             subtitle: "Play Matrix games",      href: "#",  active: activeSection === "games",       onClick: () => setActiveSection("games"),        disabled: false },
     { icon: Star,      label: "Collectibles",      subtitle: "Coming soon",            href: "#",  active: activeSection === "collectibles",onClick: () => setActiveSection("collectibles"), disabled: true },
   ];
